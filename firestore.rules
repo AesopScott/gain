@@ -70,8 +70,10 @@ service cloud.firestore {
         //   (c) an invited user self-redeems by passing a matching inviteId.
         allow create: if
           isAdmin(companyId)
+          // getAfter (not get) so the rule sees the company doc written in the
+          // SAME transaction that creates this owner member record.
           || (isSignedIn() && uid() == memberUid &&
-              get(/databases/$(database)/documents/companies/$(companyId)).data.ownerUid == uid())
+              getAfter(/databases/$(database)/documents/companies/$(companyId)).data.ownerUid == uid())
           || (isSignedIn() && uid() == memberUid &&
               request.resource.data.inviteId is string &&
               get(/databases/$(database)/documents/invites/$(request.resource.data.inviteId)).data.email == request.auth.token.email &&
