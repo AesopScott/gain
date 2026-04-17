@@ -34,8 +34,8 @@ governance data needs real, revocable access control.
 
 ## One-Time Firebase Setup
 
-1. Create a new Firebase project in the console, name it `gain-app` (or edit
-   `.firebaserc` to match whatever you pick).
+1. Firebase project: already created with ID `gain`. If you ever swap to a
+   different project, update `.firebaserc` to match.
 2. Enable **Authentication → Email/Password** provider.
 3. Enable **Firestore** in Native mode (pick region near your users).
 4. In Project Settings → Your apps → register a Web app, copy the config into

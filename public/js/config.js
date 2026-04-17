@@ -10,11 +10,13 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getAuth } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import { getFirestore } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 
+// Project ID is "gain". Fill in apiKey, messagingSenderId, and appId from
+// Firebase Console → Project settings → Your apps → Web app → Config.
 const firebaseConfig = {
   apiKey: 'REPLACE_WITH_YOUR_API_KEY',
-  authDomain: 'gain-app.firebaseapp.com',
-  projectId: 'gain-app',
-  storageBucket: 'gain-app.appspot.com',
+  authDomain: 'gain.firebaseapp.com',
+  projectId: 'gain',
+  storageBucket: 'gain.appspot.com',
   messagingSenderId: 'REPLACE_WITH_YOUR_SENDER_ID',
   appId: 'REPLACE_WITH_YOUR_APP_ID'
 };
