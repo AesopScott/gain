@@ -1,0 +1,144 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---------- helpers ----------
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function uid() {
+      return request.auth.uid;
+    }
+    function memberDoc(companyId) {
+      return get(/databases/$(database)/documents/companies/$(companyId)/members/$(uid()));
+    }
+    function isMember(companyId) {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/companies/$(companyId)/members/$(uid()));
+    }
+    function memberRole(companyId) {
+      return memberDoc(companyId).data.role;
+    }
+    function isOwner(companyId) {
+      return isMember(companyId) && memberRole(companyId) == 'owner';
+    }
+    function isAdmin(companyId) {
+      return isMember(companyId) && memberRole(companyId) in ['owner', 'admin'];
+    }
+    function isEditor(companyId) {
+      return isMember(companyId) && memberRole(companyId) in ['owner', 'admin', 'editor'];
+    }
+
+    // ---------- user profiles ----------
+    // Each authenticated user has a /users/{uid} doc with their display name and
+    // list of companies they belong to. A user may only read or write their own.
+    match /users/{userId} {
+      allow read: if isSignedIn() && uid() == userId;
+      allow create: if isSignedIn() && uid() == userId;
+      allow update: if isSignedIn() && uid() == userId;
+      allow delete: if false;
+    }
+
+    // ---------- companies ----------
+    // A company document contains shared metadata (name, owner, created date).
+    // Members are a subcollection; the member doc's presence is the gate for
+    // access to all nested collections.
+    match /companies/{companyId} {
+      // Anyone signed in can create a new company (they become owner in a
+      // transactional client call that also creates their member doc).
+      allow create: if isSignedIn() &&
+        request.resource.data.ownerUid == uid();
+
+      // Only members can read the company document.
+      allow read: if isMember(companyId);
+
+      // Only owners/admins can update top-level company fields.
+      allow update: if isAdmin(companyId);
+
+      // Only owner can delete (rarely used; usually soft-delete via archived flag)
+      allow delete: if isOwner(companyId);
+
+      // --- members subcollection ---
+      // A member doc models role + email + joined date. Members can see each
+      // other; admins can add/remove members; users can read their own member doc.
+      match /members/{memberUid} {
+        allow read: if isMember(companyId) || uid() == memberUid;
+        // Three paths to create a member doc:
+        //   (a) an existing admin adds someone,
+        //   (b) the owner self-creates their owner record at company-creation time,
+        //   (c) an invited user self-redeems by passing a matching inviteId.
+        allow create: if
+          isAdmin(companyId)
+          || (isSignedIn() && uid() == memberUid &&
+              get(/databases/$(database)/documents/companies/$(companyId)).data.ownerUid == uid())
+          || (isSignedIn() && uid() == memberUid &&
+              request.resource.data.inviteId is string &&
+              get(/databases/$(database)/documents/invites/$(request.resource.data.inviteId)).data.email == request.auth.token.email &&
+              get(/databases/$(database)/documents/invites/$(request.resource.data.inviteId)).data.companyId == companyId &&
+              get(/databases/$(database)/documents/invites/$(request.resource.data.inviteId)).data.role == request.resource.data.role);
+        allow update: if isAdmin(companyId);
+        allow delete: if isAdmin(companyId) && memberUid != get(/databases/$(database)/documents/companies/$(companyId)).data.ownerUid;
+      }
+
+      // --- framework posture ---
+      match /frameworkPosture/{docId} {
+        allow read: if isMember(companyId);
+        allow write: if isAdmin(companyId);
+      }
+
+      // --- use case intake ---
+      match /intake/{useCaseId} {
+        allow read: if isMember(companyId);
+        allow create, update: if isEditor(companyId);
+        allow delete: if isAdmin(companyId);
+      }
+
+      // --- AI system inventory ---
+      match /inventory/{systemId} {
+        allow read: if isMember(companyId);
+        allow create, update: if isEditor(companyId);
+        allow delete: if isAdmin(companyId);
+      }
+
+      // --- AI Impact Assessments ---
+      match /aias/{aiaId} {
+        allow read: if isMember(companyId);
+        allow create, update: if isEditor(companyId);
+        allow delete: if isAdmin(companyId);
+      }
+
+      // --- Risk register ---
+      match /risks/{riskId} {
+        allow read: if isMember(companyId);
+        allow create, update: if isEditor(companyId);
+        allow delete: if isAdmin(companyId);
+      }
+
+      // --- audit log ---
+      // Append-only journal written by editors, readable by members, never updated or deleted
+      match /audit/{eventId} {
+        allow read: if isMember(companyId);
+        allow create: if isEditor(companyId) &&
+          request.resource.data.actorUid == uid();
+        allow update, delete: if false;
+      }
+    }
+
+    // ---------- invites ----------
+    // Sent by an admin with a target email. When a new user signs up with that
+    // email, their client redeems the invite (creates a member doc, deletes invite).
+    match /invites/{inviteId} {
+      allow read: if isSignedIn() &&
+        (request.auth.token.email == resource.data.email ||
+         isAdmin(resource.data.companyId));
+      allow create: if isSignedIn() &&
+        isAdmin(request.resource.data.companyId) &&
+        request.resource.data.inviterUid == uid();
+      allow delete: if isSignedIn() &&
+        (request.auth.token.email == resource.data.email ||
+         isAdmin(resource.data.companyId));
+      allow update: if false;
+    }
+  }
+}

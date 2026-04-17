@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GAIN — AI Impact Assessments</title>
+  <link rel="stylesheet" href="/css/gain-theme.css" />
+</head>
+<body>
+
+  <div data-site-header></div>
+
+  <main class="app-shell">
+
+    <div class="flex-between">
+      <h1 class="page-title">AI Impact Assessments</h1>
+      <button class="btn btn-primary" data-new data-editor-only>+ New AIA</button>
+    </div>
+
+    <p class="page-lead">
+      An AIA documents the intended use, stakeholders, data, fairness analysis, safety
+      controls, human oversight, and residual risk acceptance for a specific AI system.
+      Required for any system tiered <strong>high</strong>. Renewed on material change
+      or annually.
+    </p>
+
+    <div class="card">
+      <table class="data">
+        <thead>
+          <tr>
+            <th>System</th>
+            <th>Version</th>
+            <th>Impact score</th>
+            <th>Status</th>
+            <th>Last review</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody data-rows></tbody>
+      </table>
+    </div>
+
+    <div data-site-footer></div>
+  </main>
+
+  <script type="module">
+    import { requireCompany, canEdit, canAdmin } from '/js/session.js';
+    import { renderHeader, renderFooter, toast, openModal, confirmDialog, serializeForm, escapeHTML, formatDate } from '/js/ui.js';
+    import { listDocs, createRecord, updateRecord, deleteRecord, getRecord, logEvent } from '/js/data.js';
+
+    const { user, memberships, company, member } = await requireCompany();
+    renderHeader({ user, company, memberships });
+    renderFooter();
+
+    const editorOK = canEdit(member);
+    const adminOK = canAdmin(member);
+    if (!editorOK) document.querySelectorAll('[data-editor-only]').forEach(el => el.setAttribute('disabled', 'disabled'));
+
+    const inventory = await listDocs(company.id, 'inventory');
+
+    async function refresh() {
+      const rows = await listDocs(company.id, 'aias', { orderBy: [['updatedAt', 'desc']] });
+      const tbody = document.querySelector('[data-rows]');
+      if (rows.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="empty-state">No AIAs yet.</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = rows.map(r => {
+        const sys = inventory.find(s => s.id === r.systemId);
+        return `
+          <tr>
+            <td><a href="#" data-open="${escapeHTML(r.id)}">${escapeHTML(sys?.name || r.systemName || '(unknown)')}</a></td>
+            <td>${escapeHTML(r.version || 'v1')}</td>
+            <td>${renderImpactBadge(r.impactScore)}</td>
+            <td><span class="status-pill status-${escapeHTML(r.status || 'draft')}">${escapeHTML(r.status || 'draft')}</span></td>
+            <td>${formatDate(r.reviewedAt || r.updatedAt)}</td>
+            <td>${editorOK ? `<button class="btn btn-ghost btn-sm" data-open="${escapeHTML(r.id)}">Open</button>` : ''}</td>
+          </tr>
+        `;
+      }).join('');
+      tbody.querySelectorAll('[data-open]').forEach(el => {
+        el.addEventListener('click', async (e) => {
+          e.preventDefault();
+          const id = e.currentTarget.dataset.open;
+          const rec = await getRecord(company.id, 'aias', id);
+          openEditor(rec);
+        });
+      });
+    }
+    refresh();
+
+    function renderImpactBadge(score) {
+      if (score == null || score === '') return '<span class="text-muted">—</span>';
+      const n = Number(score);
+      let tier = 'minimal';
+      if (n >= 15) tier = 'high';
+      else if (n >= 8) tier = 'limited';
+      return `<span class="badge badge-${tier}">${n}</span>`;
+    }
+
+    document.querySelector('[data-new]').addEventListener('click', () => {
+      if (!editorOK) return;
+      openEditor(null);
+    });
+
+    function inventorySelectOptions(selectedId) {
+      return `
+        <option value="">— pick a system from inventory —</option>
+        ${inventory.map(s => `<option value="${escapeHTML(s.id)}" ${selectedId===s.id?'selected':''}>${escapeHTML(s.name)}</option>`).join('')}
+      `;
+    }
+
+    function formHTML(v = {}) {
+      return `
+        <div class="grid-2">
+          <div class="field"><label>Linked inventory system *</label>
+            <select name="systemId" required>${inventorySelectOptions(v.systemId)}</select>
+          </div>
+          <div class="field"><label>Version</label>
+            <input name="version" value="${escapeHTML(v.version || 'v1')}" />
+          </div>
+        </div>
+
+        <h3 class="aia-section">1 · Purpose &amp; stakeholders</h3>
+        <div class="field"><label>Intended purpose</label>
+          <textarea name="purpose" rows="2">${escapeHTML(v.purpose || '')}</textarea>
+        </div>
+        <div class="field"><label>Affected stakeholders (internal + external)</label>
+          <textarea name="stakeholders" rows="2">${escapeHTML(v.stakeholders || '')}</textarea>
+        </div>
+        <div class="field"><label>Out-of-scope uses explicitly prohibited</label>
+          <textarea name="outOfScope" rows="2">${escapeHTML(v.outOfScope || '')}</textarea>
+        </div>
+
+        <h3 class="aia-section">2 · Data</h3>
+        <div class="field"><label>Data sources + lawful basis</label>
+          <textarea name="dataSources" rows="2">${escapeHTML(v.dataSources || '')}</textarea>
+        </div>
+        <div class="field"><label>Known limitations / representativeness gaps</label>
+          <textarea name="dataGaps" rows="2">${escapeHTML(v.dataGaps || '')}</textarea>
+        </div>
+
+        <h3 class="aia-section">3 · Fairness &amp; rights impact</h3>
+        <div class="field"><label>Protected groups potentially affected</label>
+          <textarea name="protectedGroups" rows="2" placeholder="e.g., race, sex, age, disability, national origin">${escapeHTML(v.protectedGroups || '')}</textarea>
+        </div>
+        <div class="field"><label>Disparate impact testing performed?</label>
+          <select name="disparateImpactTested">
+            <option value="">—</option>
+            <option ${v.disparateImpactTested==='yes'?'selected':''} value="yes">Yes</option>
+            <option ${v.disparateImpactTested==='no'?'selected':''} value="no">No</option>
+            <option ${v.disparateImpactTested==='n/a'?'selected':''} value="n/a">N/A</option>
+          </select>
+        </div>
+        <div class="field"><label>Findings + mitigations</label>
+          <textarea name="fairnessFindings" rows="3">${escapeHTML(v.fairnessFindings || '')}</textarea>
+        </div>
+
+        <h3 class="aia-section">4 · Safety, accuracy, robustness</h3>
+        <div class="field"><label>Known failure modes</label>
+          <textarea name="failureModes" rows="2">${escapeHTML(v.failureModes || '')}</textarea>
+        </div>
+        <div class="field"><label>Measured accuracy / precision / recall (if applicable)</label>
+          <textarea name="metrics" rows="2">${escapeHTML(v.metrics || '')}</textarea>
+        </div>
+        <div class="field"><label>Adversarial / red-team testing summary</label>
+          <textarea name="redTeam" rows="2">${escapeHTML(v.redTeam || '')}</textarea>
+        </div>
+
+        <h3 class="aia-section">5 · Human oversight</h3>
+        <div class="field"><label>Decision mode</label>
+          <select name="decisionMode">
+            <option value="">—</option>
+            <option ${v.decisionMode==='advisor'?'selected':''} value="advisor">Advisor — human makes the decision</option>
+            <option ${v.decisionMode==='hitl'?'selected':''} value="hitl">Human-in-the-loop — human approves each output</option>
+            <option ${v.decisionMode==='hotl'?'selected':''} value="hotl">Human-on-the-loop — human oversees patterns</option>
+            <option ${v.decisionMode==='autonomous'?'selected':''} value="autonomous">Autonomous — no routine human review</option>
+          </select>
+        </div>
+        <div class="field"><label>Override / appeal mechanism</label>
+          <textarea name="override" rows="2">${escapeHTML(v.override || '')}</textarea>
+        </div>
+
+        <h3 class="aia-section">6 · Impact score</h3>
+        <p class="text-muted">
+          Score 1–5 on each. Sum scales impact (20+ → high, 10–19 → limited, ≤ 9 → minimal).
+        </p>
+        <div class="grid-2">
+          <div class="field"><label>Severity if wrong</label>
+            <select name="impactSeverity">${sel(v.impactSeverity, 1, 5)}</select>
+          </div>
+          <div class="field"><label>Reversibility (5 = not reversible)</label>
+            <select name="impactReversibility">${sel(v.impactReversibility, 1, 5)}</select>
+          </div>
+          <div class="field"><label>Scale (people affected)</label>
+            <select name="impactScale">${sel(v.impactScale, 1, 5)}</select>
+          </div>
+          <div class="field"><label>Sensitivity of data</label>
+            <select name="impactSensitivity">${sel(v.impactSensitivity, 1, 5)}</select>
+          </div>
+          <div class="field"><label>Autonomy of system</label>
+            <select name="impactAutonomy">${sel(v.impactAutonomy, 1, 5)}</select>
+          </div>
+        </div>
+        <p class="text-muted">Computed impact score: <strong data-impact-total>—</strong></p>
+
+        <h3 class="aia-section">7 · Decision</h3>
+        <div class="grid-2">
+          <div class="field"><label>Status</label>
+            <select name="status">
+              <option ${v.status==='draft'?'selected':''} value="draft">draft</option>
+              <option ${v.status==='review'?'selected':''} value="review">review</option>
+              <option ${v.status==='approved'?'selected':''} value="approved">approved</option>
+              <option ${v.status==='rejected'?'selected':''} value="rejected">rejected</option>
+              <option ${v.status==='renewal-due'?'selected':''} value="renewal-due">renewal-due</option>
+            </select>
+          </div>
+          <div class="field"><label>Reviewed by (name, role, date)</label>
+            <input name="reviewedBy" value="${escapeHTML(v.reviewedBy || '')}" />
+          </div>
+        </div>
+        <div class="field"><label>Residual risk acceptance statement</label>
+          <textarea name="acceptance" rows="3">${escapeHTML(v.acceptance || '')}</textarea>
+        </div>
+      `;
+    }
+
+    function sel(current, min, max) {
+      let out = '<option value="">—</option>';
+      for (let i = min; i <= max; i++) {
+        out += `<option ${String(current)===String(i)?'selected':''} value="${i}">${i}</option>`;
+      }
+      return out;
+    }
+
+    function openEditor(rec) {
+      const isNew = !rec;
+      const form = document.createElement('form');
+      form.className = 'stacked-form';
+      form.innerHTML = formHTML(rec || {});
+
+      // Compute impact total live.
+      const totalEl = form.querySelector('[data-impact-total]');
+      function recompute() {
+        const fields = ['impactSeverity','impactReversibility','impactScale','impactSensitivity','impactAutonomy'];
+        let sum = 0, has = false;
+        for (const f of fields) {
+          const v = Number(form.querySelector(`[name="${f}"]`).value);
+          if (!Number.isNaN(v) && v > 0) { sum += v; has = true; }
+        }
+        totalEl.textContent = has ? sum : '—';
+      }
+      for (const f of ['impactSeverity','impactReversibility','impactScale','impactSensitivity','impactAutonomy']) {
+        form.querySelector(`[name="${f}"]`).addEventListener('change', recompute);
+      }
+      recompute();
+
+      const actions = [{ label: 'Close', variant: 'ghost', onClick: ({ close }) => close() }];
+      if (editorOK) {
+        actions.push({
+          label: isNew ? 'Save AIA' : 'Save',
+          variant: 'primary',
+          onClick: async ({ close }) => {
+            if (!form.reportValidity()) return;
+            const data = serializeForm(form);
+            const score = ['impactSeverity','impactReversibility','impactScale','impactSensitivity','impactAutonomy']
+              .reduce((s, k) => s + (Number(data[k]) || 0), 0);
+            data.impactScore = score;
+            if (data.status === 'approved' || data.status === 'review') {
+              data.reviewedAt = new Date();
+            }
+            // Convenience: store system name snapshot so deletion of inventory item doesn't lose context.
+            const sys = inventory.find(s => s.id === data.systemId);
+            if (sys) data.systemName = sys.name;
+            try {
+              if (isNew) {
+                const id = await createRecord(company.id, 'aias', data, user.uid);
+                await logEvent(company.id, { actorUid: user.uid, actorName: user.displayName || user.email, action: 'aia.create', target: id, details: { systemId: data.systemId } });
+                toast('AIA created.', 'success');
+              } else {
+                await updateRecord(company.id, 'aias', rec.id, data, user.uid);
+                await logEvent(company.id, { actorUid: user.uid, actorName: user.displayName || user.email, action: 'aia.update', target: rec.id, details: { status: data.status } });
+                toast('Saved.', 'success');
+              }
+              close();
+              refresh();
+            } catch (err) {
+              toast(err.message, 'error', 5000);
+            }
+          }
+        });
+      }
+      if (!isNew && adminOK) {
+        actions.unshift({
+          label: 'Delete',
+          variant: 'danger',
+          onClick: async ({ close }) => {
+            const ok = await confirmDialog({ title: 'Delete this AIA?', message: 'This cannot be undone.', confirmLabel: 'Delete', variant: 'danger' });
+            if (!ok) return;
+            try {
+              await deleteRecord(company.id, 'aias', rec.id);
+              await logEvent(company.id, { actorUid: user.uid, actorName: user.displayName || user.email, action: 'aia.delete', target: rec.id });
+              toast('Deleted.', 'success');
+              close();
+              refresh();
+            } catch (err) {
+              toast(err.message, 'error', 5000);
+            }
+          }
+        });
+      }
+      openModal({
+        title: isNew ? 'New AIA' : `AIA · ${rec.systemName || '(system)'}`,
+        body: form,
+        actions
+      });
+    }
+  </script>
+
+</body>
+</html>

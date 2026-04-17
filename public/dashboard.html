@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GAIN — Dashboard</title>
+  <link rel="stylesheet" href="/css/gain-theme.css" />
+</head>
+<body>
+
+  <div data-site-header></div>
+
+  <main class="app-shell">
+
+    <section id="no-companies" class="hidden">
+      <div class="card card-hero">
+        <h1 class="page-title">Welcome to GAIN</h1>
+        <p>
+          You're not a member of any companies yet. Create a new company
+          workspace to start building your AI governance program, or wait for
+          an admin to invite you.
+        </p>
+        <button class="btn btn-primary" data-new-company>Create a company</button>
+      </div>
+    </section>
+
+    <section id="has-companies" class="hidden">
+
+      <div class="flex-between">
+        <h1 class="page-title">Program dashboard</h1>
+        <button class="btn btn-secondary" data-new-company>+ New company</button>
+      </div>
+
+      <div class="card">
+        <div class="flex-between">
+          <div>
+            <h2 class="card-title" data-company-name></h2>
+            <p class="text-muted" data-company-sub></p>
+          </div>
+          <a class="btn btn-ghost" href="/settings.html">Settings</a>
+        </div>
+      </div>
+
+      <div class="grid-3 section-sep">
+        <div class="card stat">
+          <div class="stat-label">AI systems in inventory</div>
+          <div class="stat-value" data-stat-inventory>—</div>
+          <a class="stat-link" href="/inventory.html">View inventory →</a>
+        </div>
+        <div class="card stat">
+          <div class="stat-label">Open intake requests</div>
+          <div class="stat-value" data-stat-intake>—</div>
+          <a class="stat-link" href="/intake.html">Review intake →</a>
+        </div>
+        <div class="card stat">
+          <div class="stat-label">High / prohibited risks</div>
+          <div class="stat-value" data-stat-risks>—</div>
+          <a class="stat-link" href="/risks.html">Open risk register →</a>
+        </div>
+      </div>
+
+      <div class="card section-sep">
+        <h2 class="card-title">Program build checklist</h2>
+        <p class="text-muted">Work through these in order. You can revisit any step at any time.</p>
+        <ol class="progress-checklist" data-progress></ol>
+      </div>
+
+    </section>
+
+    <div data-site-footer></div>
+  </main>
+
+  <script type="module">
+    import { requireAuth, setActiveCompanyId, getActiveCompanyId } from '/js/session.js';
+    import { renderHeader, renderFooter, toast, openModal, serializeForm, escapeHTML } from '/js/ui.js';
+    import { createCompany, getCompany, getPosture, listDocs } from '/js/data.js';
+
+    const { user, memberships } = await requireAuth();
+
+    const noCompanies = document.getElementById('no-companies');
+    const hasCompanies = document.getElementById('has-companies');
+
+    if (memberships.length === 0) {
+      noCompanies.classList.remove('hidden');
+      renderHeader({ user, company: null, memberships });
+      renderFooter();
+    } else {
+      // Ensure active company is valid.
+      let activeId = getActiveCompanyId();
+      if (!activeId || !memberships.find(m => m.company.id === activeId)) {
+        activeId = memberships[0].company.id;
+        setActiveCompanyId(activeId);
+      }
+      const active = memberships.find(m => m.company.id === activeId);
+      const company = active.company;
+
+      renderHeader({ user, company, memberships });
+      renderFooter();
+
+      document.querySelector('[data-company-name]').textContent = company.name || '(unnamed)';
+      const subParts = [];
+      if (company.industry) subParts.push(company.industry);
+      if (company.size) subParts.push(company.size);
+      subParts.push(`Your role: ${active.member.role}`);
+      document.querySelector('[data-company-sub]').textContent = subParts.join(' · ');
+
+      hasCompanies.classList.remove('hidden');
+
+      // Load stats in parallel.
+      const [inventory, intake, risks, posture] = await Promise.all([
+        listDocs(company.id, 'inventory'),
+        listDocs(company.id, 'intake'),
+        listDocs(company.id, 'risks'),
+        getPosture(company.id)
+      ]);
+
+      document.querySelector('[data-stat-inventory]').textContent = inventory.length;
+      const openIntake = intake.filter(i => !['approved', 'rejected', 'withdrawn'].includes(i.status)).length;
+      document.querySelector('[data-stat-intake]').textContent = openIntake;
+      const highRisks = risks.filter(r => ['prohibited', 'high'].includes((r.residualTier || '').toLowerCase())).length;
+      document.querySelector('[data-stat-risks]').textContent = highRisks;
+
+      renderProgress({ posture, inventory, intake, risks });
+    }
+
+    // ---------- progress checklist ----------
+    function renderProgress({ posture, inventory, intake, risks }) {
+      const steps = [
+        {
+          label: '1. Select your governance framework',
+          hint: 'Pick your operating framework, management system, jurisdictions, and maturity target.',
+          href: '/framework.html',
+          done: !!(posture && posture.ratifiedAt)
+        },
+        {
+          label: '2. Start your AI system inventory',
+          hint: 'Record every AI system — in production, pilot, and planned.',
+          href: '/inventory.html',
+          done: inventory.length > 0
+        },
+        {
+          label: '3. Route new ideas through intake',
+          hint: 'Every new AI use case begins with a standardized intake request.',
+          href: '/intake.html',
+          done: intake.length > 0
+        },
+        {
+          label: '4. Run AI Impact Assessments',
+          hint: 'Every high-impact system needs a completed AIA before it goes live.',
+          href: '/aia.html',
+          done: false // set below
+        },
+        {
+          label: '5. Maintain the risk register',
+          hint: 'Track inherent and residual risk per system; treat each entry.',
+          href: '/risks.html',
+          done: risks.length > 0
+        }
+      ];
+      // We defer checking AIA count to avoid an extra read earlier; fire and forget.
+      const container = document.querySelector('[data-progress]');
+      container.innerHTML = steps.map(s => `
+        <li class="checklist-item ${s.done ? 'done' : ''}">
+          <span class="checklist-check" aria-hidden="true"></span>
+          <div class="checklist-body">
+            <a href="${s.href}" class="checklist-label">${escapeHTML(s.label)}</a>
+            <p class="checklist-hint">${escapeHTML(s.hint)}</p>
+          </div>
+        </li>
+      `).join('');
+    }
+
+    // ---------- new company modal ----------
+    for (const btn of document.querySelectorAll('[data-new-company]')) {
+      btn.addEventListener('click', openNewCompanyDialog);
+    }
+
+    function openNewCompanyDialog() {
+      const form = document.createElement('form');
+      form.className = 'stacked-form';
+      form.innerHTML = `
+        <div class="field">
+          <label>Company name</label>
+          <input name="name" required autofocus />
+        </div>
+        <div class="field">
+          <label>Industry</label>
+          <input name="industry" placeholder="e.g., Education, Healthcare" />
+        </div>
+        <div class="field">
+          <label>Size</label>
+          <select name="size">
+            <option value="">—</option>
+            <option>1–25</option>
+            <option>26–100</option>
+            <option>101–500</option>
+            <option>501–2,500</option>
+            <option>2,501+</option>
+          </select>
+        </div>
+      `;
+
+      const { close } = openModal({
+        title: 'Create a new company workspace',
+        body: form,
+        actions: [
+          { label: 'Cancel', variant: 'ghost', onClick: ({ close }) => close() },
+          {
+            label: 'Create',
+            variant: 'primary',
+            onClick: async ({ close }) => {
+              const data = serializeForm(form);
+              if (!data.name) return;
+              try {
+                const companyId = await createCompany({
+                  uid: user.uid,
+                  email: user.email,
+                  displayName: user.displayName || '',
+                  name: data.name,
+                  industry: data.industry || '',
+                  size: data.size || ''
+                });
+                setActiveCompanyId(companyId);
+                toast(`Created "${data.name}"`, 'success');
+                close();
+                setTimeout(() => window.location.reload(), 400);
+              } catch (err) {
+                console.error(err);
+                toast('Failed to create company: ' + err.message, 'error', 5000);
+              }
+            }
+          }
+        ]
+      });
+    }
+  </script>
+
+</body>
+</html>

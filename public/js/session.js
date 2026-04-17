@@ -1,0 +1,178 @@
+// Session / auth helpers.
+//
+// Every protected page should call requireAuth() at the top of its module
+// script. That function returns a promise that resolves with { user, memberships }
+// once the user is signed in, or redirects to /index.html if they aren't.
+//
+// The "active company" is stored in localStorage under `gain.activeCompanyId`.
+// A page that needs a company context should call requireCompany() which
+// resolves with { user, company, member, memberships } or redirects to the
+// dashboard if no company is picked yet.
+
+import { auth, db } from './config.js';
+import {
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  sendPasswordResetEmail,
+  signOut,
+  updateProfile
+} from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+import {
+  doc,
+  getDoc,
+  setDoc,
+  updateDoc,
+  serverTimestamp,
+  collection,
+  getDocs,
+  query,
+  where
+} from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+
+const ACTIVE_COMPANY_KEY = 'gain.activeCompanyId';
+
+// ---------- auth ----------
+
+export function onAuth(cb) {
+  return onAuthStateChanged(auth, cb);
+}
+
+export function currentUser() {
+  return auth.currentUser;
+}
+
+export async function signIn(email, password) {
+  const cred = await signInWithEmailAndPassword(auth, email, password);
+  return cred.user;
+}
+
+export async function signUp(email, password, displayName) {
+  const cred = await createUserWithEmailAndPassword(auth, email, password);
+  const user = cred.user;
+  if (displayName) {
+    await updateProfile(user, { displayName });
+  }
+  // Create /users/{uid}
+  await setDoc(doc(db, 'users', user.uid), {
+    displayName: displayName || '',
+    email: user.email,
+    createdAt: serverTimestamp(),
+    companyIds: []
+  }, { merge: true });
+  return user;
+}
+
+export async function resetPassword(email) {
+  await sendPasswordResetEmail(auth, email);
+}
+
+export async function logOut() {
+  localStorage.removeItem(ACTIVE_COMPANY_KEY);
+  await signOut(auth);
+}
+
+// ---------- user profile ----------
+
+export async function getUserProfile(uid) {
+  const snap = await getDoc(doc(db, 'users', uid));
+  return snap.exists() ? { id: snap.id, ...snap.data() } : null;
+}
+
+export async function upsertUserProfile(user, patch = {}) {
+  await setDoc(doc(db, 'users', user.uid), {
+    displayName: user.displayName || patch.displayName || '',
+    email: user.email,
+    ...patch
+  }, { merge: true });
+}
+
+// ---------- memberships ----------
+
+// Returns the list of companies this user belongs to, by reading the member
+// docs via a collection-group query. Each result includes the company doc.
+export async function loadMemberships(uid) {
+  const q = query(collection(db, 'users', uid, 'memberCache'));
+  // The memberCache subcollection is optional — the source of truth is the
+  // companyIds array on the user doc. We hydrate each company doc by id.
+  const profile = await getUserProfile(uid);
+  const ids = (profile && Array.isArray(profile.companyIds)) ? profile.companyIds : [];
+  const results = [];
+  for (const companyId of ids) {
+    try {
+      const companySnap = await getDoc(doc(db, 'companies', companyId));
+      if (!companySnap.exists()) continue;
+      const memberSnap = await getDoc(doc(db, 'companies', companyId, 'members', uid));
+      if (!memberSnap.exists()) continue;
+      results.push({
+        company: { id: companySnap.id, ...companySnap.data() },
+        member: { id: memberSnap.id, ...memberSnap.data() }
+      });
+    } catch (e) {
+      console.warn('Failed to load company', companyId, e);
+    }
+  }
+  results.sort((a, b) => (a.company.name || '').localeCompare(b.company.name || ''));
+  return results;
+}
+
+// ---------- active company ----------
+
+export function getActiveCompanyId() {
+  return localStorage.getItem(ACTIVE_COMPANY_KEY) || null;
+}
+
+export function setActiveCompanyId(companyId) {
+  if (companyId) {
+    localStorage.setItem(ACTIVE_COMPANY_KEY, companyId);
+  } else {
+    localStorage.removeItem(ACTIVE_COMPANY_KEY);
+  }
+}
+
+// ---------- guards ----------
+
+// Resolves when signed in, redirects to /index.html otherwise.
+export function requireAuth() {
+  return new Promise((resolve) => {
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        window.location.href = '/index.html';
+        return;
+      }
+      const memberships = await loadMemberships(user.uid);
+      resolve({ user, memberships });
+    });
+  });
+}
+
+// Requires both auth AND an active company. Redirects to /dashboard.html if no
+// active company is set or the user isn't a member of the saved one.
+export async function requireCompany() {
+  const { user, memberships } = await requireAuth();
+  const activeId = getActiveCompanyId();
+  const match = memberships.find(m => m.company.id === activeId);
+  if (!match) {
+    window.location.href = '/dashboard.html';
+    return new Promise(() => {}); // never resolves; page is redirecting
+  }
+  return { user, memberships, company: match.company, member: match.member };
+}
+
+// ---------- role helpers ----------
+
+export function roleRank(role) {
+  return { owner: 4, admin: 3, editor: 2, viewer: 1 }[role] || 0;
+}
+
+export function canEdit(member) {
+  return member && roleRank(member.role) >= roleRank('editor');
+}
+
+export function canAdmin(member) {
+  return member && roleRank(member.role) >= roleRank('admin');
+}
+
+export function isOwner(member) {
+  return member && member.role === 'owner';
+}

@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GAIN — Sign in</title>
+  <link rel="stylesheet" href="/css/gain-theme.css" />
+</head>
+<body class="auth-shell">
+
+  <main class="auth-card">
+    <div class="auth-brand">
+      <span class="brand-mark brand-mark-lg">GAIN</span>
+      <span class="brand-tagline">Governance for AI, Navigated</span>
+    </div>
+
+    <div class="auth-tabs" role="tablist">
+      <button class="auth-tab active" data-tab="signin" role="tab">Sign in</button>
+      <button class="auth-tab" data-tab="signup" role="tab">Create account</button>
+      <button class="auth-tab" data-tab="reset" role="tab">Forgot password</button>
+    </div>
+
+    <form id="form-signin" class="auth-form active" data-pane="signin" autocomplete="on">
+      <div class="field">
+        <label for="signin-email">Work email</label>
+        <input id="signin-email" type="email" name="email" required autocomplete="email" />
+      </div>
+      <div class="field">
+        <label for="signin-password">Password</label>
+        <input id="signin-password" type="password" name="password" required autocomplete="current-password" />
+      </div>
+      <button type="submit" class="btn btn-primary btn-block">Sign in</button>
+      <p class="auth-msg" data-msg></p>
+    </form>
+
+    <form id="form-signup" class="auth-form" data-pane="signup" autocomplete="on">
+      <div class="field">
+        <label for="signup-name">Your name</label>
+        <input id="signup-name" type="text" name="displayName" required autocomplete="name" />
+      </div>
+      <div class="field">
+        <label for="signup-email">Work email</label>
+        <input id="signup-email" type="email" name="email" required autocomplete="email" />
+      </div>
+      <div class="field">
+        <label for="signup-password">Password</label>
+        <input id="signup-password" type="password" name="password" required minlength="8" autocomplete="new-password" />
+        <p class="field-hint">At least 8 characters.</p>
+      </div>
+      <button type="submit" class="btn btn-primary btn-block">Create account</button>
+      <p class="auth-msg" data-msg></p>
+    </form>
+
+    <form id="form-reset" class="auth-form" data-pane="reset" autocomplete="on">
+      <div class="field">
+        <label for="reset-email">Work email</label>
+        <input id="reset-email" type="email" name="email" required autocomplete="email" />
+      </div>
+      <button type="submit" class="btn btn-primary btn-block">Send reset link</button>
+      <p class="auth-msg" data-msg></p>
+    </form>
+
+    <p class="auth-footnote">
+      GAIN keeps each company's governance data isolated. Your account can be
+      invited into one or many companies; you'll pick the active company after
+      you sign in.
+    </p>
+  </main>
+
+  <script type="module">
+    import { auth } from '/js/config.js';
+    import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+    import { signIn, signUp, resetPassword } from '/js/session.js';
+    import { listInvitesForEmail, redeemInvite } from '/js/data.js';
+
+    // If already signed in, skip straight to the dashboard.
+    onAuthStateChanged(auth, (user) => {
+      if (user) window.location.href = '/dashboard.html';
+    });
+
+    const tabs = document.querySelectorAll('.auth-tab');
+    const panes = document.querySelectorAll('.auth-form');
+    tabs.forEach(tab => tab.addEventListener('click', () => {
+      const target = tab.dataset.tab;
+      tabs.forEach(t => t.classList.toggle('active', t === tab));
+      panes.forEach(p => p.classList.toggle('active', p.dataset.pane === target));
+      // Clear any previous messages.
+      document.querySelectorAll('[data-msg]').forEach(m => { m.textContent = ''; m.className = 'auth-msg'; });
+    }));
+
+    function setMsg(form, text, ok) {
+      const el = form.querySelector('[data-msg]');
+      el.textContent = text || '';
+      el.className = 'auth-msg' + (text ? (ok ? ' ok' : ' err') : '');
+    }
+
+    // Sign in
+    document.getElementById('form-signin').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const form = e.currentTarget;
+      const email = form.email.value.trim();
+      const password = form.password.value;
+      setMsg(form, 'Signing in…', true);
+      try {
+        await signIn(email, password);
+        window.location.href = '/dashboard.html';
+      } catch (err) {
+        setMsg(form, friendlyError(err), false);
+      }
+    });
+
+    // Sign up (also redeems any pending invites for that email)
+    document.getElementById('form-signup').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const form = e.currentTarget;
+      const email = form.email.value.trim();
+      const password = form.password.value;
+      const displayName = form.displayName.value.trim();
+      setMsg(form, 'Creating account…', true);
+      try {
+        const user = await signUp(email, password, displayName);
+        // Try to auto-redeem invites; silently ignore failures so account still works.
+        try {
+          const invites = await listInvitesForEmail(email);
+          for (const inv of invites) {
+            await redeemInvite({
+              inviteId: inv.id,
+              companyId: inv.companyId,
+              uid: user.uid,
+              email,
+              displayName,
+              role: inv.role
+            });
+          }
+        } catch (inviteErr) {
+          console.warn('Invite redemption issue:', inviteErr);
+        }
+        window.location.href = '/dashboard.html';
+      } catch (err) {
+        setMsg(form, friendlyError(err), false);
+      }
+    });
+
+    // Reset
+    document.getElementById('form-reset').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const form = e.currentTarget;
+      const email = form.email.value.trim();
+      setMsg(form, 'Sending reset link…', true);
+      try {
+        await resetPassword(email);
+        setMsg(form, 'If that email is on file, a reset link is on its way.', true);
+      } catch (err) {
+        setMsg(form, friendlyError(err), false);
+      }
+    });
+
+    function friendlyError(err) {
+      const code = err?.code || '';
+      const map = {
+        'auth/invalid-email': 'That email address doesn\'t look right.',
+        'auth/user-disabled': 'That account has been disabled.',
+        'auth/user-not-found': 'No account matches that email.',
+        'auth/wrong-password': 'That password didn\'t match.',
+        'auth/invalid-credential': 'Email or password is incorrect.',
+        'auth/email-already-in-use': 'That email already has an account — try signing in.',
+        'auth/weak-password': 'Password needs to be at least 8 characters.',
+        'auth/too-many-requests': 'Too many attempts. Try again in a few minutes.'
+      };
+      return map[code] || err?.message || 'Something went wrong. Please try again.';
+    }
+  </script>
+
+</body>
+</html>

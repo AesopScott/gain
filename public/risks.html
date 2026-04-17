@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GAIN — Risk Register</title>
+  <link rel="stylesheet" href="/css/gain-theme.css" />
+</head>
+<body>
+
+  <div data-site-header></div>
+
+  <main class="app-shell">
+
+    <div class="flex-between">
+      <h1 class="page-title">Risk Register</h1>
+      <button class="btn btn-primary" data-new data-editor-only>+ Add risk</button>
+    </div>
+
+    <p class="page-lead">
+      Every risk has an owner, an inherent score, a treatment, and a residual score. Review
+      high-residual risks on cadence; close out retired ones with a decision note.
+    </p>
+
+    <div class="card">
+      <div class="filter-row">
+        <label>Residual tier:</label>
+        <select data-filter-tier>
+          <option value="">All</option>
+          <option value="high">High</option>
+          <option value="medium">Medium</option>
+          <option value="low">Low</option>
+        </select>
+        <label class="filter-gap">Status:</label>
+        <select data-filter-status>
+          <option value="">All</option>
+          <option value="open">Open</option>
+          <option value="treating">Treating</option>
+          <option value="accepted">Accepted</option>
+          <option value="closed">Closed</option>
+        </select>
+      </div>
+
+      <table class="data">
+        <thead>
+          <tr>
+            <th>Risk</th>
+            <th>System</th>
+            <th>Owner</th>
+            <th>Inherent</th>
+            <th>Treatment</th>
+            <th>Residual</th>
+            <th>Status</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody data-rows></tbody>
+      </table>
+    </div>
+
+    <div data-site-footer></div>
+  </main>
+
+  <script type="module">
+    import { requireCompany, canEdit, canAdmin } from '/js/session.js';
+    import { renderHeader, renderFooter, toast, openModal, confirmDialog, serializeForm, escapeHTML, formatDate } from '/js/ui.js';
+    import { listDocs, createRecord, updateRecord, deleteRecord, getRecord, logEvent } from '/js/data.js';
+
+    const { user, memberships, company, member } = await requireCompany();
+    renderHeader({ user, company, memberships });
+    renderFooter();
+
+    const editorOK = canEdit(member);
+    const adminOK = canAdmin(member);
+    if (!editorOK) document.querySelectorAll('[data-editor-only]').forEach(el => el.setAttribute('disabled', 'disabled'));
+
+    const inventory = await listDocs(company.id, 'inventory');
+
+    const tierFilter = document.querySelector('[data-filter-tier]');
+    const statusFilter = document.querySelector('[data-filter-status]');
+    tierFilter.addEventListener('change', refresh);
+    statusFilter.addEventListener('change', refresh);
+
+    async function refresh() {
+      const rows = await listDocs(company.id, 'risks', { orderBy: [['residualScore', 'desc']] });
+      const tv = tierFilter.value, sv = statusFilter.value;
+      const filtered = rows.filter(r =>
+        (!tv || scoreTier(r.residualScore) === tv) &&
+        (!sv || (r.status || '') === sv)
+      );
+      const tbody = document.querySelector('[data-rows]');
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" class="empty-state">No risks match.</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = filtered.map(r => {
+        const sys = inventory.find(s => s.id === r.systemId);
+        return `
+          <tr>
+            <td><a href="#" data-open="${escapeHTML(r.id)}">${escapeHTML(r.title || '(untitled)')}</a></td>
+            <td>${escapeHTML(sys?.name || r.systemName || '—')}</td>
+            <td>${escapeHTML(r.owner || '')}</td>
+            <td>${riskBadge(r.inherentScore)}</td>
+            <td>${escapeHTML(r.treatment || '—')}</td>
+            <td>${riskBadge(r.residualScore)}</td>
+            <td><span class="status-pill status-${escapeHTML(r.status || 'open')}">${escapeHTML(r.status || 'open')}</span></td>
+            <td>${editorOK ? `<button class="btn btn-ghost btn-sm" data-open="${escapeHTML(r.id)}">Open</button>` : ''}</td>
+          </tr>
+        `;
+      }).join('');
+      tbody.querySelectorAll('[data-open]').forEach(el => {
+        el.addEventListener('click', async (e) => {
+          e.preventDefault();
+          const id = e.currentTarget.dataset.open;
+          const rec = await getRecord(company.id, 'risks', id);
+          openEditor(rec);
+        });
+      });
+    }
+    refresh();
+
+    function scoreTier(score) {
+      if (score == null || score === '') return '';
+      const n = Number(score);
+      if (n >= 15) return 'high';
+      if (n >= 8) return 'medium';
+      return 'low';
+    }
+    function riskBadge(score) {
+      if (score == null || score === '') return '<span class="text-muted">—</span>';
+      const t = scoreTier(score);
+      return `<span class="badge badge-${t}">${score}</span>`;
+    }
+
+    document.querySelector('[data-new]').addEventListener('click', () => {
+      if (!editorOK) return;
+      openEditor(null);
+    });
+
+    function inventoryOptions(selected) {
+      return `<option value="">— none / cross-cutting —</option>
+        ${inventory.map(s => `<option ${s.id===selected?'selected':''} value="${escapeHTML(s.id)}">${escapeHTML(s.name)}</option>`).join('')}`;
+    }
+
+    function formHTML(v = {}) {
+      return `
+        <div class="field"><label>Risk title *</label>
+          <input name="title" required value="${escapeHTML(v.title || '')}" placeholder="e.g., LLM hallucinates case-law citations in legal briefs" />
+        </div>
+        <div class="field"><label>Linked system (optional)</label>
+          <select name="systemId">${inventoryOptions(v.systemId)}</select>
+        </div>
+        <div class="field"><label>Risk description (cause → event → consequence)</label>
+          <textarea name="description" rows="3">${escapeHTML(v.description || '')}</textarea>
+        </div>
+        <div class="field"><label>Risk owner (name, role)</label>
+          <input name="owner" value="${escapeHTML(v.owner || '')}" />
+        </div>
+        <div class="field"><label>Category</label>
+          <select name="category">
+            <option value="">—</option>
+            <option ${v.category==='accuracy'?'selected':''} value="accuracy">Accuracy / performance</option>
+            <option ${v.category==='bias'?'selected':''} value="bias">Bias / fairness</option>
+            <option ${v.category==='privacy'?'selected':''} value="privacy">Privacy / data protection</option>
+            <option ${v.category==='security'?'selected':''} value="security">Security</option>
+            <option ${v.category==='safety'?'selected':''} value="safety">Safety / harm</option>
+            <option ${v.category==='legal'?'selected':''} value="legal">Legal / regulatory</option>
+            <option ${v.category==='ip'?'selected':''} value="ip">IP / copyright</option>
+            <option ${v.category==='transparency'?'selected':''} value="transparency">Transparency / explainability</option>
+            <option ${v.category==='vendor'?'selected':''} value="vendor">Third-party / vendor</option>
+            <option ${v.category==='ops'?'selected':''} value="ops">Operational / availability</option>
+            <option ${v.category==='misuse'?'selected':''} value="misuse">Misuse / abuse</option>
+          </select>
+        </div>
+
+        <h3 class="aia-section">Inherent risk (before controls)</h3>
+        <div class="grid-2">
+          <div class="field"><label>Likelihood (1–5)</label>
+            <select name="inherentLikelihood">${sel(v.inherentLikelihood)}</select>
+          </div>
+          <div class="field"><label>Impact (1–5)</label>
+            <select name="inherentImpact">${sel(v.inherentImpact)}</select>
+          </div>
+        </div>
+        <p class="text-muted">Inherent score (L × I): <strong data-inherent>—</strong></p>
+
+        <h3 class="aia-section">Treatment</h3>
+        <div class="field"><label>Strategy</label>
+          <select name="treatment">
+            <option value="">—</option>
+            <option ${v.treatment==='avoid'?'selected':''} value="avoid">Avoid</option>
+            <option ${v.treatment==='mitigate'?'selected':''} value="mitigate">Mitigate</option>
+            <option ${v.treatment==='transfer'?'selected':''} value="transfer">Transfer</option>
+            <option ${v.treatment==='accept'?'selected':''} value="accept">Accept</option>
+          </select>
+        </div>
+        <div class="field"><label>Controls / actions</label>
+          <textarea name="controls" rows="3">${escapeHTML(v.controls || '')}</textarea>
+        </div>
+
+        <h3 class="aia-section">Residual risk (after controls)</h3>
+        <div class="grid-2">
+          <div class="field"><label>Likelihood (1–5)</label>
+            <select name="residualLikelihood">${sel(v.residualLikelihood)}</select>
+          </div>
+          <div class="field"><label>Impact (1–5)</label>
+            <select name="residualImpact">${sel(v.residualImpact)}</select>
+          </div>
+        </div>
+        <p class="text-muted">Residual score (L × I): <strong data-residual>—</strong></p>
+
+        <div class="grid-2">
+          <div class="field"><label>Status</label>
+            <select name="status">
+              <option ${v.status==='open'?'selected':''} value="open">open</option>
+              <option ${v.status==='treating'?'selected':''} value="treating">treating</option>
+              <option ${v.status==='accepted'?'selected':''} value="accepted">accepted</option>
+              <option ${v.status==='closed'?'selected':''} value="closed">closed</option>
+            </select>
+          </div>
+          <div class="field"><label>Next review date</label>
+            <input name="nextReview" type="date" value="${escapeHTML(v.nextReview || '')}" />
+          </div>
+        </div>
+        <div class="field"><label>Decision / notes</label>
+          <textarea name="notes" rows="2">${escapeHTML(v.notes || '')}</textarea>
+        </div>
+      `;
+    }
+
+    function sel(current) {
+      let out = '<option value="">—</option>';
+      for (let i = 1; i <= 5; i++) out += `<option ${String(current)===String(i)?'selected':''} value="${i}">${i}</option>`;
+      return out;
+    }
+
+    function openEditor(rec) {
+      const isNew = !rec;
+      const form = document.createElement('form');
+      form.className = 'stacked-form';
+      form.innerHTML = formHTML(rec || {});
+
+      const inherentEl = form.querySelector('[data-inherent]');
+      const residualEl = form.querySelector('[data-residual]');
+      function score(prefix) {
+        const l = Number(form.querySelector(`[name="${prefix}Likelihood"]`).value) || 0;
+        const i = Number(form.querySelector(`[name="${prefix}Impact"]`).value) || 0;
+        return (l && i) ? l * i : null;
+      }
+      function recompute() {
+        const inh = score('inherent');
+        const res = score('residual');
+        inherentEl.textContent = inh != null ? inh : '—';
+        residualEl.textContent = res != null ? res : '—';
+      }
+      for (const n of ['inherentLikelihood','inherentImpact','residualLikelihood','residualImpact']) {
+        form.querySelector(`[name="${n}"]`).addEventListener('change', recompute);
+      }
+      recompute();
+
+      const actions = [{ label: 'Close', variant: 'ghost', onClick: ({ close }) => close() }];
+      if (editorOK) {
+        actions.push({
+          label: isNew ? 'Add risk' : 'Save',
+          variant: 'primary',
+          onClick: async ({ close }) => {
+            if (!form.reportValidity()) return;
+            const data = serializeForm(form);
+            data.inherentScore = score.call(null, 'inherent') || 0;
+            data.residualScore = score.call(null, 'residual') || 0;
+            // capture live values
+            data.inherentScore = (Number(data.inherentLikelihood) || 0) * (Number(data.inherentImpact) || 0);
+            data.residualScore = (Number(data.residualLikelihood) || 0) * (Number(data.residualImpact) || 0);
+            data.residualTier = scoreTier(data.residualScore);
+            const sys = inventory.find(s => s.id === data.systemId);
+            if (sys) data.systemName = sys.name;
+            try {
+              if (isNew) {
+                const id = await createRecord(company.id, 'risks', data, user.uid);
+                await logEvent(company.id, { actorUid: user.uid, actorName: user.displayName || user.email, action: 'risk.create', target: id, details: { title: data.title } });
+                toast('Risk added.', 'success');
+              } else {
+                await updateRecord(company.id, 'risks', rec.id, data, user.uid);
+                await logEvent(company.id, { actorUid: user.uid, actorName: user.displayName || user.email, action: 'risk.update', target: rec.id });
+                toast('Saved.', 'success');
+              }
+              close();
+              refresh();
+            } catch (err) {
+              toast(err.message, 'error', 5000);
+            }
+          }
+        });
+      }
+      if (!isNew && adminOK) {
+        actions.unshift({
+          label: 'Delete',
+          variant: 'danger',
+          onClick: async ({ close }) => {
+            const ok = await confirmDialog({ title: 'Delete risk?', message: 'Prefer closing with a decision note for audit trail.', confirmLabel: 'Delete', variant: 'danger' });
+            if (!ok) return;
+            try {
+              await deleteRecord(company.id, 'risks', rec.id);
+              await logEvent(company.id, { actorUid: user.uid, actorName: user.displayName || user.email, action: 'risk.delete', target: rec.id });
+              toast('Deleted.', 'success');
+              close();
+              refresh();
+            } catch (err) {
+              toast(err.message, 'error', 5000);
+            }
+          }
+        });
+      }
+      openModal({
+        title: isNew ? 'New risk' : `Risk · ${rec.title || ''}`,
+        body: form,
+        actions
+      });
+    }
+  </script>
+
+</body>
+</html>

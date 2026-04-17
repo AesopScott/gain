@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GAIN — AI Use Case Intake</title>
+  <link rel="stylesheet" href="/css/gain-theme.css" />
+</head>
+<body>
+
+  <div data-site-header></div>
+
+  <main class="app-shell">
+
+    <div class="flex-between">
+      <h1 class="page-title">AI Use Case Intake</h1>
+      <button class="btn btn-primary" data-new-intake data-editor-only>+ New intake request</button>
+    </div>
+
+    <p class="page-lead">
+      Every new AI use case — whether building, buying, or enabling a vendor feature —
+      starts here. Governance reviews each request, then triages to AIA or declines.
+    </p>
+
+    <div class="card">
+      <div class="filter-row">
+        <label>Status:</label>
+        <select data-filter-status>
+          <option value="">All</option>
+          <option value="submitted">Submitted</option>
+          <option value="triage">In triage</option>
+          <option value="review">In review</option>
+          <option value="approved">Approved</option>
+          <option value="rejected">Rejected</option>
+          <option value="withdrawn">Withdrawn</option>
+        </select>
+      </div>
+      <table class="data">
+        <thead>
+          <tr>
+            <th>Title</th>
+            <th>Requester</th>
+            <th>Dept</th>
+            <th>Submitted</th>
+            <th>Status</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody data-intake-rows></tbody>
+      </table>
+    </div>
+
+    <div data-site-footer></div>
+  </main>
+
+  <script type="module">
+    import { requireCompany, canEdit, canAdmin } from '/js/session.js';
+    import { renderHeader, renderFooter, toast, openModal, confirmDialog, serializeForm, setFormValues, escapeHTML, formatDate } from '/js/ui.js';
+    import { listDocs, createRecord, updateRecord, deleteRecord, getRecord, logEvent } from '/js/data.js';
+
+    const { user, memberships, company, member } = await requireCompany();
+    renderHeader({ user, company, memberships });
+    renderFooter();
+
+    const editorOK = canEdit(member);
+    const adminOK = canAdmin(member);
+    if (!editorOK) document.querySelectorAll('[data-editor-only]').forEach(el => el.setAttribute('disabled', 'disabled'));
+
+    const statusFilter = document.querySelector('[data-filter-status]');
+    statusFilter.addEventListener('change', refresh);
+
+    async function refresh() {
+      const rows = await listDocs(company.id, 'intake', { orderBy: [['createdAt', 'desc']] });
+      const filterVal = statusFilter.value;
+      const filtered = filterVal ? rows.filter(r => r.status === filterVal) : rows;
+
+      const tbody = document.querySelector('[data-intake-rows]');
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="empty-state">No intake requests${filterVal ? ' with that status' : ' yet'}.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(r => `
+        <tr>
+          <td><a href="#" data-open="${escapeHTML(r.id)}">${escapeHTML(r.title || '(untitled)')}</a></td>
+          <td>${escapeHTML(r.requesterName || '')}</td>
+          <td>${escapeHTML(r.department || '')}</td>
+          <td>${formatDate(r.createdAt)}</td>
+          <td><span class="status-pill status-${escapeHTML((r.status || 'submitted'))}">${escapeHTML(r.status || 'submitted')}</span></td>
+          <td>
+            ${editorOK ? `<button class="btn btn-ghost btn-sm" data-open="${escapeHTML(r.id)}">Open</button>` : ''}
+          </td>
+        </tr>
+      `).join('');
+
+      tbody.querySelectorAll('[data-open]').forEach(el => {
+        el.addEventListener('click', async (e) => {
+          e.preventDefault();
+          const id = e.currentTarget.dataset.open;
+          const rec = await getRecord(company.id, 'intake', id);
+          openIntakeEditor(rec);
+        });
+      });
+    }
+    refresh();
+
+    document.querySelector('[data-new-intake]').addEventListener('click', () => {
+      if (!editorOK) return;
+      openIntakeEditor(null);
+    });
+
+    function intakeFormHTML(values = {}) {
+      return `
+        <div class="field">
+          <label>Title *</label>
+          <input name="title" required value="${escapeHTML(values.title || '')}" />
+        </div>
+        <div class="grid-2">
+          <div class="field">
+            <label>Requester name</label>
+            <input name="requesterName" value="${escapeHTML(values.requesterName || user.displayName || '')}" />
+          </div>
+          <div class="field">
+            <label>Department</label>
+            <input name="department" value="${escapeHTML(values.department || '')}" />
+          </div>
+        </div>
+        <div class="field">
+          <label>Business problem / opportunity *</label>
+          <textarea name="problem" rows="3" required>${escapeHTML(values.problem || '')}</textarea>
+        </div>
+        <div class="field">
+          <label>Proposed AI approach *</label>
+          <textarea name="approach" rows="3" required placeholder="e.g., GPT-based summarization of case notes; in-house classifier on tabular data; vendor LLM feature">${escapeHTML(values.approach || '')}</textarea>
+        </div>
+        <div class="field">
+          <label>Build / Buy / Enable</label>
+          <select name="sourcing">
+            <option value="">—</option>
+            <option ${values.sourcing==='build'?'selected':''} value="build">Build — in-house</option>
+            <option ${values.sourcing==='buy'?'selected':''} value="buy">Buy — dedicated AI product</option>
+            <option ${values.sourcing==='enable'?'selected':''} value="enable">Enable — AI feature inside existing product</option>
+          </select>
+        </div>
+        <div class="grid-2">
+          <div class="field">
+            <label>Data types involved</label>
+            <textarea name="dataTypes" rows="2" placeholder="e.g., PII, PHI, student records, financial data, biometric…">${escapeHTML(values.dataTypes || '')}</textarea>
+          </div>
+          <div class="field">
+            <label>Users / populations affected</label>
+            <textarea name="affected" rows="2" placeholder="e.g., internal analysts only; 12k customers; K–12 students">${escapeHTML(values.affected || '')}</textarea>
+          </div>
+        </div>
+        <div class="field">
+          <label>Decisions this system influences</label>
+          <textarea name="decisions" rows="2" placeholder="e.g., hiring, credit, admission, diagnosis, routing, eligibility">${escapeHTML(values.decisions || '')}</textarea>
+        </div>
+        <div class="field">
+          <label>Expected benefits / success metrics</label>
+          <textarea name="benefits" rows="2">${escapeHTML(values.benefits || '')}</textarea>
+        </div>
+        <div class="field">
+          <label>Known concerns / constraints</label>
+          <textarea name="concerns" rows="2" placeholder="e.g., legal review needed; vendor contract pending; customer-facing outputs">${escapeHTML(values.concerns || '')}</textarea>
+        </div>
+        <div class="grid-2">
+          <div class="field">
+            <label>Target launch date</label>
+            <input name="targetDate" type="date" value="${escapeHTML(values.targetDate || '')}" />
+          </div>
+          <div class="field">
+            <label>Estimated annual cost</label>
+            <input name="estCost" value="${escapeHTML(values.estCost || '')}" placeholder="e.g., $25,000" />
+          </div>
+        </div>
+        <div class="field">
+          <label>Status</label>
+          <select name="status" ${adminOK?'':'disabled'}>
+            ${['submitted','triage','review','approved','rejected','withdrawn'].map(s =>
+              `<option ${((values.status || 'submitted')===s)?'selected':''} value="${s}">${s}</option>`
+            ).join('')}
+          </select>
+        </div>
+        <div class="field">
+          <label>Governance notes (internal)</label>
+          <textarea name="govNotes" rows="3">${escapeHTML(values.govNotes || '')}</textarea>
+        </div>
+      `;
+    }
+
+    function openIntakeEditor(rec) {
+      const isNew = !rec;
+      const form = document.createElement('form');
+      form.className = 'stacked-form';
+      form.innerHTML = intakeFormHTML(rec || {});
+
+      const actions = [
+        { label: 'Close', variant: 'ghost', onClick: ({ close }) => close() }
+      ];
+      if (editorOK) {
+        actions.push({
+          label: isNew ? 'Submit' : 'Save',
+          variant: 'primary',
+          onClick: async ({ close }) => {
+            if (!form.reportValidity()) return;
+            const data = serializeForm(form);
+            try {
+              if (isNew) {
+                const id = await createRecord(company.id, 'intake', {
+                  ...data,
+                  status: data.status || 'submitted'
+                }, user.uid);
+                await logEvent(company.id, { actorUid: user.uid, actorName: user.displayName || user.email, action: 'intake.create', target: id, details: { title: data.title } });
+                toast('Intake request submitted.', 'success');
+              } else {
+                await updateRecord(company.id, 'intake', rec.id, data, user.uid);
+                await logEvent(company.id, { actorUid: user.uid, actorName: user.displayName || user.email, action: 'intake.update', target: rec.id, details: { status: data.status } });
+                toast('Saved.', 'success');
+              }
+              close();
+              refresh();
+            } catch (err) {
+              toast(err.message, 'error', 5000);
+            }
+          }
+        });
+      }
+      if (!isNew && adminOK) {
+        actions.unshift({
+          label: 'Delete',
+          variant: 'danger',
+          onClick: async ({ close }) => {
+            const ok = await confirmDialog({ title: 'Delete this intake?', message: 'This cannot be undone.', confirmLabel: 'Delete', variant: 'danger' });
+            if (!ok) return;
+            try {
+              await deleteRecord(company.id, 'intake', rec.id);
+              await logEvent(company.id, { actorUid: user.uid, actorName: user.displayName || user.email, action: 'intake.delete', target: rec.id });
+              toast('Deleted.', 'success');
+              close();
+              refresh();
+            } catch (err) {
+              toast(err.message, 'error', 5000);
+            }
+          }
+        });
+      }
+
+      openModal({
+        title: isNew ? 'New intake request' : `Intake: ${rec.title || '(untitled)'}`,
+        body: form,
+        actions
+      });
+    }
+  </script>
+
+</body>
+</html>

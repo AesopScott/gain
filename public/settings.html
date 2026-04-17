@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GAIN — Settings</title>
+  <link rel="stylesheet" href="/css/gain-theme.css" />
+</head>
+<body>
+
+  <div data-site-header></div>
+
+  <main class="app-shell">
+
+    <h1 class="page-title">Company settings</h1>
+
+    <div class="card">
+      <h2 class="card-title">Profile</h2>
+      <form id="form-company" class="stacked-form">
+        <div class="field">
+          <label>Company name</label>
+          <input name="name" required />
+        </div>
+        <div class="grid-2">
+          <div class="field">
+            <label>Industry</label>
+            <input name="industry" />
+          </div>
+          <div class="field">
+            <label>Size</label>
+            <select name="size">
+              <option value="">—</option>
+              <option>1–25</option>
+              <option>26–100</option>
+              <option>101–500</option>
+              <option>501–2,500</option>
+              <option>2,501+</option>
+            </select>
+          </div>
+        </div>
+        <div class="btn-row">
+          <button type="submit" class="btn btn-primary" data-admin-only>Save</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="card section-sep">
+      <div class="flex-between">
+        <h2 class="card-title">Members</h2>
+        <button class="btn btn-primary" data-invite data-admin-only>+ Invite member</button>
+      </div>
+      <table class="data">
+        <thead>
+          <tr><th>Name</th><th>Email</th><th>Role</th><th>Joined</th><th></th></tr>
+        </thead>
+        <tbody data-members></tbody>
+      </table>
+
+      <h3 class="subsection">Pending invites</h3>
+      <table class="data">
+        <thead>
+          <tr><th>Email</th><th>Role</th><th>Invited by</th><th>Sent</th><th></th></tr>
+        </thead>
+        <tbody data-invites></tbody>
+      </table>
+    </div>
+
+    <div data-site-footer></div>
+  </main>
+
+  <script type="module">
+    import { requireCompany, canAdmin, isOwner } from '/js/session.js';
+    import { renderHeader, renderFooter, toast, openModal, confirmDialog, serializeForm, setFormValues, escapeHTML, formatDate } from '/js/ui.js';
+    import { updateCompany, listMembers, updateMemberRole, removeMember, createInvite, listInvitesForCompany, deleteInvite, logEvent } from '/js/data.js';
+
+    const { user, memberships, company, member } = await requireCompany();
+    renderHeader({ user, company, memberships });
+    renderFooter();
+
+    const adminOK = canAdmin(member);
+    const ownerOK = isOwner(member);
+
+    if (!adminOK) {
+      document.querySelectorAll('[data-admin-only]').forEach(el => el.setAttribute('disabled', 'disabled'));
+    }
+
+    // ---------- company profile ----------
+    const companyForm = document.getElementById('form-company');
+    setFormValues(companyForm, { name: company.name, industry: company.industry, size: company.size });
+    companyForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!adminOK) return;
+      const data = serializeForm(companyForm);
+      try {
+        await updateCompany(company.id, { name: data.name, industry: data.industry, size: data.size });
+        await logEvent(company.id, { actorUid: user.uid, actorName: user.displayName || user.email, action: 'update.company', target: company.id });
+        toast('Saved company profile.', 'success');
+      } catch (err) {
+        toast(err.message, 'error', 4000);
+      }
+    });
+
+    // ---------- members list ----------
+    async function refreshMembers() {
+      const [members, invites] = await Promise.all([
+        listMembers(company.id),
+        listInvitesForCompany(company.id)
+      ]);
+
+      const mbody = document.querySelector('[data-members]');
+      if (members.length === 0) {
+        mbody.innerHTML = `<tr><td colspan="5" class="empty-state">No members yet.</td></tr>`;
+      } else {
+        mbody.innerHTML = members.map(m => {
+          const canEdit = adminOK && m.role !== 'owner';
+          const roleCell = canEdit
+            ? `<select data-role-for="${escapeHTML(m.id)}">
+                 ${['admin','editor','viewer'].map(r => `<option value="${r}"${m.role === r ? ' selected' : ''}>${r}</option>`).join('')}
+               </select>`
+            : `<span class="role-${escapeHTML(m.role)}">${escapeHTML(m.role)}</span>`;
+          const actionCell = canEdit
+            ? `<button class="btn btn-ghost btn-sm" data-remove-member="${escapeHTML(m.id)}">Remove</button>`
+            : '';
+          return `<tr>
+            <td>${escapeHTML(m.displayName || '')}</td>
+            <td>${escapeHTML(m.email || '')}</td>
+            <td>${roleCell}</td>
+            <td>${formatDate(m.joinedAt)}</td>
+            <td>${actionCell}</td>
+          </tr>`;
+        }).join('');
+      }
+
+      // Wire role change + remove.
+      mbody.querySelectorAll('[data-role-for]').forEach(sel => {
+        sel.addEventListener('change', async (e) => {
+          const uid = e.currentTarget.dataset.roleFor;
+          const newRole = e.currentTarget.value;
+          try {
+            await updateMemberRole(company.id, uid, newRole);
+            await logEvent(company.id, { actorUid: user.uid, actorName: user.displayName || user.email, action: 'update.member.role', target: uid, details: { role: newRole } });
+            toast('Role updated.', 'success');
+          } catch (err) {
+            toast(err.message, 'error', 4000);
+          }
+        });
+      });
+      mbody.querySelectorAll('[data-remove-member]').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          const uid = e.currentTarget.dataset.removeMember;
+          const ok = await confirmDialog({
+            title: 'Remove member?',
+            message: 'They will lose access to this company workspace immediately.',
+            confirmLabel: 'Remove',
+            variant: 'danger'
+          });
+          if (!ok) return;
+          try {
+            await removeMember(company.id, uid);
+            await logEvent(company.id, { actorUid: user.uid, actorName: user.displayName || user.email, action: 'remove.member', target: uid });
+            toast('Member removed.', 'success');
+            refreshMembers();
+          } catch (err) {
+            toast(err.message, 'error', 4000);
+          }
+        });
+      });
+
+      const ibody = document.querySelector('[data-invites]');
+      if (invites.length === 0) {
+        ibody.innerHTML = `<tr><td colspan="5" class="empty-state">No pending invites.</td></tr>`;
+      } else {
+        ibody.innerHTML = invites.map(i => `
+          <tr>
+            <td>${escapeHTML(i.email)}</td>
+            <td>${escapeHTML(i.role)}</td>
+            <td>${escapeHTML(i.inviterName || '')}</td>
+            <td>${formatDate(i.createdAt)}</td>
+            <td>${adminOK ? `<button class="btn btn-ghost btn-sm" data-cancel-invite="${escapeHTML(i.id)}">Cancel</button>` : ''}</td>
+          </tr>
+        `).join('');
+        ibody.querySelectorAll('[data-cancel-invite]').forEach(btn => {
+          btn.addEventListener('click', async (e) => {
+            const id = e.currentTarget.dataset.cancelInvite;
+            try {
+              await deleteInvite(id);
+              toast('Invite cancelled.', 'success');
+              refreshMembers();
+            } catch (err) {
+              toast(err.message, 'error', 4000);
+            }
+          });
+        });
+      }
+    }
+    refreshMembers();
+
+    // ---------- invite modal ----------
+    document.querySelector('[data-invite]').addEventListener('click', () => {
+      if (!adminOK) return;
+      const form = document.createElement('form');
+      form.className = 'stacked-form';
+      form.innerHTML = `
+        <div class="field">
+          <label>Email</label>
+          <input name="email" type="email" required autofocus />
+        </div>
+        <div class="field">
+          <label>Role</label>
+          <select name="role">
+            <option value="viewer">viewer — read only</option>
+            <option value="editor" selected>editor — create / edit records</option>
+            <option value="admin">admin — invite members, edit company</option>
+          </select>
+        </div>
+        <p class="text-muted">
+          When the invitee signs up with this email address, they'll be added
+          automatically with the role you pick here.
+        </p>
+      `;
+      openModal({
+        title: 'Invite a member',
+        body: form,
+        actions: [
+          { label: 'Cancel', variant: 'ghost', onClick: ({ close }) => close() },
+          {
+            label: 'Send invite',
+            variant: 'primary',
+            onClick: async ({ close }) => {
+              const data = serializeForm(form);
+              if (!data.email) return;
+              try {
+                await createInvite({
+                  companyId: company.id,
+                  email: data.email,
+                  role: data.role,
+                  inviterUid: user.uid,
+                  inviterName: user.displayName || user.email
+                });
+                await logEvent(company.id, { actorUid: user.uid, actorName: user.displayName || user.email, action: 'invite.create', target: data.email, details: { role: data.role } });
+                toast(`Invite created for ${data.email}.`, 'success');
+                close();
+                refreshMembers();
+              } catch (err) {
+                toast(err.message, 'error', 4000);
+              }
+            }
+          }
+        ]
+      });
+    });
+  </script>
+
+</body>
+</html>

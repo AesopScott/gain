@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GAIN — AI System Inventory</title>
+  <link rel="stylesheet" href="/css/gain-theme.css" />
+</head>
+<body>
+
+  <div data-site-header></div>
+
+  <main class="app-shell">
+
+    <div class="flex-between">
+      <h1 class="page-title">AI System Inventory</h1>
+      <button class="btn btn-primary" data-new data-editor-only>+ Add system</button>
+    </div>
+
+    <p class="page-lead">
+      A living register of every AI system your organization builds, buys, or enables —
+      in production, pilot, or planned. The risk tier recorded here is how GAIN decides
+      which systems need an AIA before launch and ongoing monitoring afterwards.
+    </p>
+
+    <div class="card">
+      <div class="filter-row">
+        <label>Risk tier:</label>
+        <select data-filter-tier>
+          <option value="">All</option>
+          <option value="prohibited">Prohibited</option>
+          <option value="high">High</option>
+          <option value="limited">Limited</option>
+          <option value="minimal">Minimal</option>
+        </select>
+        <label class="filter-gap">Lifecycle:</label>
+        <select data-filter-lifecycle>
+          <option value="">All</option>
+          <option value="planned">Planned</option>
+          <option value="pilot">Pilot</option>
+          <option value="production">Production</option>
+          <option value="retired">Retired</option>
+        </select>
+      </div>
+
+      <table class="data">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Purpose</th>
+            <th>Owner</th>
+            <th>Sourcing</th>
+            <th>Lifecycle</th>
+            <th>Risk tier</th>
+            <th>Updated</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody data-rows></tbody>
+      </table>
+    </div>
+
+    <div data-site-footer></div>
+  </main>
+
+  <script type="module">
+    import { requireCompany, canEdit, canAdmin } from '/js/session.js';
+    import { renderHeader, renderFooter, toast, openModal, confirmDialog, serializeForm, escapeHTML, formatDate } from '/js/ui.js';
+    import { listDocs, createRecord, updateRecord, deleteRecord, getRecord, logEvent } from '/js/data.js';
+
+    const { user, memberships, company, member } = await requireCompany();
+    renderHeader({ user, company, memberships });
+    renderFooter();
+
+    const editorOK = canEdit(member);
+    const adminOK = canAdmin(member);
+    if (!editorOK) document.querySelectorAll('[data-editor-only]').forEach(el => el.setAttribute('disabled', 'disabled'));
+
+    const tierFilter = document.querySelector('[data-filter-tier]');
+    const lifecycleFilter = document.querySelector('[data-filter-lifecycle]');
+    tierFilter.addEventListener('change', refresh);
+    lifecycleFilter.addEventListener('change', refresh);
+
+    async function refresh() {
+      const rows = await listDocs(company.id, 'inventory', { orderBy: [['updatedAt', 'desc']] });
+      const tv = tierFilter.value, lv = lifecycleFilter.value;
+      const filtered = rows.filter(r =>
+        (!tv || (r.riskTier || '') === tv) &&
+        (!lv || (r.lifecycle || '') === lv)
+      );
+      const tbody = document.querySelector('[data-rows]');
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" class="empty-state">No systems ${tv||lv?'match those filters':'in inventory yet'}.</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = filtered.map(r => `
+        <tr>
+          <td><a href="#" data-open="${escapeHTML(r.id)}">${escapeHTML(r.name || '(unnamed)')}</a></td>
+          <td>${escapeHTML(r.purpose || '')}</td>
+          <td>${escapeHTML(r.owner || '')}</td>
+          <td>${escapeHTML(r.sourcing || '')}</td>
+          <td>${escapeHTML(r.lifecycle || '')}</td>
+          <td>${renderRiskBadge(r.riskTier)}</td>
+          <td>${formatDate(r.updatedAt)}</td>
+          <td>${editorOK ? `<button class="btn btn-ghost btn-sm" data-open="${escapeHTML(r.id)}">Open</button>` : ''}</td>
+        </tr>
+      `).join('');
+      tbody.querySelectorAll('[data-open]').forEach(el => {
+        el.addEventListener('click', async (e) => {
+          e.preventDefault();
+          const id = e.currentTarget.dataset.open;
+          const rec = await getRecord(company.id, 'inventory', id);
+          openEditor(rec);
+        });
+      });
+    }
+    refresh();
+
+    function renderRiskBadge(tier) {
+      const t = (tier || '').toLowerCase();
+      if (!t) return '<span class="text-muted">—</span>';
+      return `<span class="badge badge-${t}">${escapeHTML(t)}</span>`;
+    }
+
+    document.querySelector('[data-new]').addEventListener('click', () => {
+      if (!editorOK) return;
+      openEditor(null);
+    });
+
+    function formHTML(v = {}) {
+      return `
+        <div class="field"><label>System name *</label>
+          <input name="name" required value="${escapeHTML(v.name || '')}" />
+        </div>
+        <div class="field"><label>Purpose *</label>
+          <textarea name="purpose" rows="2" required>${escapeHTML(v.purpose || '')}</textarea>
+        </div>
+        <div class="grid-2">
+          <div class="field"><label>System owner</label>
+            <input name="owner" value="${escapeHTML(v.owner || '')}" placeholder="Name + role" />
+          </div>
+          <div class="field"><label>Business unit / department</label>
+            <input name="businessUnit" value="${escapeHTML(v.businessUnit || '')}" />
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="field"><label>Sourcing</label>
+            <select name="sourcing">
+              <option value="">—</option>
+              <option ${v.sourcing==='build'?'selected':''} value="build">Build — in-house</option>
+              <option ${v.sourcing==='buy'?'selected':''} value="buy">Buy — dedicated product</option>
+              <option ${v.sourcing==='enable'?'selected':''} value="enable">Enable — feature inside existing product</option>
+            </select>
+          </div>
+          <div class="field"><label>Vendor / platform</label>
+            <input name="vendor" value="${escapeHTML(v.vendor || '')}" placeholder="e.g., OpenAI, Anthropic, internal" />
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="field"><label>Model type</label>
+            <select name="modelType">
+              <option value="">—</option>
+              <option ${v.modelType==='llm'?'selected':''} value="llm">LLM / foundation model</option>
+              <option ${v.modelType==='classical-ml'?'selected':''} value="classical-ml">Classical ML (regression, tree, SVM)</option>
+              <option ${v.modelType==='deep-learning'?'selected':''} value="deep-learning">Deep learning / neural net</option>
+              <option ${v.modelType==='rules'?'selected':''} value="rules">Rules / heuristic (no ML)</option>
+              <option ${v.modelType==='rpa-plus'?'selected':''} value="rpa-plus">RPA with AI step</option>
+              <option ${v.modelType==='other'?'selected':''} value="other">Other</option>
+            </select>
+          </div>
+          <div class="field"><label>Deployment pattern</label>
+            <select name="deployment">
+              <option value="">—</option>
+              <option ${v.deployment==='saas'?'selected':''} value="saas">Vendor SaaS</option>
+              <option ${v.deployment==='api'?'selected':''} value="api">API call to external model</option>
+              <option ${v.deployment==='self-hosted'?'selected':''} value="self-hosted">Self-hosted</option>
+              <option ${v.deployment==='on-device'?'selected':''} value="on-device">On-device / edge</option>
+            </select>
+          </div>
+        </div>
+        <div class="field"><label>Data used (training / input / output)</label>
+          <textarea name="data" rows="2">${escapeHTML(v.data || '')}</textarea>
+        </div>
+        <div class="field"><label>Decisions influenced</label>
+          <textarea name="decisions" rows="2">${escapeHTML(v.decisions || '')}</textarea>
+        </div>
+        <div class="grid-2">
+          <div class="field"><label>Lifecycle *</label>
+            <select name="lifecycle" required>
+              <option value="">—</option>
+              <option ${v.lifecycle==='planned'?'selected':''} value="planned">Planned</option>
+              <option ${v.lifecycle==='pilot'?'selected':''} value="pilot">Pilot</option>
+              <option ${v.lifecycle==='production'?'selected':''} value="production">Production</option>
+              <option ${v.lifecycle==='retired'?'selected':''} value="retired">Retired</option>
+            </select>
+          </div>
+          <div class="field"><label>Risk tier *</label>
+            <select name="riskTier" required>
+              <option value="">—</option>
+              <option ${v.riskTier==='prohibited'?'selected':''} value="prohibited">Prohibited — not permitted</option>
+              <option ${v.riskTier==='high'?'selected':''} value="high">High — material impact on people or entity</option>
+              <option ${v.riskTier==='limited'?'selected':''} value="limited">Limited — some impact, transparency expected</option>
+              <option ${v.riskTier==='minimal'?'selected':''} value="minimal">Minimal — negligible impact</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="field"><label>AIA required?</label>
+            <select name="aiaRequired">
+              <option value="">—</option>
+              <option ${v.aiaRequired==='yes'?'selected':''} value="yes">Yes</option>
+              <option ${v.aiaRequired==='no'?'selected':''} value="no">No</option>
+              <option ${v.aiaRequired==='n/a'?'selected':''} value="n/a">N/A</option>
+            </select>
+          </div>
+          <div class="field"><label>AIA status</label>
+            <select name="aiaStatus">
+              <option value="">—</option>
+              <option ${v.aiaStatus==='not-started'?'selected':''} value="not-started">Not started</option>
+              <option ${v.aiaStatus==='in-progress'?'selected':''} value="in-progress">In progress</option>
+              <option ${v.aiaStatus==='complete'?'selected':''} value="complete">Complete</option>
+              <option ${v.aiaStatus==='renewal-due'?'selected':''} value="renewal-due">Renewal due</option>
+            </select>
+          </div>
+        </div>
+        <div class="field"><label>Notes</label>
+          <textarea name="notes" rows="3">${escapeHTML(v.notes || '')}</textarea>
+        </div>
+      `;
+    }
+
+    function openEditor(rec) {
+      const isNew = !rec;
+      const form = document.createElement('form');
+      form.className = 'stacked-form';
+      form.innerHTML = formHTML(rec || {});
+
+      const actions = [
+        { label: 'Close', variant: 'ghost', onClick: ({ close }) => close() }
+      ];
+      if (editorOK) {
+        actions.push({
+          label: isNew ? 'Add to inventory' : 'Save',
+          variant: 'primary',
+          onClick: async ({ close }) => {
+            if (!form.reportValidity()) return;
+            const data = serializeForm(form);
+            try {
+              if (isNew) {
+                const id = await createRecord(company.id, 'inventory', data, user.uid);
+                await logEvent(company.id, { actorUid: user.uid, actorName: user.displayName || user.email, action: 'inventory.create', target: id, details: { name: data.name } });
+                toast('System added.', 'success');
+              } else {
+                await updateRecord(company.id, 'inventory', rec.id, data, user.uid);
+                await logEvent(company.id, { actorUid: user.uid, actorName: user.displayName || user.email, action: 'inventory.update', target: rec.id });
+                toast('Saved.', 'success');
+              }
+              close();
+              refresh();
+            } catch (err) {
+              toast(err.message, 'error', 5000);
+            }
+          }
+        });
+      }
+      if (!isNew && adminOK) {
+        actions.unshift({
+          label: 'Delete',
+          variant: 'danger',
+          onClick: async ({ close }) => {
+            const ok = await confirmDialog({ title: 'Remove from inventory?', message: 'AIAs and risk register entries linked to this system will keep existing but lose their reference.', confirmLabel: 'Delete', variant: 'danger' });
+            if (!ok) return;
+            try {
+              await deleteRecord(company.id, 'inventory', rec.id);
+              await logEvent(company.id, { actorUid: user.uid, actorName: user.displayName || user.email, action: 'inventory.delete', target: rec.id });
+              toast('Deleted.', 'success');
+              close();
+              refresh();
+            } catch (err) {
+              toast(err.message, 'error', 5000);
+            }
+          }
+        });
+      }
+      openModal({
+        title: isNew ? 'New AI system' : `System: ${rec.name || '(unnamed)'}`,
+        body: form,
+        actions
+      });
+    }
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GAIN — Framework Selection</title>
+  <link rel="stylesheet" href="/css/gain-theme.css" />
+</head>
+<body>
+
+  <div data-site-header></div>
+
+  <main class="app-shell">
+
+    <h1 class="page-title">Framework Selection Worksheet</h1>
+    <p class="page-lead">
+      Decide the <strong>operating framework</strong>, <strong>management system</strong>,
+      <strong>jurisdictions</strong>, <strong>sectors</strong>, and <strong>maturity target</strong>
+      that your governance program will align to. This posture drives what's required in
+      intake, AIAs, and the risk register. It can be updated later — but changes should be
+      ratified deliberately, not casually.
+    </p>
+
+    <form id="posture-form" class="stacked-form">
+
+      <section class="card">
+        <h2 class="card-title">1 · Operating framework</h2>
+        <p class="text-muted">
+          The operating framework supplies vocabulary, functions, and practices. You can
+          blend more than one; pick the primary.
+        </p>
+        <div class="field">
+          <label>Primary framework</label>
+          <select name="operatingFramework" required>
+            <option value="">— select —</option>
+            <option value="NIST AI RMF">NIST AI Risk Management Framework (AI RMF 1.0)</option>
+            <option value="ISO/IEC 23894">ISO/IEC 23894 — AI risk management</option>
+            <option value="OECD AI Principles">OECD AI Principles</option>
+            <option value="UNESCO">UNESCO Ethics of AI Recommendation</option>
+            <option value="Custom">Custom / hybrid</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Secondary / supporting frameworks (optional)</label>
+          <div class="checkbox-grid">
+            <label><input type="checkbox" name="supportingFrameworks" data-multiple value="NIST CSF 2.0" /> NIST CSF 2.0</label>
+            <label><input type="checkbox" name="supportingFrameworks" data-multiple value="NIST Privacy Framework" /> NIST Privacy Framework</label>
+            <label><input type="checkbox" name="supportingFrameworks" data-multiple value="COBIT 2019" /> COBIT 2019</label>
+            <label><input type="checkbox" name="supportingFrameworks" data-multiple value="COSO ERM" /> COSO ERM</label>
+            <label><input type="checkbox" name="supportingFrameworks" data-multiple value="FAIR" /> FAIR (risk quantification)</label>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2 class="card-title">2 · Management system</h2>
+        <p class="text-muted">
+          A management system gives you auditability and a certification path. Optional
+          but recommended for regulated industries.
+        </p>
+        <div class="field">
+          <label>Management system</label>
+          <select name="managementSystem">
+            <option value="">None / not yet</option>
+            <option value="ISO/IEC 42001">ISO/IEC 42001 (AI Management System)</option>
+            <option value="ISO/IEC 27001">ISO/IEC 27001 (Information Security)</option>
+            <option value="ISO/IEC 27001+42001">ISO/IEC 27001 + 42001 (both)</option>
+            <option value="SOC 2">SOC 2</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Target outcome</label>
+          <select name="managementOutcome">
+            <option value="">—</option>
+            <option>Internal alignment only</option>
+            <option>Readiness for audit (no cert)</option>
+            <option>Third-party certification</option>
+          </select>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2 class="card-title">3 · Jurisdictions</h2>
+        <p class="text-muted">
+          Where do your AI systems operate, and where do your data subjects live? Check
+          all that apply. This controls which laws appear as compliance reminders.
+        </p>
+        <div class="checkbox-grid">
+          <label><input type="checkbox" name="jurisdictions" data-multiple value="US-Federal" /> United States (federal)</label>
+          <label><input type="checkbox" name="jurisdictions" data-multiple value="US-CA" /> California</label>
+          <label><input type="checkbox" name="jurisdictions" data-multiple value="US-CO" /> Colorado</label>
+          <label><input type="checkbox" name="jurisdictions" data-multiple value="US-NYC" /> New York City</label>
+          <label><input type="checkbox" name="jurisdictions" data-multiple value="US-IL" /> Illinois (BIPA)</label>
+          <label><input type="checkbox" name="jurisdictions" data-multiple value="EU" /> European Union (EU AI Act, GDPR)</label>
+          <label><input type="checkbox" name="jurisdictions" data-multiple value="UK" /> United Kingdom</label>
+          <label><input type="checkbox" name="jurisdictions" data-multiple value="Canada" /> Canada</label>
+          <label><input type="checkbox" name="jurisdictions" data-multiple value="Brazil" /> Brazil (LGPD)</label>
+          <label><input type="checkbox" name="jurisdictions" data-multiple value="APAC" /> APAC (general)</label>
+          <label><input type="checkbox" name="jurisdictions" data-multiple value="Other" /> Other</label>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2 class="card-title">4 · Sectors &amp; regulated data types</h2>
+        <p class="text-muted">
+          Your industry and the data you process. This is how GAIN knows whether to
+          surface HIPAA, FERPA, GLBA, ECOA, SOX, etc. during intake and AIAs.
+        </p>
+        <div class="checkbox-grid">
+          <label><input type="checkbox" name="sectors" data-multiple value="Healthcare/HIPAA" /> Healthcare (HIPAA / HITECH)</label>
+          <label><input type="checkbox" name="sectors" data-multiple value="Education/FERPA" /> Education (FERPA / COPPA)</label>
+          <label><input type="checkbox" name="sectors" data-multiple value="Finance/GLBA" /> Financial services (GLBA)</label>
+          <label><input type="checkbox" name="sectors" data-multiple value="Credit/ECOA" /> Credit &amp; lending (ECOA, FCRA)</label>
+          <label><input type="checkbox" name="sectors" data-multiple value="Public Company/SOX" /> Public company (SOX)</label>
+          <label><input type="checkbox" name="sectors" data-multiple value="Insurance" /> Insurance (NAIC, state-level)</label>
+          <label><input type="checkbox" name="sectors" data-multiple value="Employment/EEOC" /> Employment / HR (EEOC, NYC LL144)</label>
+          <label><input type="checkbox" name="sectors" data-multiple value="Government" /> Government / public sector</label>
+          <label><input type="checkbox" name="sectors" data-multiple value="Critical Infrastructure" /> Critical infrastructure</label>
+          <label><input type="checkbox" name="sectors" data-multiple value="Children" /> Processes children's data</label>
+          <label><input type="checkbox" name="sectors" data-multiple value="Biometrics" /> Processes biometrics</label>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2 class="card-title">5 · Risk appetite &amp; maturity target</h2>
+        <div class="grid-2">
+          <div class="field">
+            <label>Risk appetite</label>
+            <select name="riskAppetite">
+              <option value="">—</option>
+              <option value="averse">Averse — avoid any high-impact AI until controls proven</option>
+              <option value="cautious">Cautious — pilot with guardrails, scale only with evidence</option>
+              <option value="balanced">Balanced — measured expansion with residual risk tracked</option>
+              <option value="opportunity-seeking">Opportunity-seeking — fast experimentation, broader tolerance</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Maturity target (NIST AI RMF tier-style)</label>
+            <select name="maturityTarget">
+              <option value="">—</option>
+              <option value="1">1 — Ad hoc (recognize &amp; log)</option>
+              <option value="2">2 — Defined (policies written, inventory exists)</option>
+              <option value="3">3 — Managed (AIAs required, measurable controls)</option>
+              <option value="4">4 — Optimizing (continuous monitoring, quantitative risk)</option>
+            </select>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2 class="card-title">6 · Ratification</h2>
+        <p class="text-muted">
+          When your steering committee or governance body formally adopts this posture,
+          check the box and save. A ratification timestamp is recorded.
+        </p>
+        <label class="check-line">
+          <input type="checkbox" name="ratified" />
+          <span>Ratified by our governance body on today's date</span>
+        </label>
+        <div class="field">
+          <label>Ratified by (names, roles)</label>
+          <textarea name="ratifiedBy" rows="2" placeholder="e.g., AI Steering Committee: J. Smith (CTO), R. Lee (CISO), M. Chen (General Counsel)"></textarea>
+        </div>
+      </section>
+
+      <div class="btn-row">
+        <button type="submit" class="btn btn-primary" data-admin-only>Save posture</button>
+        <a class="btn btn-ghost" href="/dashboard.html">Back to dashboard</a>
+      </div>
+    </form>
+
+    <div data-site-footer></div>
+  </main>
+
+  <script type="module">
+    import { requireCompany, canAdmin } from '/js/session.js';
+    import { renderHeader, renderFooter, toast, serializeForm, setFormValues } from '/js/ui.js';
+    import { getPosture, savePosture, logEvent } from '/js/data.js';
+
+    const { user, memberships, company, member } = await requireCompany();
+    renderHeader({ user, company, memberships });
+    renderFooter();
+
+    const adminOK = canAdmin(member);
+    const form = document.getElementById('posture-form');
+
+    if (!adminOK) {
+      for (const el of form.querySelectorAll('input, select, textarea, button[type=submit]')) {
+        el.setAttribute('disabled', 'disabled');
+      }
+    }
+
+    // Load existing posture if any.
+    const existing = await getPosture(company.id);
+    if (existing) {
+      setFormValues(form, {
+        ...existing,
+        ratified: !!existing.ratifiedAt
+      });
+      // multi-selects
+      for (const name of ['supportingFrameworks', 'jurisdictions', 'sectors']) {
+        const vals = existing[name] || [];
+        for (const cb of form.querySelectorAll(`input[name="${name}"]`)) {
+          cb.checked = vals.includes(cb.value);
+        }
+      }
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!adminOK) return;
+      const data = serializeForm(form);
+      const payload = {
+        operatingFramework: data.operatingFramework || '',
+        supportingFrameworks: data.supportingFrameworks || [],
+        managementSystem: data.managementSystem || '',
+        managementOutcome: data.managementOutcome || '',
+        jurisdictions: data.jurisdictions || [],
+        sectors: data.sectors || [],
+        riskAppetite: data.riskAppetite || '',
+        maturityTarget: data.maturityTarget || '',
+        ratifiedBy: data.ratifiedBy || ''
+      };
+      if (data.ratified) {
+        payload.ratifiedAt = new Date();
+      }
+      try {
+        await savePosture(company.id, payload, user.uid);
+        await logEvent(company.id, {
+          actorUid: user.uid, actorName: user.displayName || user.email,
+          action: 'update.posture', target: 'current',
+          details: { ratified: !!data.ratified }
+        });
+        toast('Framework posture saved.', 'success');
+      } catch (err) {
+        toast(err.message, 'error', 5000);
+      }
+    });
+  </script>
+
+</body>
+</html>
