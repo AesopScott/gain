@@ -1,0 +1,35 @@
+name: Deploy to Mocahost (GAIN)
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch: # manual run from the Actions tab
+
+concurrency:
+  group: deploy-mocahost-gain
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Deploy public/ via FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: 65.181.111.131
+          username: hivetec1
+          password: ${{ secrets.FTP_PASSWORD }}
+          port: 21
+          protocol: ftps
+          # Only the public/ folder becomes the site root
+          local-dir: ./public/
+          server-dir: /public_html/gain/
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/node_modules/**
+            **/.DS_Store
