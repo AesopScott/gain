@@ -1,0 +1,792 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GAIN — Training Tracker</title>
+  <script>(function(){try{var p=localStorage.getItem('gain.theme.palette')||'classic';var m=localStorage.getItem('gain.theme.mode')||'light';document.documentElement.setAttribute('data-palette',p);document.documentElement.setAttribute('data-mode',m);}catch(e){}})();</script>
+  <link rel="stylesheet" href="/css/gain-theme.css?v=16" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <!-- SheetJS for Excel/CSV parsing -->
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.mini.min.js"></script>
+  <style>
+    .tab-bar{display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:20px}
+    .tab-btn{background:none;border:none;border-bottom:3px solid transparent;padding:10px 20px;font-size:.95rem;font-weight:500;color:var(--ink-soft);cursor:pointer;margin-bottom:-2px;transition:color .15s,border-color .15s}
+    .tab-btn:hover{color:var(--ink)}
+    .tab-btn.active{color:var(--accent);border-bottom-color:var(--accent)}
+    .tab-badge{display:inline-block;background:var(--surface-2);color:var(--ink-soft);border-radius:10px;padding:1px 7px;font-size:.75rem;margin-left:5px;font-weight:600}
+    .tab-btn.active .tab-badge{background:var(--accent-soft,rgba(0,120,255,.12));color:var(--accent)}
+    .enroll-table{width:100%;border-collapse:collapse;font-size:.88rem}
+    .enroll-table th{text-align:left;padding:6px 10px;font-weight:600;border-bottom:2px solid var(--border);color:var(--ink-soft)}
+    .enroll-table td{padding:6px 10px;border-bottom:1px solid var(--border)}
+    .enroll-table tr:hover td{background:var(--surface-2)}
+    .progress-mini{display:inline-block;height:6px;background:var(--border);border-radius:3px;width:60px;vertical-align:middle;overflow:hidden}
+    .progress-mini-fill{height:100%;background:var(--accent);border-radius:3px}
+  </style>
+</head>
+<body>
+
+  <div data-site-header></div>
+
+  <main class="app-shell">
+
+    <div class="flex-between" style="margin-bottom:4px">
+      <div>
+        <div class="text-muted" style="font-size:.85rem;margin-bottom:4px">
+          <a href="/misc.html">Miscellaneous</a> › Training Tracker
+        </div>
+        <h1 class="page-title" style="margin-top:0">Training Tracker</h1>
+      </div>
+    </div>
+    <p class="page-lead">
+      Build your training program, track who has completed what, and demonstrate workforce competency
+      for <strong>NIST AI RMF GOVERN 6.1</strong>, <strong>HIPAA workforce training</strong>, and
+      other compliance requirements.
+    </p>
+
+    <!-- Tab bar -->
+    <div class="tab-bar">
+      <button class="tab-btn active" data-tab="roster">
+        Roster <span class="tab-badge" id="roster-count">0</span>
+      </button>
+      <button class="tab-btn" data-tab="courses">
+        Courses <span class="tab-badge" id="courses-count">0</span>
+      </button>
+      <button class="tab-btn" data-tab="classes">
+        Classes <span class="tab-badge" id="classes-count">0</span>
+      </button>
+    </div>
+
+    <!-- ── ROSTER tab ──────────────────────────────────────────────────── -->
+    <div id="tab-roster">
+      <div class="card">
+        <div class="flex-between" style="margin-bottom:16px">
+          <h2 class="card-title" style="margin:0">Employee / Trainee Roster</h2>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-secondary" id="btn-import" data-editor-only>Import list</button>
+            <button class="btn btn-primary" id="btn-add-person" data-editor-only>+ Add person</button>
+          </div>
+        </div>
+        <p class="text-muted" style="margin:0 0 12px;font-size:.85rem">
+          Import from CSV, Excel, or paste a list. Used to pre-populate enrollment in classes.
+        </p>
+        <table class="data">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Department</th>
+              <th>Job title</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="roster-rows"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── COURSES tab ─────────────────────────────────────────────────── -->
+    <div id="tab-courses" hidden>
+      <div class="card">
+        <div class="flex-between" style="margin-bottom:16px">
+          <h2 class="card-title" style="margin:0">Course Catalog</h2>
+          <button class="btn btn-primary" id="btn-new-course" data-editor-only>+ New course</button>
+        </div>
+        <table class="data">
+          <thead>
+            <tr>
+              <th>Title</th>
+              <th>Category</th>
+              <th>Format</th>
+              <th>Duration</th>
+              <th>Required for</th>
+              <th>Classes</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="courses-rows"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── CLASSES tab ─────────────────────────────────────────────────── -->
+    <div id="tab-classes" hidden>
+      <div class="card">
+        <div class="flex-between" style="margin-bottom:12px">
+          <div class="filter-row" style="margin:0">
+            <label>Period:</label>
+            <select id="filter-period">
+              <option value="">All periods</option>
+            </select>
+            <label class="filter-gap">Status:</label>
+            <select id="filter-status">
+              <option value="">All</option>
+              <option value="scheduled">Scheduled</option>
+              <option value="in-progress">In progress</option>
+              <option value="completed">Completed</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" id="btn-new-class" data-editor-only style="flex-shrink:0;margin-left:16px">+ New class</button>
+        </div>
+        <table class="data">
+          <thead>
+            <tr>
+              <th>Course</th>
+              <th>Date</th>
+              <th>Period</th>
+              <th>Enrolled</th>
+              <th>Completed</th>
+              <th>Progress</th>
+              <th>Status</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="classes-rows"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div data-site-footer></div>
+  </main>
+
+  <script type="module">
+    import { requireCompany, canEdit, canAdmin } from '/js/session.js?v=16';
+    import { renderHeader, renderFooter, toast, openModal, confirmDialog, serializeForm, escapeHTML, formatDate } from '/js/ui.js?v=16';
+    import { listDocs, createRecord, updateRecord, deleteRecord, logEvent } from '/js/data.js?v=16';
+    import { db } from '/js/config.js?v=16';
+    import { doc, setDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+
+    const { user, memberships, company, member } = await requireCompany();
+    renderHeader({ user, company, memberships });
+    renderFooter();
+
+    const editorOK = canEdit(member);
+    const adminOK  = canAdmin(member);
+    if (!editorOK) document.querySelectorAll('[data-editor-only]').forEach(el => el.setAttribute('disabled','disabled'));
+
+    // ── State ──────────────────────────────────────────────────────────────
+    let roster  = [];
+    let courses = [];
+    let classes = [];
+
+    async function loadAll() {
+      [roster, courses, classes] = await Promise.all([
+        listDocs(company.id, 'trainingRoster',  { orderBy: [['name','asc']] }).catch(() => []),
+        listDocs(company.id, 'trainingCourses', { orderBy: [['title','asc']] }).catch(() => []),
+        listDocs(company.id, 'trainingClasses', { orderBy: [['date','desc']] }).catch(() => []),
+      ]);
+      renderAll();
+    }
+    await loadAll();
+
+    // ── Tab switching ──────────────────────────────────────────────────────
+    const tabs = ['roster', 'courses', 'classes'];
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const t = btn.dataset.tab;
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === t));
+        tabs.forEach(name => document.getElementById('tab-' + name).hidden = (name !== t));
+      });
+    });
+
+    // ── Periods ────────────────────────────────────────────────────────────
+    function generatePeriods() {
+      const now = new Date();
+      const y = now.getFullYear();
+      const q = Math.floor(now.getMonth() / 3) + 1;
+      const list = [];
+      for (let yr = y - 2; yr <= y + 2; yr++) list.push(String(yr));
+      for (let off = -8; off <= 4; off++) {
+        const total = (y * 4 + (q - 1)) + off;
+        const fy = Math.floor(total / 4);
+        const fq = (((total % 4) + 4) % 4) + 1;
+        list.push(`Q${fq} ${fy}`);
+      }
+      return [...new Set(list)].sort((a, b) => {
+        const parse = s => s.startsWith('Q') ? parseInt(s.slice(-4)) * 10 + parseInt(s[1]) : parseInt(s) * 10;
+        return parse(a) - parse(b);
+      });
+    }
+    const PERIODS = generatePeriods();
+    const periodSelect = document.getElementById('filter-period');
+    PERIODS.forEach(p => { const o = document.createElement('option'); o.value = o.textContent = p; periodSelect.appendChild(o); });
+
+    // ── Render roster ──────────────────────────────────────────────────────
+    function renderRoster() {
+      document.getElementById('roster-count').textContent = roster.length;
+      const tbody = document.getElementById('roster-rows');
+      if (!roster.length) {
+        tbody.innerHTML = `<tr><td colspan="5" class="empty-state">No people in the roster yet — import a list or add individually.</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = roster.map(r => `
+        <tr>
+          <td><strong>${escapeHTML(r.name || '(no name)')}</strong></td>
+          <td>${escapeHTML(r.email || '—')}</td>
+          <td>${escapeHTML(r.department || '—')}</td>
+          <td>${escapeHTML(r.jobTitle || '—')}</td>
+          <td style="white-space:nowrap">
+            ${editorOK ? `<button class="btn btn-ghost btn-sm" data-edit-person="${escapeHTML(r.id)}">Edit</button>` : ''}
+            ${adminOK  ? `<button class="btn btn-ghost btn-sm" data-del-person="${escapeHTML(r.id)}" style="color:var(--danger)">Delete</button>` : ''}
+          </td>
+        </tr>
+      `).join('');
+      tbody.querySelectorAll('[data-edit-person]').forEach(btn =>
+        btn.addEventListener('click', () => openPersonEditor(roster.find(r => r.id === btn.dataset.editPerson))));
+      tbody.querySelectorAll('[data-del-person]').forEach(btn =>
+        btn.addEventListener('click', async () => {
+          if (!await confirmDialog({ title: 'Remove person', message: 'Remove this person from the roster? This does not affect past class records.', confirmLabel: 'Remove', variant: 'danger' })) return;
+          await deleteRecord(company.id, 'trainingRoster', btn.dataset.delPerson);
+          roster = roster.filter(r => r.id !== btn.dataset.delPerson);
+          renderRoster();
+        }));
+    }
+
+    // ── Render courses ─────────────────────────────────────────────────────
+    function renderCourses() {
+      document.getElementById('courses-count').textContent = courses.length;
+      const tbody = document.getElementById('courses-rows');
+      if (!courses.length) {
+        tbody.innerHTML = `<tr><td colspan="7" class="empty-state">No courses yet — create one to get started.</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = courses.map(c => {
+        const classCount = classes.filter(cl => cl.courseId === c.id).length;
+        return `
+          <tr>
+            <td><strong>${escapeHTML(c.title || '(untitled)')}</strong>${c.description ? `<div class="text-muted" style="font-size:.8rem">${escapeHTML(c.description)}</div>` : ''}</td>
+            <td>${escapeHTML(c.category || '—')}</td>
+            <td>${escapeHTML(c.format || '—')}</td>
+            <td>${c.durationHours ? escapeHTML(c.durationHours) + ' hr' : '—'}</td>
+            <td>${escapeHTML(c.requiredFor || '—')}</td>
+            <td>${classCount}</td>
+            <td style="white-space:nowrap">
+              ${editorOK ? `<button class="btn btn-ghost btn-sm" data-edit-course="${escapeHTML(c.id)}">Edit</button>` : ''}
+              ${adminOK  ? `<button class="btn btn-ghost btn-sm" data-del-course="${escapeHTML(c.id)}" style="color:var(--danger)">Delete</button>` : ''}
+            </td>
+          </tr>
+        `;
+      }).join('');
+      tbody.querySelectorAll('[data-edit-course]').forEach(btn =>
+        btn.addEventListener('click', () => openCourseEditor(courses.find(c => c.id === btn.dataset.editCourse))));
+      tbody.querySelectorAll('[data-del-course]').forEach(btn =>
+        btn.addEventListener('click', async () => {
+          if (!await confirmDialog({ title: 'Delete course', message: 'Delete this course? Existing classes will keep their course name but lose the link.', confirmLabel: 'Delete', variant: 'danger' })) return;
+          await deleteRecord(company.id, 'trainingCourses', btn.dataset.delCourse);
+          courses = courses.filter(c => c.id !== btn.dataset.delCourse);
+          renderCourses();
+        }));
+    }
+
+    // ── Render classes ─────────────────────────────────────────────────────
+    function renderClasses() {
+      document.getElementById('classes-count').textContent = classes.length;
+      const pf = document.getElementById('filter-period').value;
+      const sf = document.getElementById('filter-status').value;
+      const filtered = classes.filter(cl =>
+        (!pf || cl.period === pf) &&
+        (!sf || cl.status === sf)
+      );
+      const tbody = document.getElementById('classes-rows');
+      if (!filtered.length) {
+        tbody.innerHTML = `<tr><td colspan="8" class="empty-state">No classes${pf||sf?' match those filters':' yet — create one'}.</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = filtered.map(cl => {
+        const enrolled = (cl.enrolled || []).length;
+        const completed = Object.keys(cl.completions || {}).filter(k => (cl.completions[k] && cl.completions[k].at)).length;
+        const pct = enrolled ? Math.round(completed / enrolled * 100) : 0;
+        const stCls = cl.status === 'completed' ? 'status-approved' : cl.status === 'cancelled' ? 'status-withdrawn' : cl.status === 'in-progress' ? 'status-triage' : 'status-submitted';
+        return `
+          <tr>
+            <td><strong>${escapeHTML(cl.courseName || '—')}</strong></td>
+            <td>${escapeHTML(cl.date || '—')}</td>
+            <td>${escapeHTML(cl.period || '—')}</td>
+            <td style="text-align:center">${enrolled}</td>
+            <td style="text-align:center">${completed}</td>
+            <td>
+              <div class="progress-mini"><div class="progress-mini-fill" style="width:${pct}%"></div></div>
+              <span style="font-size:.8rem;margin-left:6px;color:var(--ink-soft)">${pct}%</span>
+            </td>
+            <td><span class="status-pill ${stCls}">${escapeHTML(cl.status || 'scheduled')}</span></td>
+            <td><button class="btn btn-ghost btn-sm" data-open-class="${escapeHTML(cl.id)}">Open</button></td>
+          </tr>
+        `;
+      }).join('');
+      tbody.querySelectorAll('[data-open-class]').forEach(btn =>
+        btn.addEventListener('click', () => openClassEditor(classes.find(cl => cl.id === btn.dataset.openClass))));
+    }
+
+    function renderAll() {
+      renderRoster();
+      renderCourses();
+      renderClasses();
+    }
+
+    document.getElementById('filter-period').addEventListener('change', renderClasses);
+    document.getElementById('filter-status').addEventListener('change', renderClasses);
+
+    // ── Person editor ──────────────────────────────────────────────────────
+    document.getElementById('btn-add-person').addEventListener('click', () => openPersonEditor(null));
+
+    function openPersonEditor(rec) {
+      const v = rec || {};
+      const { close } = openModal({
+        title: rec ? 'Edit person' : 'Add person',
+        body: `
+          <form id="person-form">
+            <div class="grid-2">
+              <div class="field"><label>Full name *</label>
+                <input name="name" required value="${escapeHTML(v.name||'')}" placeholder="Alice Johnson" /></div>
+              <div class="field"><label>Email</label>
+                <input name="email" type="email" value="${escapeHTML(v.email||'')}" placeholder="alice@company.com" /></div>
+            </div>
+            <div class="grid-2">
+              <div class="field"><label>Department</label>
+                <input name="department" value="${escapeHTML(v.department||'')}" placeholder="Legal, Technology, HR…" /></div>
+              <div class="field"><label>Job title</label>
+                <input name="jobTitle" value="${escapeHTML(v.jobTitle||'')}" placeholder="AI Product Manager" /></div>
+            </div>
+          </form>`,
+        actions: [
+          { label: 'Cancel', variant: 'ghost', onClick: ({ close }) => close() },
+          { label: rec ? 'Save' : 'Add person', variant: 'primary', onClick: async ({ close }) => {
+            const form = document.getElementById('person-form');
+            if (!form.reportValidity()) return;
+            const d = serializeForm(form);
+            try {
+              if (rec) {
+                await updateRecord(company.id, 'trainingRoster', rec.id, d, user.uid);
+                Object.assign(rec, d);
+              } else {
+                const id = await createRecord(company.id, 'trainingRoster', d, user.uid);
+                roster.push({ id, ...d });
+                roster.sort((a,b) => (a.name||'').localeCompare(b.name||''));
+              }
+              renderRoster();
+              close();
+            } catch (err) { toast(err.message, 'error', 5000); }
+          }}
+        ]
+      });
+    }
+
+    // ── Import modal ───────────────────────────────────────────────────────
+    document.getElementById('btn-import').addEventListener('click', openImportModal);
+
+    function openImportModal() {
+      const { close, backdrop } = openModal({
+        title: 'Import roster',
+        body: `
+          <p class="text-muted" style="margin:0 0 12px">Upload a <strong>CSV</strong> or <strong>Excel (.xlsx/.xls)</strong> file, or paste names directly.
+          Expected columns: <em>Name, Email, Department, Job Title</em> (order and exact spelling flexible).</p>
+          <div class="field">
+            <label>Upload file</label>
+            <input type="file" id="import-file" accept=".csv,.xlsx,.xls,.tsv" />
+          </div>
+          <div class="field">
+            <label>— or paste a list —</label>
+            <textarea id="import-paste" rows="6" placeholder="One person per line. Accepts:&#10;Name, Email, Department, Job Title&#10;or just names (one per line)"></textarea>
+          </div>
+          <div id="import-preview" style="margin-top:12px"></div>`,
+        actions: [
+          { label: 'Cancel', variant: 'ghost', onClick: ({ close }) => close() },
+          { label: 'Import', variant: 'primary', onClick: async ({ close }) => {
+            const preview = _importParsed;
+            if (!preview || !preview.length) { toast('Nothing to import — upload a file or paste some names.', 'error'); return; }
+            let added = 0;
+            for (const row of preview) {
+              if (!row.name) continue;
+              try {
+                const id = await createRecord(company.id, 'trainingRoster', row, user.uid);
+                roster.push({ id, ...row });
+                added++;
+              } catch (err) { /* skip duplicates / errors */ }
+            }
+            roster.sort((a,b) => (a.name||'').localeCompare(b.name||''));
+            renderRoster();
+            close();
+            toast(`Imported ${added} ${added === 1 ? 'person' : 'people'}.`, 'success');
+          }}
+        ]
+      });
+
+      let _importParsed = [];
+
+      backdrop.querySelector('#import-file').addEventListener('change', async e => {
+        const file = e.target.files[0];
+        if (!file) return;
+        try {
+          const rows = await parseFile(file);
+          _importParsed = rows;
+          showPreview(rows, backdrop);
+        } catch (err) { toast('Could not parse file: ' + err.message, 'error', 5000); }
+      });
+
+      backdrop.querySelector('#import-paste').addEventListener('input', e => {
+        const rows = parsePaste(e.target.value);
+        _importParsed = rows;
+        showPreview(rows, backdrop);
+      });
+    }
+
+    function showPreview(rows, backdrop) {
+      const el = backdrop.querySelector('#import-preview');
+      if (!rows.length) { el.innerHTML = ''; return; }
+      const sample = rows.slice(0, 5);
+      el.innerHTML = `
+        <p class="text-muted" style="margin:0 0 6px;font-size:.85rem"><strong>${rows.length}</strong> ${rows.length===1?'person':'people'} detected (showing first ${Math.min(5,rows.length)}):</p>
+        <table class="data" style="font-size:.85rem">
+          <thead><tr><th>Name</th><th>Email</th><th>Department</th><th>Job title</th></tr></thead>
+          <tbody>${sample.map(r => `<tr>
+            <td>${escapeHTML(r.name||'')}</td>
+            <td>${escapeHTML(r.email||'')}</td>
+            <td>${escapeHTML(r.department||'')}</td>
+            <td>${escapeHTML(r.jobTitle||'')}</td>
+          </tr>`).join('')}</tbody>
+        </table>`;
+    }
+
+    async function parseFile(file) {
+      const ext = file.name.split('.').pop().toLowerCase();
+      if (ext === 'csv' || ext === 'tsv') {
+        const text = await file.text();
+        return parseCSV(text);
+      }
+      if (ext === 'xlsx' || ext === 'xls') {
+        const buf = await file.arrayBuffer();
+        const wb = window.XLSX.read(buf, { type: 'array' });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const arr = window.XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+        return normalizeRows(arr);
+      }
+      throw new Error('Unsupported file type. Please use CSV or Excel (.xlsx).');
+    }
+
+    function parseCSV(text) {
+      const lines = text.trim().split(/\r?\n/);
+      const rows = lines.map(line => {
+        const cells = [];
+        let cur = '', inQ = false;
+        for (let i = 0; i < line.length; i++) {
+          const c = line[i];
+          if (c === '"' && !inQ) { inQ = true; continue; }
+          if (c === '"' && inQ) { inQ = false; continue; }
+          if ((c === ',' || c === '\t') && !inQ) { cells.push(cur.trim()); cur = ''; continue; }
+          cur += c;
+        }
+        cells.push(cur.trim());
+        return cells;
+      });
+      return normalizeRows(rows);
+    }
+
+    function parsePaste(text) {
+      const lines = text.trim().split(/\r?\n/).filter(l => l.trim());
+      const rows = lines.map(l => l.split(/[\t,]/).map(c => c.trim()));
+      return normalizeRows(rows);
+    }
+
+    function normalizeRows(rows) {
+      if (!rows.length) return [];
+      const COL_MAP = {
+        name:       ['name','full name','fullname','employee name','employee','person'],
+        email:      ['email','email address','e-mail','mail'],
+        department: ['department','dept','division','team','group'],
+        jobTitle:   ['title','job title','jobtitle','role','position','job role'],
+      };
+      const header = rows[0].map(h => (h||'').toString().toLowerCase().trim());
+      const dataRows = rows.slice(1);
+
+      const findCol = keys => {
+        for (const k of keys) { const i = header.indexOf(k); if (i >= 0) return i; }
+        return -1;
+      };
+
+      const nameI  = findCol(COL_MAP.name);
+      const emailI = findCol(COL_MAP.email);
+      const deptI  = findCol(COL_MAP.department);
+      const titleI = findCol(COL_MAP.jobTitle);
+
+      // If no header match assume single-column name list
+      if (nameI < 0 && emailI < 0) {
+        return rows.map(r => ({ name: (r[0]||'').trim(), email: '', department: '', jobTitle: '' })).filter(r => r.name);
+      }
+
+      return dataRows.map(row => ({
+        name:       nameI  >= 0 ? (row[nameI]  || '').toString().trim() : '',
+        email:      emailI >= 0 ? (row[emailI] || '').toString().trim() : '',
+        department: deptI  >= 0 ? (row[deptI]  || '').toString().trim() : '',
+        jobTitle:   titleI >= 0 ? (row[titleI] || '').toString().trim() : '',
+      })).filter(r => r.name || r.email);
+    }
+
+    // ── Course editor ──────────────────────────────────────────────────────
+    document.getElementById('btn-new-course').addEventListener('click', () => openCourseEditor(null));
+
+    const COURSE_CATS = ['AI Risk & Governance','HIPAA / Healthcare AI','Bias & Fairness','Data Privacy','Security','Tool-Specific','Regulatory Compliance','General Awareness','Other'];
+    const FORMATS = ['Live / instructor-led','Virtual / webinar','Self-paced / async','Blended','Vendor-provided','Other'];
+    const REQ_FOR = ['All employees','Technology / Engineering','Legal & Compliance','Clinical / Healthcare','Finance','HR / People','Leadership / Board','Custom'];
+
+    function openCourseEditor(rec) {
+      const v = rec || {};
+      openModal({
+        title: rec ? 'Edit course' : 'New course',
+        body: `
+          <form id="course-form">
+            <div class="field"><label>Course title *</label>
+              <input name="title" required value="${escapeHTML(v.title||'')}" placeholder="e.g., AI Risk Awareness — Foundation" /></div>
+            <div class="field"><label>Description</label>
+              <textarea name="description" rows="2" placeholder="What this course covers and why it matters.">${escapeHTML(v.description||'')}</textarea></div>
+            <div class="grid-2">
+              <div class="field"><label>Category</label>
+                <select name="category">
+                  <option value="">—</option>
+                  ${COURSE_CATS.map(c => `<option ${v.category===c?'selected':''}>${escapeHTML(c)}</option>`).join('')}
+                </select></div>
+              <div class="field"><label>Format</label>
+                <select name="format">
+                  <option value="">—</option>
+                  ${FORMATS.map(f => `<option ${v.format===f?'selected':''}>${escapeHTML(f)}</option>`).join('')}
+                </select></div>
+            </div>
+            <div class="grid-2">
+              <div class="field"><label>Duration (hours)</label>
+                <input name="durationHours" type="number" min="0.25" step="0.25" value="${escapeHTML(v.durationHours||'')}" placeholder="1.0" /></div>
+              <div class="field"><label>Required for</label>
+                <select name="requiredFor">
+                  <option value="">—</option>
+                  ${REQ_FOR.map(r => `<option ${v.requiredFor===r?'selected':''}>${escapeHTML(r)}</option>`).join('')}
+                </select></div>
+            </div>
+            <div class="field"><label>Notes / objectives</label>
+              <textarea name="notes" rows="2" placeholder="Learning objectives, regulatory citations, prerequisite info…">${escapeHTML(v.notes||'')}</textarea></div>
+          </form>`,
+        actions: [
+          { label: 'Cancel', variant: 'ghost', onClick: ({ close }) => close() },
+          { label: rec ? 'Save' : 'Create course', variant: 'primary', onClick: async ({ close }) => {
+            const form = document.getElementById('course-form');
+            if (!form.reportValidity()) return;
+            const d = serializeForm(form);
+            try {
+              if (rec) {
+                await updateRecord(company.id, 'trainingCourses', rec.id, d, user.uid);
+                Object.assign(rec, d);
+                classes.filter(cl => cl.courseId === rec.id).forEach(cl => { cl.courseName = d.title; });
+              } else {
+                const id = await createRecord(company.id, 'trainingCourses', d, user.uid);
+                courses.push({ id, ...d });
+                courses.sort((a,b) => (a.title||'').localeCompare(b.title||''));
+              }
+              renderAll();
+              close();
+            } catch (err) { toast(err.message, 'error', 5000); }
+          }}
+        ]
+      });
+    }
+
+    // ── Class editor ───────────────────────────────────────────────────────
+    document.getElementById('btn-new-class').addEventListener('click', () => openClassEditor(null));
+
+    function classFormHTML(v) {
+      const courseOpts = courses.map(c =>
+        `<option value="${escapeHTML(c.id)}" ${v.courseId===c.id?'selected':''}>${escapeHTML(c.title||'(untitled)')}</option>`
+      ).join('');
+      const periodOpts = PERIODS.map(p => `<option ${v.period===p?'selected':''}>${escapeHTML(p)}</option>`).join('');
+      return `
+        <form id="class-form">
+          <div class="grid-2">
+            <div class="field"><label>Course *</label>
+              <select name="courseId" required>
+                <option value="">— select a course —</option>
+                ${courseOpts}
+              </select></div>
+            <div class="field"><label>Period</label>
+              <select name="period">
+                <option value="">—</option>
+                ${periodOpts}
+              </select></div>
+          </div>
+          <div class="grid-2">
+            <div class="field"><label>Date</label>
+              <input type="date" name="date" value="${escapeHTML(v.date||'')}" /></div>
+            <div class="field"><label>Status</label>
+              <select name="status">
+                <option ${v.status==='scheduled'||!v.status?'selected':''} value="scheduled">Scheduled</option>
+                <option ${v.status==='in-progress'?'selected':''} value="in-progress">In progress</option>
+                <option ${v.status==='completed'?'selected':''} value="completed">Completed</option>
+                <option ${v.status==='cancelled'?'selected':''} value="cancelled">Cancelled</option>
+              </select></div>
+          </div>
+          <div class="grid-2">
+            <div class="field"><label>Instructor</label>
+              <input name="instructor" value="${escapeHTML(v.instructor||'')}" placeholder="Instructor name or vendor" /></div>
+            <div class="field"><label>Format</label>
+              <select name="format">
+                <option value="">—</option>
+                ${FORMATS.map(f => `<option ${v.format===f?'selected':''}>${escapeHTML(f)}</option>`).join('')}
+              </select></div>
+          </div>
+          <div class="field"><label>Location / URL</label>
+            <input name="location" value="${escapeHTML(v.location||'')}" placeholder="Room 3B or https://zoom.us/j/…" /></div>
+          <div class="field"><label>Notes</label>
+            <textarea name="notes" rows="2">${escapeHTML(v.notes||'')}</textarea></div>
+        </form>`;
+    }
+
+    function enrollmentTableHTML(cl) {
+      if (!roster.length) return `<p class="text-muted">No one in the roster yet. Add people on the Roster tab first.</p>`;
+      const enrolled   = new Set(cl.enrolled || []);
+      const completions = cl.completions || {};
+      return `
+        <h3 style="margin:20px 0 8px;font-size:1rem;font-weight:600">Enrollment &amp; Completion</h3>
+        <p class="text-muted" style="font-size:.85rem;margin:0 0 10px">
+          ${enrolled.size} enrolled · ${Object.values(completions).filter(c=>c&&c.at).length} completed
+        </p>
+        <table class="enroll-table" id="enroll-table">
+          <thead><tr>
+            <th>Name</th><th>Department</th><th>Enrolled</th><th>Completed</th><th>Date completed</th>
+          </tr></thead>
+          <tbody>
+            ${roster.map(r => {
+              const isEnrolled   = enrolled.has(r.id);
+              const comp         = completions[r.id] || {};
+              const isCompleted  = !!(comp.at);
+              return `
+                <tr data-person="${escapeHTML(r.id)}">
+                  <td>${escapeHTML(r.name||'')}</td>
+                  <td>${escapeHTML(r.department||'—')}</td>
+                  <td style="text-align:center">
+                    <input type="checkbox" class="enroll-cb" data-id="${escapeHTML(r.id)}" ${isEnrolled?'checked':''} />
+                  </td>
+                  <td style="text-align:center">
+                    <input type="checkbox" class="complete-cb" data-id="${escapeHTML(r.id)}" ${isCompleted?'checked':''} ${!isEnrolled?'disabled':''} />
+                  </td>
+                  <td>
+                    <input type="date" class="complete-date" data-id="${escapeHTML(r.id)}" value="${escapeHTML(comp.at||'')}" style="font-size:.8rem;width:130px" ${!isCompleted?'disabled':''} />
+                  </td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>`;
+    }
+
+    function wireEnrollTable(container) {
+      container.querySelectorAll('.enroll-cb').forEach(cb => {
+        cb.addEventListener('change', () => {
+          const row = cb.closest('tr');
+          const completeCb   = row.querySelector('.complete-cb');
+          const completeDate = row.querySelector('.complete-date');
+          if (!cb.checked) {
+            completeCb.checked = false;
+            completeCb.disabled = true;
+            completeDate.disabled = true;
+            completeDate.value = '';
+          } else {
+            completeCb.disabled = false;
+          }
+        });
+      });
+      container.querySelectorAll('.complete-cb').forEach(cb => {
+        cb.addEventListener('change', () => {
+          const row = cb.closest('tr');
+          const dateInput = row.querySelector('.complete-date');
+          dateInput.disabled = !cb.checked;
+          if (cb.checked && !dateInput.value) dateInput.value = new Date().toISOString().slice(0,10);
+          if (!cb.checked) dateInput.value = '';
+        });
+      });
+    }
+
+    function collectEnrollment(container) {
+      const enrolled = [];
+      const completions = {};
+      container.querySelectorAll('tr[data-person]').forEach(row => {
+        const id          = row.dataset.person;
+        const isEnrolled  = row.querySelector('.enroll-cb').checked;
+        const isCompleted = row.querySelector('.complete-cb').checked;
+        const dateVal     = row.querySelector('.complete-date').value;
+        if (isEnrolled) {
+          enrolled.push(id);
+          if (isCompleted) completions[id] = { at: dateVal || new Date().toISOString().slice(0,10) };
+        }
+      });
+      return { enrolled, completions };
+    }
+
+    function openClassEditor(rec) {
+      const v = rec || {};
+      const isNew = !rec;
+      const bodyNode = document.createElement('div');
+      bodyNode.innerHTML = classFormHTML(v) + (isNew ? '' : enrollmentTableHTML(v));
+
+      const { close } = openModal({
+        title: isNew ? 'New class' : (v.courseName || 'Class') + ' — ' + (v.period || v.date || ''),
+        body: bodyNode,
+        actions: [
+          { label: 'Cancel', variant: 'ghost', onClick: ({ close }) => close() },
+          ...(rec && adminOK ? [{ label: 'Delete', variant: 'ghost', onClick: async ({ close }) => {
+            if (!await confirmDialog({ title: 'Delete class', message: 'Delete this class and all its enrollment records?', confirmLabel: 'Delete', variant: 'danger' })) return;
+            await deleteRecord(company.id, 'trainingClasses', rec.id);
+            classes = classes.filter(cl => cl.id !== rec.id);
+            renderClasses();
+            close();
+          }}] : []),
+          { label: isNew ? 'Create class' : 'Save', variant: 'primary', onClick: async ({ close }) => {
+            const form = document.getElementById('class-form');
+            if (!form.reportValidity()) return;
+            const fd = serializeForm(form);
+            const course = courses.find(c => c.id === fd.courseId);
+            const enrollment = isNew ? { enrolled: [], completions: {} } : collectEnrollment(bodyNode);
+            const payload = {
+              courseId:    fd.courseId,
+              courseName:  course ? course.title : (v.courseName || ''),
+              period:      fd.period || '',
+              date:        fd.date || '',
+              instructor:  fd.instructor || '',
+              format:      fd.format || '',
+              location:    fd.location || '',
+              notes:       fd.notes || '',
+              status:      fd.status || 'scheduled',
+              enrolled:    enrollment.enrolled,
+              completions: enrollment.completions,
+            };
+            try {
+              if (isNew) {
+                const id = await createRecord(company.id, 'trainingClasses', payload, user.uid);
+                classes.unshift({ id, ...payload });
+              } else {
+                await setDoc(doc(db, 'companies', company.id, 'trainingClasses', rec.id), {
+                  ...payload,
+                  updatedAt: serverTimestamp(),
+                  updatedBy: user.uid
+                }, { merge: true });
+                Object.assign(rec, payload);
+              }
+              await logEvent(company.id, {
+                actorUid: user.uid, actorName: user.displayName || user.email,
+                action: isNew ? 'create.trainingClass' : 'update.trainingClass',
+                target: payload.courseName,
+                details: { period: payload.period, enrolled: payload.enrolled.length }
+              });
+              renderClasses();
+              close();
+              if (!isNew) toast('Class saved.', 'success');
+            } catch (err) { toast(err.message, 'error', 5000); }
+          }}
+        ]
+      });
+
+      // Wire enrollment interactivity after modal is in the DOM
+      if (!isNew) {
+        wireEnrollTable(document.querySelector('.modal-body'));
+      }
+    }
+
+  </script>
+
+</body>
+</html>

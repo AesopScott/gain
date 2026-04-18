@@ -1,0 +1,39 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git pull *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(where magick *)",
+      "Bash(python -c \"import cairosvg; print\\('cairosvg OK'\\)\")",
+      "Bash(node -e \"console.log\\(require.resolve\\('sharp'\\)\\)\")",
+      "Bash(start \"\" \"C:\\\\Users\\\\scott\\\\Code\\\\gain\\\\.claude\\\\worktrees\\\\determined-cori-526273\\\\public\\\\og-images\\\\11-badge-statement.svg\")",
+      "Bash(git fetch *)",
+      "Bash(pip install *)",
+      "Bash(python -c \"import cairosvg; cairosvg.svg2png\\(url='public/og-images/11-badge-statement.svg', write_to='public/og-images/11-badge-statement.png', output_width=1200, output_height=630\\); print\\('OK'\\)\")",
+      "Bash('/c/Program Files \\(x86\\)/Microsoft/Edge/Application/msedge.exe' --headless=new --disable-gpu --hide-scrollbars --default-background-color=00000000 --window-size=1200,630 --screenshot=__TRACKED_VAR__/public/og-images/11-badge-statement.png file:///C:/Users/scott/Code/gain/.claude/worktrees/determined-cori-526273/public/og-images/11-badge-statement.svg)",
+      "Bash(\"/c/Program Files \\(x86\\)/Microsoft/Edge/Application/msedge.exe\" --headless=new --disable-gpu --hide-scrollbars --window-size=1200,630 --screenshot=\"C:\\\\Users\\\\scott\\\\Code\\\\gain\\\\.claude\\\\worktrees\\\\determined-cori-526273\\\\public\\\\og-images\\\\11-badge-statement.png\" \"file:///C:/Users/scott/Code/gain/.claude/worktrees/determined-cori-526273/public/og-images/11-badge-statement.svg\")",
+      "Bash(echo \"---EXIT $?---\")",
+      "Bash(python -c \"from PIL import Image; im = Image.open\\('public/og-images/11-badge-statement.png'\\); print\\(f'{im.size[0]}x{im.size[1]} {im.mode}'\\)\")",
+      "Bash(\"/c/Program Files \\(x86\\)/Microsoft/Edge/Application/msedge.exe\" --headless=new --disable-gpu --hide-scrollbars --window-size=1200,630 --screenshot=\"C:\\\\Users\\\\scott\\\\Code\\\\gain\\\\.claude\\\\worktrees\\\\determined-cori-526273\\\\public\\\\og-images\\\\11-badge-statement.png\" \"file:///C:/Users/scott/Code/gain/.claude/worktrees/determined-cori-526273/public/og-images/.render.html\")",
+      "Bash(echo \"exit=$?\")",
+      "Bash(python -c \"from PIL import Image; im = Image.open\\('public/og-images/11-badge-statement.png'\\); print\\(f'{im.size[0]}x{im.size[1]}'\\)\")",
+      "Bash(python -c ' *)",
+      "Bash(git ls-tree *)",
+      "Bash(grep -E \"favicon|\\\\.html$\")",
+      "Bash(grep -nA2 \"\\\\.site-header\\\\b\" public/css/gain-theme.css)",
+      "Bash(gh run *)",
+      "Bash(GIT_EDITOR=true git rebase --continue)",
+      "mcp__mcp-obsidian__obsidian_list_files_in_dir",
+      "mcp__mcp-obsidian__obsidian_simple_search",
+      "mcp__mcp-obsidian__obsidian_list_files_in_vault",
+      "mcp__mcp-obsidian__obsidian_get_file_contents",
+      "mcp__mcp-obsidian__obsidian_append_content",
+      "WebSearch",
+      "Bash(git -C /c/Users/scott/Code/gain status --short)",
+      "Bash(git -C /c/Users/scott/Code/gain diff --stat)",
+      "Bash(git -C /c/Users/scott/Code/gain log --oneline -3)"
+    ]
+  }
+}
