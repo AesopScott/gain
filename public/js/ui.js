@@ -19,6 +19,7 @@ const DEFAULT_NAV = [
   { href: '/risks.html',     label: 'Risks',     match: 'risks' },
   { href: '/aia.html',       label: 'AIAs',      match: 'aia' },
   { href: '/checklists.html', label: 'Checklists', match: 'checklists' },
+  { href: '/policies.html',  label: 'Policies',  match: 'policies' },
   { href: '/settings.html',  label: 'Settings',  match: 'settings' }
 ];
 
@@ -89,7 +90,7 @@ export function renderFooter() {
     <footer class="site-footer">
       <span>GAIN · Govern AI Now</span>
       <span class="text-muted">Your data · Your company · Your framework</span>
-      <span class="text-muted" style="font-size:.7rem;opacity:.6">v14</span>
+      <span class="text-muted" style="font-size:.7rem;opacity:.6">v15</span>
     </footer>
   `;
 }

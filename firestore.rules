@@ -143,6 +143,13 @@ service cloud.firestore {
         allow delete: if isAdmin(companyId);
       }
 
+      // --- governance policies ---
+      match /policies/{policyId} {
+        allow read: if isMember(companyId);
+        allow create, update: if isEditor(companyId);
+        allow delete: if isAdmin(companyId);
+      }
+
       // --- audit log ---
       // Append-only journal written by editors, readable by members, never updated or deleted
       match /audit/{eventId} {

@@ -1030,6 +1030,18 @@ table.data .actions {
 .nav-link:hover { background: var(--header-ink-hover-bg); color: var(--header-ink); text-decoration: none; }
 .nav-link.active { background: var(--header-ink-active-bg); color: var(--header-ink); }
 
+/* ---------- wide modal (policy editor) ---------- */
+.modal-xl { max-width: 860px; }
+.policy-body-textarea { font-family: 'Menlo', 'Consolas', monospace; font-size: .85rem; line-height: 1.6; resize: vertical; }
+.policy-editor-form .grid-2 { gap: 14px; }
+
+/* ---------- suggested policies ---------- */
+.suggested-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+.suggested-card { background: var(--surface-alt); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; display: flex; flex-direction: column; }
+.suggested-card-name { font-weight: 600; font-size: .9rem; color: var(--h-color); margin-bottom: 4px; }
+.suggested-card-desc { font-size: .82rem; color: var(--ink-soft); line-height: 1.4; flex: 1; }
+.suggested-card-meta { font-size: .75rem; color: var(--accent); margin-top: 6px; font-weight: 500; }
+
 .header-right {
   margin-left: auto;
   display: flex;

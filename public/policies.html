@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GAIN — Policies</title>
+  <script>(function(){try{var p=localStorage.getItem('gain.theme.palette')||'classic';var m=localStorage.getItem('gain.theme.mode')||'light';document.documentElement.setAttribute('data-palette',p);document.documentElement.setAttribute('data-mode',m);}catch(e){}})();</script>
+  <link rel="stylesheet" href="/css/gain-theme.css?v=15" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+</head>
+<body>
+
+  <div data-site-header></div>
+
+  <main class="app-shell">
+
+    <div class="flex-between">
+      <h1 class="page-title">Policies</h1>
+      <button class="btn btn-primary" data-new data-editor-only>+ New policy</button>
+    </div>
+
+    <p class="page-lead">
+      A living library of your organisation's AI governance policies — drafted, approved,
+      and ratified here. GAIN suggests policies based on your
+      <a href="/framework.html">Regulatory Posture</a> so nothing required by your
+      frameworks falls through the gaps.
+    </p>
+
+    <div class="card">
+      <div class="filter-row">
+        <label>Framework:</label>
+        <select data-filter-framework>
+          <option value="">All frameworks</option>
+          <option>NIST AI RMF</option>
+          <option>ISO 42001</option>
+          <option>EU AI Act</option>
+          <option>NYC Local Law 144</option>
+          <option>Colorado AI Act</option>
+          <option>HIPAA</option>
+          <option>GLBA</option>
+          <option>ECOA / FCRA</option>
+          <option>FERPA / COPPA</option>
+          <option>NAIC</option>
+          <option>SOX</option>
+          <option>Other</option>
+        </select>
+        <label class="filter-gap">Status:</label>
+        <select data-filter-status>
+          <option value="">All statuses</option>
+          <option value="draft">Draft</option>
+          <option value="in-review">In review</option>
+          <option value="approved">Approved</option>
+          <option value="ratified">Ratified</option>
+          <option value="archived">Archived</option>
+        </select>
+      </div>
+      <table class="data">
+        <thead>
+          <tr>
+            <th>Policy</th>
+            <th>Framework</th>
+            <th>Relates to</th>
+            <th>Status</th>
+            <th>Owner</th>
+            <th>Updated</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody data-rows></tbody>
+      </table>
+    </div>
+
+    <div class="card" id="suggested-card">
+      <div class="flex-between" style="cursor:pointer;user-select:none" data-toggle-suggested>
+        <h2 class="card-title" style="margin:0">
+          Suggested by your posture
+          <span id="suggested-count" class="badge" style="margin-left:8px;font-size:.8rem">0</span>
+        </h2>
+        <span id="suggested-chevron" style="font-size:.85rem;color:var(--ink-soft)">▼ Show</span>
+      </div>
+      <div id="suggested-list" class="hidden" style="margin-top:16px"></div>
+    </div>
+
+    <div data-site-footer></div>
+  </main>
+
+  <script type="module">
+    import { requireCompany, canEdit, canAdmin } from '/js/session.js?v=15';
+    import { renderHeader, renderFooter, toast, openModal, confirmDialog, serializeForm, escapeHTML, formatDate } from '/js/ui.js?v=15';
+    import { listDocs, createRecord, updateRecord, deleteRecord, getRecord, logEvent, getPosture } from '/js/data.js?v=15';
+    import { POLICY_LIBRARY, FRAMEWORKS, GAIN_COLLECTIONS, suggestedPolicies } from '/js/policyLibrary.js?v=15';
+
+    const { user, memberships, company, member } = await requireCompany();
+    renderHeader({ user, company, memberships });
+    renderFooter();
+
+    const editorOK = canEdit(member);
+    const adminOK  = canAdmin(member);
+    if (!editorOK) document.querySelectorAll('[data-editor-only]').forEach(el => el.setAttribute('disabled', 'disabled'));
+
+    const [team, posture] = await Promise.all([
+      listDocs(company.id, 'team', { orderBy: [['name', 'asc']] }),
+      getPosture(company.id),
+    ]);
+
+    const frameworkFilter = document.querySelector('[data-filter-framework]');
+    const statusFilter    = document.querySelector('[data-filter-status]');
+    frameworkFilter.addEventListener('change', refresh);
+    statusFilter.addEventListener('change', refresh);
+
+    // ── list ──────────────────────────────────────────────────────────────
+
+    const collectionLabel = Object.fromEntries(GAIN_COLLECTIONS.map(c => [c.value, c.label]));
+
+    const STATUS_CLASS = {
+      draft: 'status-submitted',
+      'in-review': 'status-triage',
+      approved: 'status-review',
+      ratified: 'status-approved',
+      archived: 'status-withdrawn',
+    };
+
+    async function refresh() {
+      const rows = await listDocs(company.id, 'policies', { orderBy: [['updatedAt', 'desc']] });
+      const ff = frameworkFilter.value, sf = statusFilter.value;
+      const filtered = rows.filter(r =>
+        (!ff || r.framework === ff) &&
+        (!sf || r.status === sf)
+      );
+      const tbody = document.querySelector('[data-rows]');
+      if (filtered.length === 0) {
+        const msg = ff || sf ? 'No policies match those filters.' : 'No policies yet — add one or load from suggestions below.';
+        tbody.innerHTML = `<tr><td colspan="7" class="empty-state">${msg}</td></tr>`;
+      } else {
+        tbody.innerHTML = filtered.map(r => `
+          <tr>
+            <td>
+              <a href="#" data-open="${escapeHTML(r.id)}">${escapeHTML(r.name || '(untitled)')}</a>
+              ${r.description ? `<div class="text-muted" style="font-size:.8rem;margin-top:2px">${escapeHTML(r.description)}</div>` : ''}
+            </td>
+            <td>${escapeHTML(r.framework || '—')}</td>
+            <td>${escapeHTML(collectionLabel[r.gainCollection] || r.gainCollection || '—')}</td>
+            <td><span class="status-pill ${STATUS_CLASS[r.status] || 'status-submitted'}">${escapeHTML(r.status || 'draft')}</span></td>
+            <td>${escapeHTML(r.owner || '—')}</td>
+            <td>${formatDate(r.updatedAt)}</td>
+            <td>${editorOK ? `<button class="btn btn-ghost btn-sm" data-open="${escapeHTML(r.id)}">Open</button>` : ''}</td>
+          </tr>
+        `).join('');
+      }
+      tbody.querySelectorAll('[data-open]').forEach(el => {
+        el.addEventListener('click', async e => {
+          e.preventDefault();
+          const rec = await getRecord(company.id, 'policies', e.currentTarget.dataset.open);
+          openEditor(rec);
+        });
+      });
+
+      // refresh suggestion count (exclude already-created library IDs)
+      const usedIds = new Set(rows.map(r => r.libraryId).filter(Boolean));
+      renderSuggestions(usedIds);
+    }
+    refresh();
+
+    // ── suggestions ───────────────────────────────────────────────────────
+
+    let suggestionsVisible = false;
+
+    document.querySelector('[data-toggle-suggested]').addEventListener('click', () => {
+      suggestionsVisible = !suggestionsVisible;
+      document.getElementById('suggested-list').classList.toggle('hidden', !suggestionsVisible);
+      document.getElementById('suggested-chevron').textContent = suggestionsVisible ? '▲ Hide' : '▼ Show';
+    });
+
+    function renderSuggestions(usedIds) {
+      const suggestions = suggestedPolicies(posture, usedIds);
+      document.getElementById('suggested-count').textContent = suggestions.length;
+
+      if (suggestions.length === 0) {
+        document.getElementById('suggested-list').innerHTML =
+          '<p class="text-muted" style="font-size:.9rem">All suggested policies for your posture have been created.</p>';
+        return;
+      }
+
+      // Group by framework
+      const byFramework = {};
+      for (const p of suggestions) {
+        if (!byFramework[p.framework]) byFramework[p.framework] = [];
+        byFramework[p.framework].push(p);
+      }
+
+      document.getElementById('suggested-list').innerHTML = Object.entries(byFramework).map(([fw, policies]) => `
+        <div style="margin-bottom:20px">
+          <h3 style="font-size:.85rem;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">${escapeHTML(fw)}</h3>
+          <div class="suggested-grid">
+            ${policies.map(p => `
+              <div class="suggested-card">
+                <div class="suggested-card-name">${escapeHTML(p.name)}</div>
+                <div class="suggested-card-desc">${escapeHTML(p.description)}</div>
+                <div class="suggested-card-meta">${escapeHTML(collectionLabel[p.gainCollection] || p.gainCollection)}</div>
+                ${editorOK ? `<button class="btn btn-primary btn-sm" style="margin-top:10px" data-add-suggestion="${escapeHTML(p.id)}">Add from template</button>` : ''}
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `).join('');
+
+      document.querySelectorAll('[data-add-suggestion]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const p = POLICY_LIBRARY.find(x => x.id === btn.dataset.addSuggestion);
+          if (p) openEditor(null, p);
+        });
+      });
+    }
+
+    // ── editor ────────────────────────────────────────────────────────────
+
+    document.querySelector('[data-new]').addEventListener('click', () => {
+      if (!editorOK) return;
+      openEditor(null);
+    });
+
+    function teamMemberOptions(selected) {
+      if (!team.length) return `<option value="">— no team members yet —</option>`;
+      return `<option value="">— unassigned —</option>` +
+        team.map(t => `<option value="${escapeHTML(t.name)}" ${t.name === selected ? 'selected' : ''}>${escapeHTML(t.name)}</option>`).join('');
+    }
+
+    function openEditor(rec, template = null) {
+      const v = rec || {};
+      const prefill = template ? {
+        name: template.name,
+        framework: template.framework,
+        gainCollection: template.gainCollection,
+        description: template.description,
+        body: template.bodyTemplate,
+        libraryId: template.id,
+      } : {};
+
+      const name         = v.name         || prefill.name         || '';
+      const framework    = v.framework    || prefill.framework    || '';
+      const gainColl     = v.gainCollection || prefill.gainCollection || '';
+      const status       = v.status       || 'draft';
+      const owner        = v.owner        || '';
+      const description  = v.description  || prefill.description  || '';
+      const body         = v.body         || prefill.body         || '';
+      const ratifiedBy   = v.ratifiedBy   || '';
+      const reviewCycle  = v.reviewCycle  || 'annual';
+      const nextReview   = v.nextReviewDate || '';
+      const libraryId    = v.libraryId    || prefill.libraryId    || '';
+
+      const form = document.createElement('form');
+      form.className = 'stacked-form policy-editor-form';
+      form.innerHTML = `
+        <div class="grid-2">
+          <div class="field" style="grid-column:1/-1">
+            <label>Policy name *</label>
+            <input name="name" required value="${escapeHTML(name)}" placeholder="e.g. AI Risk Management Governance Policy" />
+          </div>
+          <div class="field">
+            <label>Framework</label>
+            <select name="framework">
+              <option value="">— select —</option>
+              ${FRAMEWORKS.map(f => `<option value="${escapeHTML(f)}" ${f === framework ? 'selected' : ''}>${escapeHTML(f)}</option>`).join('')}
+            </select>
+          </div>
+          <div class="field">
+            <label>Relates to</label>
+            <select name="gainCollection">
+              <option value="">— select —</option>
+              ${GAIN_COLLECTIONS.map(c => `<option value="${escapeHTML(c.value)}" ${c.value === gainColl ? 'selected' : ''}>${escapeHTML(c.label)}</option>`).join('')}
+            </select>
+          </div>
+          <div class="field">
+            <label>Status</label>
+            <select name="status" id="policy-status-sel">
+              <option value="draft" ${status==='draft'?'selected':''}>Draft</option>
+              <option value="in-review" ${status==='in-review'?'selected':''}>In review</option>
+              <option value="approved" ${status==='approved'?'selected':''}>Approved</option>
+              <option value="ratified" ${status==='ratified'?'selected':''}>Ratified</option>
+              <option value="archived" ${status==='archived'?'selected':''}>Archived</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Policy owner</label>
+            <select name="owner">${teamMemberOptions(owner)}</select>
+          </div>
+          <div id="ratified-by-row" class="field" style="grid-column:1/-1;${status==='ratified'?'':'display:none'}">
+            <label>Ratified by (names / roles)</label>
+            <input name="ratifiedBy" value="${escapeHTML(ratifiedBy)}" placeholder="e.g. AI Governance Board: J. Smith (CTO), R. Lee (CISO)" />
+          </div>
+          <div class="field">
+            <label>Review cycle</label>
+            <select name="reviewCycle">
+              <option value="annual" ${reviewCycle==='annual'?'selected':''}>Annual</option>
+              <option value="semi-annual" ${reviewCycle==='semi-annual'?'selected':''}>Semi-annual</option>
+              <option value="quarterly" ${reviewCycle==='quarterly'?'selected':''}>Quarterly</option>
+              <option value="as-needed" ${reviewCycle==='as-needed'?'selected':''}>As needed</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Next review date</label>
+            <input type="date" name="nextReviewDate" value="${escapeHTML(nextReview)}" />
+          </div>
+          <div class="field" style="grid-column:1/-1">
+            <label>Short description</label>
+            <textarea name="description" rows="2" placeholder="One or two sentences summarising this policy's purpose.">${escapeHTML(description)}</textarea>
+          </div>
+          <div class="field" style="grid-column:1/-1">
+            <label>Policy body <span class="text-muted" style="font-weight:400;font-size:.8rem">— supports Markdown</span></label>
+            <textarea name="body" class="policy-body-textarea" rows="32" placeholder="Write or paste the full policy text here. Use Markdown headings (## Section), bold (**text**), and tables.">${escapeHTML(body)}</textarea>
+          </div>
+          <input type="hidden" name="libraryId" value="${escapeHTML(libraryId)}" />
+        </div>
+      `;
+
+      // Show/hide ratifiedBy when status changes
+      form.querySelector('#policy-status-sel').addEventListener('change', e => {
+        form.querySelector('#ratified-by-row').style.display = e.target.value === 'ratified' ? '' : 'none';
+      });
+
+      const isNew = !rec;
+      const actions = [
+        { label: 'Cancel', variant: 'ghost', onClick: ({ close }) => close() },
+      ];
+      if (!isNew && editorOK && adminOK) {
+        actions.push({
+          label: 'Delete', variant: 'danger',
+          onClick: async ({ close }) => {
+            const ok = await confirmDialog({ title: 'Delete policy?', message: `Delete "${v.name}"? This cannot be undone.`, confirmLabel: 'Delete', variant: 'danger' });
+            if (!ok) return;
+            try {
+              await deleteRecord(company.id, 'policies', rec.id);
+              await logEvent(company.id, { actorUid: user.uid, actorName: user.displayName || user.email, action: 'delete.policy', target: rec.id });
+              toast('Policy deleted.', 'success');
+              close();
+              refresh();
+            } catch (err) { toast(err.message, 'error', 4000); }
+          },
+        });
+      }
+      if (editorOK) {
+        actions.push({
+          label: isNew ? 'Create policy' : 'Save changes',
+          variant: 'primary',
+          onClick: async ({ close }) => {
+            if (!form.reportValidity()) return;
+            const data = serializeForm(form);
+            const payload = {
+              name: data.name,
+              framework: data.framework,
+              gainCollection: data.gainCollection,
+              status: data.status,
+              owner: data.owner,
+              description: data.description,
+              body: data.body,
+              ratifiedBy: data.ratifiedBy || '',
+              reviewCycle: data.reviewCycle,
+              nextReviewDate: data.nextReviewDate || '',
+              libraryId: data.libraryId || '',
+            };
+            try {
+              if (isNew) {
+                await createRecord(company.id, 'policies', payload);
+                await logEvent(company.id, { actorUid: user.uid, actorName: user.displayName || user.email, action: 'create.policy', target: payload.name });
+                toast('Policy created.', 'success');
+              } else {
+                await updateRecord(company.id, 'policies', rec.id, payload);
+                await logEvent(company.id, { actorUid: user.uid, actorName: user.displayName || user.email, action: 'update.policy', target: rec.id });
+                toast('Policy saved.', 'success');
+              }
+              close();
+              refresh();
+            } catch (err) { toast(err.message, 'error', 4000); }
+          },
+        });
+      }
+
+      const { backdrop } = openModal({ title: isNew ? (template ? `Add: ${template.name}` : 'New policy') : `Edit policy`, body: form, actions });
+      backdrop.querySelector('.modal').classList.add('modal-xl');
+    }
+  </script>
+</body>
+</html>
