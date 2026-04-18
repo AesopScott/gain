@@ -168,6 +168,13 @@ service cloud.firestore {
         allow delete: if isAdmin(companyId);
       }
 
+      // --- vendor contracts & BAAs (Miscellaneous) ---
+      match /contracts/{contractId} {
+        allow read: if isMember(companyId) || isSuperadmin();
+        allow create, update: if isEditor(companyId);
+        allow delete: if isAdmin(companyId);
+      }
+
       // --- training tracker (Miscellaneous) ---
       match /trainingRoster/{personId} {
         allow read: if isMember(companyId) || isSuperadmin();

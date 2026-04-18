@@ -1,0 +1,20 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Vendor contracts & BAAs — stored per company, per contract record.
+    // Readable by any member; writable by editors; deletable by admins.
+    match /companies/{companyId}/contracts/{contractId}/{filename} {
+      allow read: if request.auth != null &&
+        firestore.exists(/databases/(default)/documents/companies/$(companyId)/members/$(request.auth.uid));
+      allow create, update: if request.auth != null &&
+        firestore.get(/databases/(default)/documents/companies/$(companyId)/members/$(request.auth.uid)).data.role
+          in ['owner', 'admin', 'editor'];
+      allow delete: if request.auth != null &&
+        firestore.get(/databases/(default)/documents/companies/$(companyId)/members/$(request.auth.uid)).data.role
+          in ['owner', 'admin'];
+    }
+
+  }
+}

@@ -1,0 +1,521 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GAIN — Vendor Contracts &amp; BAAs</title>
+  <script>(function(){try{var p=localStorage.getItem('gain.theme.palette')||'classic';var m=localStorage.getItem('gain.theme.mode')||'light';document.documentElement.setAttribute('data-palette',p);document.documentElement.setAttribute('data-mode',m);}catch(e){}})();</script>
+  <link rel="stylesheet" href="/css/gain-theme.css?v=18" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+</head>
+<body>
+
+  <div data-site-header></div>
+
+  <main class="app-shell">
+
+    <div class="flex-between" style="margin-bottom:4px">
+      <div>
+        <div class="text-muted" style="font-size:.85rem;margin-bottom:4px">
+          <a href="/misc.html">Miscellaneous</a> › Vendor Contracts &amp; BAAs
+        </div>
+        <h1 class="page-title" style="margin-top:0">Vendor Contracts &amp; BAAs</h1>
+      </div>
+      <button class="btn btn-primary" id="btn-new" data-editor-only>+ Add contract</button>
+    </div>
+
+    <p class="page-lead">
+      Upload and track Business Associate Agreements, Data Processing Agreements, and
+      AI vendor contracts. Monitor clause coverage and expiration dates. Satisfies
+      <strong>HIPAA BAA requirements</strong> and <strong>NIST AI RMF GOVERN 5.1</strong>.
+    </p>
+
+    <div class="card">
+      <div class="filter-row">
+        <label>Type:</label>
+        <select id="filter-type">
+          <option value="">All types</option>
+          <option>BAA</option>
+          <option>DPA</option>
+          <option>MSA</option>
+          <option>AI Addendum</option>
+          <option>NDA</option>
+          <option>Vendor Agreement</option>
+          <option>Other</option>
+        </select>
+        <label class="filter-gap">Status:</label>
+        <select id="filter-status">
+          <option value="">All</option>
+          <option value="active">Active</option>
+          <option value="pending-renewal">Pending renewal</option>
+          <option value="expired">Expired</option>
+          <option value="terminated">Terminated</option>
+        </select>
+      </div>
+      <table class="data">
+        <thead>
+          <tr>
+            <th>Vendor</th>
+            <th>Type</th>
+            <th>AI System</th>
+            <th>Effective</th>
+            <th>Expires</th>
+            <th>Status</th>
+            <th>Clauses</th>
+            <th>File</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="contracts-rows"></tbody>
+      </table>
+    </div>
+
+    <div data-site-footer></div>
+  </main>
+
+  <script type="module">
+    import { requireCompany, canEdit, canAdmin } from '/js/session.js?v=18';
+    import { renderHeader, renderFooter, toast, openModal, confirmDialog, serializeForm, escapeHTML, formatDate } from '/js/ui.js?v=18';
+    import { listDocs, createRecord, updateRecord, deleteRecord, logEvent } from '/js/data.js?v=18';
+    import { storage } from '/js/config.js?v=18';
+    import { ref, uploadBytes, getDownloadURL, deleteObject } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js';
+
+    const { user, memberships, company, member } = await requireCompany();
+    renderHeader({ user, company, memberships });
+    renderFooter();
+
+    const editorOK = canEdit(member);
+    const adminOK  = canAdmin(member);
+    if (!editorOK) document.querySelectorAll('[data-editor-only]').forEach(el => el.setAttribute('disabled','disabled'));
+
+    const today = new Date().toISOString().slice(0, 10);
+    const warn30 = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
+
+    let contracts = [];
+    let inventory = [];
+
+    async function loadAll() {
+      [contracts, inventory] = await Promise.all([
+        listDocs(company.id, 'contracts', { orderBy: [['vendorName','asc']] }).catch(() => []),
+        listDocs(company.id, 'inventory', { orderBy: [['name','asc']] }).catch(() => []),
+      ]);
+      refresh();
+    }
+    await loadAll();
+
+    document.getElementById('filter-type').addEventListener('change', refresh);
+    document.getElementById('filter-status').addEventListener('change', refresh);
+
+    // ── Render list ────────────────────────────────────────────────────────
+    function refresh() {
+      const tf = document.getElementById('filter-type').value;
+      const sf = document.getElementById('filter-status').value;
+      const filtered = contracts.filter(r =>
+        (!tf || r.contractType === tf) &&
+        (!sf || r.status === sf)
+      );
+      const tbody = document.getElementById('contracts-rows');
+      if (!filtered.length) {
+        tbody.innerHTML = `<tr><td colspan="9" class="empty-state">No contracts${tf||sf?' match those filters':' yet — add one to get started'}.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(r => {
+        const sys = inventory.find(i => i.id === r.systemId);
+        const sysName = sys ? sys.name : (r.systemName || '—');
+        const expCell = expirationCell(r.expirationDate);
+        const statusCls = { active:'status-approved', expired:'status-withdrawn', 'pending-renewal':'status-triage', terminated:'status-submitted' }[r.status] || 'status-submitted';
+        const clauseCount = countClauses(r.clauses);
+        const clauseTip = clauseCount.checked + ' / ' + clauseCount.total + ' clauses covered';
+        const fileIcon = r.fileUrl
+          ? `<a href="${escapeHTML(r.fileUrl)}" target="_blank" title="${escapeHTML(r.fileName||'Download')}" style="font-size:1.1rem">📎</a>`
+          : r.externalLink
+            ? `<a href="${escapeHTML(r.externalLink)}" target="_blank" title="External document" style="font-size:1.1rem">🔗</a>`
+            : '<span class="text-muted">—</span>';
+
+        return `
+          <tr>
+            <td><strong>${escapeHTML(r.vendorName||'(unnamed)')}</strong></td>
+            <td>${escapeHTML(r.contractType||'—')}</td>
+            <td>${escapeHTML(sysName)}</td>
+            <td style="font-size:.85rem">${escapeHTML(r.effectiveDate||'—')}</td>
+            <td style="font-size:.85rem">${expCell}</td>
+            <td><span class="status-pill ${statusCls}">${escapeHTML(r.status||'active')}</span></td>
+            <td><span title="${clauseTip}" style="cursor:default;font-size:.85rem">${clauseCount.checked}/${clauseCount.total}</span></td>
+            <td style="text-align:center">${fileIcon}</td>
+            <td><button class="btn btn-ghost btn-sm" data-open="${escapeHTML(r.id)}">Open</button></td>
+          </tr>
+        `;
+      }).join('');
+
+      tbody.querySelectorAll('[data-open]').forEach(btn =>
+        btn.addEventListener('click', () => openEditor(contracts.find(r => r.id === btn.dataset.open))));
+    }
+
+    function expirationCell(date) {
+      if (!date) return '—';
+      if (date < today) return `<span style="color:var(--danger);font-weight:600">${escapeHTML(date)}</span>`;
+      if (date <= warn30) return `<span style="color:var(--warning,#d97706);font-weight:600">${escapeHTML(date)}</span>`;
+      return escapeHTML(date);
+    }
+
+    const CLAUSES = [
+      { key: 'trainingProhibition',  label: 'Training / use prohibition — vendor cannot use your data to train or improve their models' },
+      { key: 'dataRetentionTerms',   label: 'Data retention & deletion terms specified (zero-retention or defined period)' },
+      { key: 'subProcessorFlowDown', label: 'Sub-processor flow-down — requirements bind all sub-processors' },
+      { key: 'annualVerification',   label: 'Annual written verification of technical safeguards (HIPAA 2025 NPRM)' },
+      { key: 'auditRights',          label: 'Audit rights — your organization may audit the vendor' },
+      { key: 'regulatorAccess',      label: 'Regulator access clause — regulators may inspect vendor on your behalf' },
+      { key: 'breachNotification',   label: 'Breach notification requirements and timelines defined' },
+    ];
+
+    function countClauses(clauses) {
+      const c = clauses || {};
+      return { checked: CLAUSES.filter(cl => c[cl.key]).length, total: CLAUSES.length };
+    }
+
+    // ── Editor modal ───────────────────────────────────────────────────────
+    document.getElementById('btn-new').addEventListener('click', () => openEditor(null));
+
+    function contractFormHTML(v) {
+      const cl = v.clauses || {};
+      const dd = v.dueDiligence || {};
+      const inventoryOpts = inventory.map(i =>
+        `<option value="${escapeHTML(i.id)}" ${v.systemId===i.id?'selected':''}>${escapeHTML(i.name||'(unnamed)')}</option>`
+      ).join('');
+
+      return `
+        <form id="contract-form">
+
+          <h3 class="aia-section" style="margin-top:0">Contract details</h3>
+          <div class="grid-2">
+            <div class="field">
+              <label>Vendor / counterparty name *</label>
+              <input name="vendorName" required value="${escapeHTML(v.vendorName||'')}" placeholder="Acme AI Solutions LLC" />
+            </div>
+            <div class="field">
+              <label>Contract type</label>
+              <select name="contractType">
+                <option value="">—</option>
+                ${['BAA','DPA','MSA','AI Addendum','NDA','Vendor Agreement','Other'].map(t =>
+                  `<option ${v.contractType===t?'selected':''}>${escapeHTML(t)}</option>`).join('')}
+              </select>
+            </div>
+          </div>
+          <div class="grid-2">
+            <div class="field">
+              <label>Linked AI system (optional)</label>
+              ${inventory.length
+                ? `<select name="systemId"><option value="">— None —</option>${inventoryOpts}</select>`
+                : `<input name="systemName" value="${escapeHTML(v.systemName||'')}" placeholder="System name (inventory is empty)" />`}
+            </div>
+            <div class="field">
+              <label>Status</label>
+              <select name="status">
+                <option ${v.status==='active'||!v.status?'selected':''} value="active">Active</option>
+                <option ${v.status==='pending-renewal'?'selected':''} value="pending-renewal">Pending renewal</option>
+                <option ${v.status==='expired'?'selected':''} value="expired">Expired</option>
+                <option ${v.status==='terminated'?'selected':''} value="terminated">Terminated</option>
+              </select>
+            </div>
+          </div>
+          <div class="grid-2" style="grid-template-columns:1fr 1fr 1fr">
+            <div class="field">
+              <label>Effective date</label>
+              <input type="date" name="effectiveDate" value="${escapeHTML(v.effectiveDate||'')}" />
+            </div>
+            <div class="field">
+              <label>Expiration date</label>
+              <input type="date" name="expirationDate" value="${escapeHTML(v.expirationDate||'')}" />
+            </div>
+            <div class="field">
+              <label>Next review date</label>
+              <input type="date" name="nextReviewDate" value="${escapeHTML(v.nextReviewDate||'')}" />
+            </div>
+          </div>
+
+          <h3 class="aia-section">AI-specific clause coverage</h3>
+          <p class="text-muted" style="font-size:.85rem;margin:0 0 10px">Check each clause that is present and confirmed in this contract.</p>
+          <div class="stacked-checks">
+            ${CLAUSES.map(cl => `
+              <label class="check-line">
+                <input type="checkbox" name="clause_${escapeHTML(cl.key)}" ${cl[cl.key]||cl.checked||false?'':''}${cl_.checked?'checked':''} />
+                <span>${escapeHTML(cl.label)}</span>
+              </label>
+            `).join('')}
+          </div>
+
+          <h3 class="aia-section">Due diligence</h3>
+          <div style="display:grid;grid-template-columns:auto 1fr;gap:8px 16px;align-items:center">
+            <label class="check-line" style="margin:0">
+              <input type="checkbox" name="dd_soc2" ${dd.soc2?'checked':''} />
+              <span>SOC 2 report reviewed</span>
+            </label>
+            <div class="field" style="margin:0">
+              <input type="date" name="dd_soc2Date" value="${escapeHTML(dd.soc2Date||'')}" placeholder="Review date" style="max-width:160px" />
+            </div>
+            <label class="check-line" style="margin:0">
+              <input type="checkbox" name="dd_hitrust" ${dd.hitrust?'checked':''} />
+              <span>HITRUST certification confirmed</span>
+            </label>
+            <div class="field" style="margin:0">
+              <input type="date" name="dd_hitrustDate" value="${escapeHTML(dd.hitrustDate||'')}" placeholder="Cert date" style="max-width:160px" />
+            </div>
+            <label class="check-line" style="margin:0">
+              <input type="checkbox" name="dd_penTest" ${dd.penTest?'checked':''} />
+              <span>Pen test / security assessment reviewed</span>
+            </label>
+            <div class="field" style="margin:0">
+              <input type="date" name="dd_penTestDate" value="${escapeHTML(dd.penTestDate||'')}" placeholder="Assessment date" style="max-width:160px" />
+            </div>
+          </div>
+
+          <h3 class="aia-section">Document</h3>
+          ${v.fileUrl
+            ? `<p class="text-muted" style="font-size:.85rem;margin:0 0 8px">
+                Current file: <a href="${escapeHTML(v.fileUrl)}" target="_blank">${escapeHTML(v.fileName||'Download')}</a>
+                — upload a new file below to replace it.
+               </p>`
+            : v.externalLink
+              ? `<p class="text-muted" style="font-size:.85rem;margin:0 0 8px">
+                  Current link: <a href="${escapeHTML(v.externalLink)}" target="_blank">${escapeHTML(v.externalLink)}</a>
+                 </p>`
+              : ''}
+          <div class="field">
+            <label>Upload contract file <span class="text-muted">(PDF, DOCX, XLSX — max 20 MB)</span></label>
+            <input type="file" id="contract-file" accept=".pdf,.doc,.docx,.xlsx,.xls" />
+          </div>
+          <div class="field">
+            <label>— or link to external document —</label>
+            <input name="externalLink" type="url" value="${escapeHTML(v.externalLink||'')}"
+              placeholder="https://drive.google.com/… or SharePoint URL" />
+          </div>
+
+          <h3 class="aia-section">Notes</h3>
+          <div class="field">
+            <textarea name="notes" rows="3" placeholder="Key terms, negotiation notes, renewal contacts…">${escapeHTML(v.notes||'')}</textarea>
+          </div>
+
+        </form>`;
+    }
+
+    function openEditor(rec) {
+      const v = rec || {};
+      const isNew = !rec;
+
+      // Build clause checked state into the HTML generation
+      const cl = v.clauses || {};
+      const dd = v.dueDiligence || {};
+      const inventoryOpts = inventory.map(i =>
+        `<option value="${escapeHTML(i.id)}" ${v.systemId===i.id?'selected':''}>${escapeHTML(i.name||'(unnamed)')}</option>`
+      ).join('');
+
+      const clauseHTML = CLAUSES.map(c => `
+        <label class="check-line">
+          <input type="checkbox" name="clause_${escapeHTML(c.key)}" ${cl[c.key]?'checked':''} />
+          <span>${escapeHTML(c.label)}</span>
+        </label>
+      `).join('');
+
+      const body = `
+        <form id="contract-form">
+
+          <h3 class="aia-section" style="margin-top:0">Contract details</h3>
+          <div class="grid-2">
+            <div class="field">
+              <label>Vendor / counterparty name *</label>
+              <input name="vendorName" required value="${escapeHTML(v.vendorName||'')}" placeholder="Acme AI Solutions LLC" />
+            </div>
+            <div class="field">
+              <label>Contract type</label>
+              <select name="contractType">
+                <option value="">—</option>
+                ${['BAA','DPA','MSA','AI Addendum','NDA','Vendor Agreement','Other'].map(t =>
+                  `<option ${v.contractType===t?'selected':''}>${escapeHTML(t)}</option>`).join('')}
+              </select>
+            </div>
+          </div>
+          <div class="grid-2">
+            <div class="field">
+              <label>Linked AI system</label>
+              ${inventory.length
+                ? `<select name="systemId"><option value="">— None —</option>${inventoryOpts}</select>`
+                : `<input name="systemName" value="${escapeHTML(v.systemName||'')}" placeholder="System name (inventory is empty)" />`}
+            </div>
+            <div class="field">
+              <label>Status</label>
+              <select name="status">
+                <option ${(!v.status||v.status==='active')?'selected':''} value="active">Active</option>
+                <option ${v.status==='pending-renewal'?'selected':''} value="pending-renewal">Pending renewal</option>
+                <option ${v.status==='expired'?'selected':''} value="expired">Expired</option>
+                <option ${v.status==='terminated'?'selected':''} value="terminated">Terminated</option>
+              </select>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px">
+            <div class="field">
+              <label>Effective date</label>
+              <input type="date" name="effectiveDate" value="${escapeHTML(v.effectiveDate||'')}" />
+            </div>
+            <div class="field">
+              <label>Expiration date</label>
+              <input type="date" name="expirationDate" value="${escapeHTML(v.expirationDate||'')}" />
+            </div>
+            <div class="field">
+              <label>Next review date</label>
+              <input type="date" name="nextReviewDate" value="${escapeHTML(v.nextReviewDate||'')}" />
+            </div>
+          </div>
+
+          <h3 class="aia-section">AI-specific clause coverage</h3>
+          <p class="text-muted" style="font-size:.85rem;margin:0 0 10px">Check each clause that is present and confirmed in this contract.</p>
+          ${clauseHTML}
+
+          <h3 class="aia-section">Due diligence</h3>
+          <div style="display:grid;grid-template-columns:auto 200px;gap:8px 24px;align-items:center">
+            <label class="check-line" style="margin:0"><input type="checkbox" name="dd_soc2" ${dd.soc2?'checked':''} /><span>SOC 2 report reviewed</span></label>
+            <input type="date" name="dd_soc2Date" value="${escapeHTML(dd.soc2Date||'')}" style="font-size:.85rem" />
+            <label class="check-line" style="margin:0"><input type="checkbox" name="dd_hitrust" ${dd.hitrust?'checked':''} /><span>HITRUST certification confirmed</span></label>
+            <input type="date" name="dd_hitrustDate" value="${escapeHTML(dd.hitrustDate||'')}" style="font-size:.85rem" />
+            <label class="check-line" style="margin:0"><input type="checkbox" name="dd_penTest" ${dd.penTest?'checked':''} /><span>Pen test / security assessment reviewed</span></label>
+            <input type="date" name="dd_penTestDate" value="${escapeHTML(dd.penTestDate||'')}" style="font-size:.85rem" />
+          </div>
+
+          <h3 class="aia-section">Document</h3>
+          ${v.fileUrl
+            ? `<p class="text-muted" style="font-size:.85rem;margin:0 0 8px">Current file: <a href="${escapeHTML(v.fileUrl)}" target="_blank">${escapeHTML(v.fileName||'Download')}</a> — upload below to replace.</p>`
+            : v.externalLink
+              ? `<p class="text-muted" style="font-size:.85rem;margin:0 0 8px">Linked: <a href="${escapeHTML(v.externalLink)}" target="_blank">${escapeHTML(v.externalLink)}</a></p>`
+              : ''}
+          <div class="field">
+            <label>Upload file <span class="text-muted">(PDF, DOCX, XLSX — max 20 MB)</span></label>
+            <input type="file" id="contract-file" accept=".pdf,.doc,.docx,.xlsx,.xls" />
+          </div>
+          <div class="field">
+            <label>— or paste an external link —</label>
+            <input name="externalLink" type="url" value="${escapeHTML(v.externalLink||'')}" placeholder="https://drive.google.com/… or SharePoint URL" />
+          </div>
+
+          <h3 class="aia-section">Notes</h3>
+          <div class="field">
+            <textarea name="notes" rows="3" placeholder="Key terms, negotiation notes, renewal contacts, data retention period…">${escapeHTML(v.notes||'')}</textarea>
+          </div>
+        </form>`;
+
+      const { close, backdrop } = openModal({
+        title: isNew ? 'Add contract' : (v.vendorName || 'Contract') + ' — ' + (v.contractType || ''),
+        body,
+        actions: [
+          { label: 'Cancel', variant: 'ghost', onClick: ({ close }) => close() },
+          ...(rec && adminOK ? [{ label: 'Delete', variant: 'ghost', onClick: async ({ close }) => {
+            if (!await confirmDialog({ title: 'Delete contract', message: 'Delete this contract record and its stored file? This cannot be undone.', confirmLabel: 'Delete', variant: 'danger' })) return;
+            if (rec.filePath) {
+              try { await deleteObject(ref(storage, rec.filePath)); } catch (_) {}
+            }
+            await deleteRecord(company.id, 'contracts', rec.id);
+            contracts = contracts.filter(r => r.id !== rec.id);
+            refresh();
+            close();
+          }}] : []),
+          { label: isNew ? 'Save contract' : 'Save', variant: 'primary', onClick: async ({ close: closeModal }) => {
+            const form = document.getElementById('contract-form');
+            if (!form.reportValidity()) return;
+            const fd = serializeForm(form);
+            const fileInput = document.getElementById('contract-file');
+            const selectedFile = fileInput?.files?.[0];
+
+            if (selectedFile && selectedFile.size > 20 * 1024 * 1024) {
+              toast('File exceeds 20 MB limit.', 'error'); return;
+            }
+
+            // Collect clause and due-diligence fields from serialized form
+            const clauses = {};
+            CLAUSES.forEach(c => { clauses[c.key] = !!fd['clause_' + c.key]; });
+            const dueDiligence = {
+              soc2:        !!fd.dd_soc2,       soc2Date:     fd.dd_soc2Date || '',
+              hitrust:     !!fd.dd_hitrust,    hitrustDate:  fd.dd_hitrustDate || '',
+              penTest:     !!fd.dd_penTest,    penTestDate:  fd.dd_penTestDate || '',
+            };
+
+            // Resolve linked system name
+            const sys = inventory.find(i => i.id === fd.systemId);
+            const systemName = sys ? sys.name : (fd.systemName || v.systemName || '');
+
+            const payload = {
+              vendorName:     fd.vendorName || '',
+              contractType:   fd.contractType || '',
+              systemId:       fd.systemId || '',
+              systemName,
+              status:         fd.status || 'active',
+              effectiveDate:  fd.effectiveDate || '',
+              expirationDate: fd.expirationDate || '',
+              nextReviewDate: fd.nextReviewDate || '',
+              externalLink:   fd.externalLink || '',
+              notes:          fd.notes || '',
+              clauses,
+              dueDiligence,
+              // preserve existing file info unless replaced below
+              fileName:  v.fileName  || '',
+              filePath:  v.filePath  || '',
+              fileUrl:   v.fileUrl   || '',
+              fileSize:  v.fileSize  || 0,
+            };
+
+            const saveBtn = backdrop.querySelector('.btn-primary');
+            const origLabel = saveBtn.textContent;
+            saveBtn.disabled = true;
+
+            try {
+              let contractId = rec?.id;
+
+              if (isNew) {
+                contractId = await createRecord(company.id, 'contracts', payload, user.uid);
+                contracts.push({ id: contractId, ...payload });
+              } else {
+                await updateRecord(company.id, 'contracts', contractId, payload, user.uid);
+                Object.assign(rec, payload);
+              }
+
+              // Upload file if one was selected
+              if (selectedFile && contractId) {
+                saveBtn.textContent = 'Uploading…';
+                const storagePath = `companies/${company.id}/contracts/${contractId}/${selectedFile.name}`;
+                const fileRef = ref(storage, storagePath);
+                await uploadBytes(fileRef, selectedFile);
+                const fileUrl = await getDownloadURL(fileRef);
+                const fileUpdate = {
+                  fileName: selectedFile.name,
+                  filePath: storagePath,
+                  fileUrl,
+                  fileSize: selectedFile.size,
+                };
+                await updateRecord(company.id, 'contracts', contractId, fileUpdate, user.uid);
+                // Update local state
+                const local = contracts.find(r => r.id === contractId);
+                if (local) Object.assign(local, fileUpdate);
+              }
+
+              await logEvent(company.id, {
+                actorUid: user.uid, actorName: user.displayName || user.email,
+                action: isNew ? 'create.contract' : 'update.contract',
+                target: payload.vendorName,
+                details: { type: payload.contractType, hasFile: !!selectedFile }
+              });
+
+              refresh();
+              closeModal();
+              toast(isNew ? 'Contract added.' : 'Contract saved.', 'success');
+            } catch (err) {
+              toast(err.message, 'error', 5000);
+              saveBtn.disabled = false;
+              saveBtn.textContent = origLabel;
+            }
+          }}
+        ]
+      });
+    }
+
+  </script>
+
+</body>
+</html>
