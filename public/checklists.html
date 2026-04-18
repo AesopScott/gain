@@ -85,7 +85,7 @@
         </div>
         ${dormantList.length ? `
           <div class="card" style="margin-top:16px;opacity:.75">
-            <h2 class="card-title">Dormant (select on <a href="/framework.html">Regulatory Posture</a> to activate)</h2>
+            <h2 class="card-title">Select on <a href="/framework.html">Regulatory Posture</a> to activate</h2>
             <ul class="checklist-dormant-list">
               ${dormantList.map(cl => `<li><strong>${escapeHTML(cl.name)}</strong> <span class="text-muted">— ${escapeHTML(cl.description)}</span></li>`).join('')}
             </ul>
