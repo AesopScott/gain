@@ -91,7 +91,7 @@ export function renderFooter() {
     <footer class="site-footer">
       <span>GAIN · Govern AI Now</span>
       <span class="text-muted">Your data · Your company · Your framework</span>
-      <span class="text-muted" style="font-size:.7rem;opacity:.6">v15</span>
+      <span class="text-muted" style="font-size:.7rem;opacity:.6">v16</span>
     </footer>
   `;
 }

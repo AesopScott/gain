@@ -143,6 +143,11 @@ service cloud.firestore {
         allow delete: if isAdmin(companyId);
       }
 
+      // --- AI settings (Anthropic key — admin-only read) ---
+      match /aiSettings/{docId} {
+        allow read, write: if isAdmin(companyId);
+      }
+
       // --- governance policies ---
       match /policies/{policyId} {
         allow read: if isMember(companyId);

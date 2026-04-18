@@ -323,6 +323,19 @@ export async function logEvent(companyId, { actorUid, actorName, action, target,
   });
 }
 
+// ---------- AI settings (admin-only: Anthropic key for policy generation) ----------
+
+export async function getAISettings(companyId) {
+  const snap = await getDoc(doc(db, 'companies', companyId, 'aiSettings', 'config'));
+  return snap.exists() ? snap.data() : null;
+}
+
+export async function saveAISettings(companyId, data) {
+  await setDoc(doc(db, 'companies', companyId, 'aiSettings', 'config'), data, { merge: true });
+}
+
+// ---------- audit ----------
+
 export async function listRecentEvents(companyId, n = 50) {
   return listDocs(companyId, 'audit', {
     orderBy: [['at', 'desc']],

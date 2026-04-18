@@ -87,7 +87,11 @@
   <script type="module">
     import { requireCompany, canEdit, canAdmin } from '/js/session.js?v=16';
     import { renderHeader, renderFooter, toast, openModal, confirmDialog, serializeForm, escapeHTML, formatDate } from '/js/ui.js?v=16';
+<<<<<<< Updated upstream
     import { listDocs, createRecord, updateRecord, deleteRecord, getRecord, logEvent, getPosture } from '/js/data.js?v=16';
+=======
+    import { listDocs, createRecord, updateRecord, deleteRecord, getRecord, logEvent, getPosture, getAISettings } from '/js/data.js?v=16';
+>>>>>>> Stashed changes
     import { POLICY_LIBRARY, FRAMEWORKS, GAIN_COLLECTIONS, suggestedPolicies } from '/js/policyLibrary.js?v=16';
 
     const { user, memberships, company, member } = await requireCompany();
@@ -306,8 +310,11 @@
             <textarea name="description" rows="2" placeholder="One or two sentences summarising this policy's purpose.">${escapeHTML(description)}</textarea>
           </div>
           <div class="field" style="grid-column:1/-1">
-            <label>Policy body <span class="text-muted" style="font-weight:400;font-size:.8rem">— supports Markdown</span></label>
-            <textarea name="body" class="policy-body-textarea" rows="32" placeholder="Write or paste the full policy text here. Use Markdown headings (## Section), bold (**text**), and tables.">${escapeHTML(body)}</textarea>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+              <label style="margin:0">Policy body <span class="text-muted" style="font-weight:400;font-size:.8rem">— supports Markdown</span></label>
+              ${editorOK ? `<button type="button" class="btn btn-primary btn-sm" id="ai-generate-btn">✦ Generate with AI</button>` : ''}
+            </div>
+            <textarea name="body" id="policy-body-ta" class="policy-body-textarea" rows="32" placeholder="Write or paste the full policy text here. Use Markdown headings (## Section), bold (**text**), and tables.">${escapeHTML(body)}</textarea>
           </div>
           <input type="hidden" name="libraryId" value="${escapeHTML(libraryId)}" />
         </div>
@@ -317,6 +324,68 @@
       form.querySelector('#policy-status-sel').addEventListener('change', e => {
         form.querySelector('#ratified-by-row').style.display = e.target.value === 'ratified' ? '' : 'none';
       });
+
+      // Generate with AI
+      const genBtn = form.querySelector('#ai-generate-btn');
+      if (genBtn) {
+        genBtn.addEventListener('click', async () => {
+          const policyName = form.querySelector('[name=name]').value.trim();
+          const framework  = form.querySelector('[name=framework]').value;
+          const desc       = form.querySelector('[name=description]').value.trim();
+          if (!policyName) { toast('Enter a policy name first.', 'error', 3000); return; }
+
+          const aiSettings = await getAISettings(company.id);
+          if (!aiSettings?.anthropicKey) {
+            toast('Add your Anthropic API key in Settings → AI Policy Generation first.', 'error', 5000);
+            return;
+          }
+
+          genBtn.disabled = true;
+          genBtn.textContent = '✦ Generating…';
+          const ta = form.querySelector('#policy-body-ta');
+
+          try {
+            const prompt = [
+              `Write a complete, professional AI governance policy document for a company.`,
+              `Policy name: ${policyName}`,
+              framework ? `Governance framework: ${framework}` : '',
+              desc ? `Purpose summary: ${desc}` : '',
+              company.name ? `Company: ${company.name}` : '',
+              company.industry ? `Industry: ${company.industry}` : '',
+              ``,
+              `Format the document in Markdown with clear sections: Purpose, Scope, Policy Statements, Roles & Responsibilities, Compliance & Enforcement, Review & Revision History.`,
+              `Be specific, actionable, and thorough. Use professional governance language.`,
+            ].filter(Boolean).join('\n');
+
+            const res = await fetch('https://api.anthropic.com/v1/messages', {
+              method: 'POST',
+              headers: {
+                'x-api-key': aiSettings.anthropicKey,
+                'anthropic-version': '2023-06-01',
+                'anthropic-dangerous-allow-browser': 'true',
+                'content-type': 'application/json',
+              },
+              body: JSON.stringify({
+                model: aiSettings.model || 'claude-sonnet-4-6',
+                max_tokens: 4096,
+                messages: [{ role: 'user', content: prompt }],
+              }),
+            });
+            if (!res.ok) {
+              const err = await res.json().catch(() => ({}));
+              throw new Error(err?.error?.message || `API error ${res.status}`);
+            }
+            const result = await res.json();
+            ta.value = result.content?.[0]?.text || '';
+            toast('Policy generated — review and save.', 'success', 4000);
+          } catch (err) {
+            toast(`Generation failed: ${err.message}`, 'error', 6000);
+          } finally {
+            genBtn.disabled = false;
+            genBtn.textContent = '✦ Generate with AI';
+          }
+        });
+      }
 
       const isNew = !rec;
       const actions = [
