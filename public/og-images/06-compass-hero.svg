@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" preserveAspectRatio="xMidYMid slice">
+  <rect width="1200" height="630" fill="#F7F8FA"/>
+  <g transform="translate(120,100)">
+    <circle cx="215" cy="215" r="210" fill="none" stroke="#1F3864" stroke-width="4"/>
+    <circle cx="215" cy="215" r="175" fill="none" stroke="#D8DEE8" stroke-width="1"/>
+    <circle cx="215" cy="215" r="140" fill="none" stroke="#D8DEE8" stroke-width="1"/>
+    <path d="M215 30 L250 225 L215 205 L180 225 Z" fill="#1F3864"/>
+    <path d="M215 400 L250 205 L215 225 L180 205 Z" fill="#4FB3D9"/>
+    <circle cx="215" cy="215" r="10" fill="#FFFFFF" stroke="#1F3864" stroke-width="3"/>
+    <text x="215" y="20" font-family="-apple-system,Segoe UI,Arial,sans-serif" font-weight="700" font-size="18" text-anchor="middle" fill="#1F3864">N</text>
+    <text x="215" y="445" font-family="-apple-system,Segoe UI,Arial,sans-serif" font-weight="700" font-size="18" text-anchor="middle" fill="#1F3864">S</text>
+    <text x="10" y="221" font-family="-apple-system,Segoe UI,Arial,sans-serif" font-weight="700" font-size="18" text-anchor="middle" fill="#1F3864">W</text>
+    <text x="420" y="221" font-family="-apple-system,Segoe UI,Arial,sans-serif" font-weight="700" font-size="18" text-anchor="middle" fill="#1F3864">E</text>
+  </g>
+  <text x="620" y="270" font-family="-apple-system,Segoe UI,Arial,sans-serif" font-weight="900" font-size="130" fill="#1F3864" letter-spacing="4">GAIN</text>
+  <rect x="620" y="290" width="120" height="5" fill="#4FB3D9"/>
+  <text x="620" y="360" font-family="-apple-system,Segoe UI,Arial,sans-serif" font-weight="600" font-size="52" fill="#1A2434">Govern AI</text>
+  <text x="620" y="420" font-family="-apple-system,Segoe UI,Arial,sans-serif" font-weight="600" font-size="52" fill="#2E75B6">Now.</text>
+  <text x="620" y="480" font-family="-apple-system,Segoe UI,Arial,sans-serif" font-weight="400" font-size="22" fill="#7A8599">GovernAINow.com</text>
+</svg>

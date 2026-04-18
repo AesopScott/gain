@@ -38,7 +38,7 @@ export function renderHeader({ user, company, memberships = [], pages = DEFAULT_
     <header class="site-header">
       <a class="brand" href="/dashboard.html">
         <span class="brand-mark">GAIN</span>
-        <span class="brand-wordmark">Governance for AI, Navigated</span>
+        <span class="brand-wordmark">Govern AI Now</span>
       </a>
       <nav class="primary-nav">${navHTML}</nav>
       <div class="header-right">
@@ -77,7 +77,7 @@ export function renderFooter() {
   if (!mount) return;
   mount.innerHTML = `
     <footer class="site-footer">
-      <span>GAIN · Governance for AI, Navigated</span>
+      <span>GAIN · Govern AI Now</span>
       <span class="text-muted">Your data · Your company · Your framework</span>
     </footer>
   `;

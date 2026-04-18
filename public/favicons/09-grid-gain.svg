@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="12" fill="#1F3864"/>
+  <g font-family="-apple-system, Segoe UI, Arial, sans-serif" font-weight="800" font-size="22" text-anchor="middle" fill="#FFFFFF">
+    <text x="20" y="28">G</text>
+    <text x="44" y="28">A</text>
+    <text x="20" y="52">I</text>
+    <text x="44" y="52" fill="#4FB3D9">N</text>
+  </g>
+</svg>

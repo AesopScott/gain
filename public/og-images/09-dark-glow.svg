@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <radialGradient id="glow9" cx="0.5" cy="0.5" r="0.6">
+      <stop offset="0" stop-color="#4FB3D9" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#0A1226" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="text9" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#4FB3D9"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="#0A1226"/>
+  <rect width="1200" height="630" fill="url(#glow9)"/>
+  <text x="600" y="335" font-family="-apple-system,Segoe UI,Arial,sans-serif" font-weight="900" font-size="240" text-anchor="middle" fill="url(#text9)" letter-spacing="10">GAIN</text>
+  <rect x="540" y="380" width="120" height="3" fill="#4FB3D9"/>
+  <text x="600" y="430" font-family="-apple-system,Segoe UI,Arial,sans-serif" font-weight="500" font-size="42" text-anchor="middle" fill="#D8DEE8" letter-spacing="16">GOVERN · AI · NOW</text>
+  <text x="600" y="490" font-family="-apple-system,Segoe UI,Arial,sans-serif" font-weight="400" font-size="20" text-anchor="middle" fill="#7A8599" letter-spacing="4">GOVERNAINOW.COM</text>
+</svg>

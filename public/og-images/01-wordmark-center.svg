@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="bg1" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1F3864"/>
+      <stop offset="1" stop-color="#2E75B6"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg1)"/>
+  <text x="600" y="320" font-family="-apple-system,Segoe UI,Arial,sans-serif" font-weight="900" font-size="220" text-anchor="middle" fill="#FFFFFF" letter-spacing="8">GAIN</text>
+  <text x="600" y="410" font-family="-apple-system,Segoe UI,Arial,sans-serif" font-weight="500" font-size="52" text-anchor="middle" fill="#4FB3D9" letter-spacing="12">GOVERN AI NOW</text>
+  <rect x="500" y="430" width="200" height="3" fill="#4FB3D9"/>
+</svg>

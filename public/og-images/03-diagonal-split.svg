@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" preserveAspectRatio="xMidYMid slice">
+  <rect width="1200" height="630" fill="#FFFFFF"/>
+  <polygon points="0,0 620,0 520,630 0,630" fill="#1F3864"/>
+  <polygon points="620,0 640,0 540,630 520,630" fill="#4FB3D9"/>
+  <text x="90" y="345" font-family="-apple-system,Segoe UI,Arial,sans-serif" font-weight="900" font-size="180" fill="#FFFFFF" letter-spacing="4">GAIN</text>
+  <text x="700" y="310" font-family="-apple-system,Segoe UI,Arial,sans-serif" font-weight="700" font-size="72" fill="#1F3864">Govern</text>
+  <text x="700" y="385" font-family="-apple-system,Segoe UI,Arial,sans-serif" font-weight="700" font-size="72" fill="#1F3864">AI</text>
+  <text x="700" y="460" font-family="-apple-system,Segoe UI,Arial,sans-serif" font-weight="700" font-size="72" fill="#2E75B6">Now.</text>
+</svg>

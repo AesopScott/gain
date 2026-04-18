@@ -1,4 +1,4 @@
-# GAIN — Governance for AI, Navigated
+# GAIN — Govern AI Now
 
 Multi-tenant AI governance program builder. Each company works through the
 framework in its own isolated workspace; all data lives in Firestore under
