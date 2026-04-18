@@ -36,9 +36,8 @@ export function renderHeader({ user, company, memberships = [], pages = DEFAULT_
 
   mount.innerHTML = `
     <header class="site-header">
-      <a class="brand" href="/dashboard.html">
-        <span class="brand-mark">GAIN</span>
-        <span class="brand-wordmark">Govern AI Now</span>
+      <a class="brand" href="/dashboard.html" aria-label="GAIN — Govern AI Now">
+        <img src="/logo-dark.svg" alt="GAIN" class="brand-logo" />
       </a>
       <nav class="primary-nav">${navHTML}</nav>
       <div class="header-right">

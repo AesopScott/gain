@@ -586,6 +586,8 @@ table.data .actions {
 .brand-mark-lg { font-size: 1.4rem; padding: 6px 14px; }
 .brand-wordmark { color: #CBD5E8; font-size: .9rem; font-weight: 500; }
 .brand-tagline { color: var(--ink-soft); font-size: .95rem; display: block; margin-top: 8px; }
+.brand-logo { height: 40px; width: auto; display: block; }
+.brand-logo-lg { height: 72px; }
 .primary-nav { display: flex; gap: 2px; flex-wrap: wrap; }
 .nav-link {
   color: #CBD5E8;

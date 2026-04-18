@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 440 110">
+  <g transform="translate(10,15)">
+    <circle cx="40" cy="40" r="38" fill="#1F3864"/>
+    <circle cx="40" cy="40" r="38" fill="none" stroke="#4FB3D9" stroke-width="2"/>
+    <text x="40" y="56" font-family="-apple-system, Segoe UI, Arial, sans-serif" font-weight="800" font-size="48" text-anchor="middle" fill="#FFFFFF">G</text>
+  </g>
+  <text x="115" y="73" font-family="-apple-system, Segoe UI, Arial, sans-serif" font-weight="800" font-size="62" letter-spacing="4"><tspan fill="#1F3864">G</tspan><tspan fill="#4FB3D9">AI</tspan><tspan fill="#1F3864">N</tspan></text>
+</svg>
