@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>GAIN — Dashboard</title>
-  <link rel="stylesheet" href="/css/gain-theme.css?v=6" />
+  <link rel="stylesheet" href="/css/gain-theme.css?v=7" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <meta name="description" content="AI governance — from intake to audit. NIST AI RMF · ISO 42001 · EU AI Act." />
   <meta property="og:type" content="website" />
@@ -92,8 +92,9 @@
 
   <script type="module">
     import { requireAuth, setActiveCompanyId, getActiveCompanyId } from '/js/session.js';
-    import { renderHeader, renderFooter, toast, openModal, serializeForm, escapeHTML } from '/js/ui.js?v=6';
+    import { renderHeader, renderFooter, toast, openModal, serializeForm, escapeHTML } from '/js/ui.js?v=7';
     import { createCompany, getCompany, getPosture, listDocs, listAllCompanies, getUserDoc, createJoinRequest, getJoinRequest, redeemApprovedRequest, dismissDeniedRequest } from '/js/data.js';
+    import { aiaRequiredFor } from '/js/posture.js?v=7';
 
     const { user, memberships } = await requireAuth();
 
@@ -132,11 +133,12 @@
       hasCompanies.classList.remove('hidden');
 
       // Load stats in parallel.
-      const [inventory, intake, risks, posture] = await Promise.all([
+      const [inventory, intake, risks, posture, aias] = await Promise.all([
         listDocs(company.id, 'inventory'),
         listDocs(company.id, 'intake'),
         listDocs(company.id, 'risks'),
-        getPosture(company.id)
+        getPosture(company.id),
+        listDocs(company.id, 'aias')
       ]);
 
       document.querySelector('[data-stat-inventory]').textContent = inventory.length;
@@ -145,11 +147,63 @@
       const highRisks = risks.filter(r => ['prohibited', 'high'].includes((r.residualTier || '').toLowerCase())).length;
       document.querySelector('[data-stat-risks]').textContent = highRisks;
 
-      renderProgress({ posture, inventory, intake, risks });
+      renderProgress({ posture, inventory, intake, risks, aias });
     }
 
     // ---------- progress checklist ----------
-    function renderProgress({ posture, inventory, intake, risks }) {
+    // Compute AIA coverage given posture's maturity gating:
+    //   tier 4 -> AIAs required for all systems
+    //   tier 3 -> AIAs required for high-impact systems only
+    //   tier <3 -> AIAs optional (no coverage gate)
+    function computeAiaCoverage(posture, inventory, aias) {
+      const approvedAias = aias.filter(a => ['approved', 'review'].includes(a.status || ''));
+      const coveredSystemIds = new Set(approvedAias.map(a => a.systemId).filter(Boolean));
+      const target = Number(posture?.maturityTarget || 0);
+
+      if (target >= 4) {
+        // All systems need AIAs.
+        const required = inventory;
+        const covered = required.filter(s => coveredSystemIds.has(s.id)).length;
+        return { gated: true, required: required.length, covered, label: 'all systems', maturityLabel: 'tier 4 · Optimizing' };
+      }
+      if (target >= 3) {
+        // High-impact only.
+        const required = inventory.filter(s => (s.riskTier || '').toLowerCase() === 'high');
+        const covered = required.filter(s => coveredSystemIds.has(s.id)).length;
+        return { gated: true, required: required.length, covered, label: 'high-impact systems', maturityLabel: 'tier 3 · Managed' };
+      }
+      return { gated: false, approvedAny: approvedAias.length > 0 };
+    }
+
+    function renderProgress({ posture, inventory, intake, risks, aias }) {
+      const coverage = computeAiaCoverage(posture, inventory, aias);
+      const target = Number(posture?.maturityTarget || 0);
+
+      let aiaStep;
+      if (coverage.gated && coverage.required === 0) {
+        aiaStep = {
+          label: '4. Run AI Impact Assessments',
+          hint: `Your maturity target (${coverage.maturityLabel}) requires AIAs for ${coverage.label}. No ${coverage.label} in inventory yet — add systems first.`,
+          href: '/aia.html',
+          done: coverage.approvedAny === true || aias.length > 0
+        };
+      } else if (coverage.gated) {
+        const pct = coverage.required > 0 ? Math.round((coverage.covered / coverage.required) * 100) : 0;
+        aiaStep = {
+          label: `4. AIA coverage — ${coverage.covered}/${coverage.required} ${coverage.label} (${pct}%)`,
+          hint: `At ${coverage.maturityLabel}, every ${coverage.label.replace(/s$/, '')} requires a completed AIA before go-live.`,
+          href: '/aia.html',
+          done: coverage.required > 0 && coverage.covered === coverage.required
+        };
+      } else {
+        aiaStep = {
+          label: '4. Run AI Impact Assessments',
+          hint: 'Every high-impact system needs a completed AIA before it goes live. Required at maturity target 3+.',
+          href: '/aia.html',
+          done: aias.length > 0
+        };
+      }
+
       const steps = [
         {
           label: '1. Set your regulatory posture',
@@ -169,12 +223,7 @@
           href: '/intake.html',
           done: intake.length > 0
         },
-        {
-          label: '4. Run AI Impact Assessments',
-          hint: 'Every high-impact system needs a completed AIA before it goes live.',
-          href: '/aia.html',
-          done: false // set below
-        },
+        aiaStep,
         {
           label: '5. Maintain the risk register',
           hint: 'Track inherent and residual risk per system; treat each entry.',
@@ -182,7 +231,6 @@
           done: risks.length > 0
         }
       ];
-      // We defer checking AIA count to avoid an extra read earlier; fire and forget.
       const container = document.querySelector('[data-progress]');
       container.innerHTML = steps.map(s => `
         <li class="checklist-item ${s.done ? 'done' : ''}">

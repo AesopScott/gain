@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>GAIN — AI System Inventory</title>
-  <link rel="stylesheet" href="/css/gain-theme.css?v=6" />
+  <link rel="stylesheet" href="/css/gain-theme.css?v=7" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <meta name="description" content="AI governance — from intake to audit. NIST AI RMF · ISO 42001 · EU AI Act." />
   <meta property="og:type" content="website" />
@@ -80,8 +80,9 @@
 
   <script type="module">
     import { requireCompany, canEdit, canAdmin } from '/js/session.js';
-    import { renderHeader, renderFooter, toast, openModal, confirmDialog, serializeForm, escapeHTML, formatDate } from '/js/ui.js?v=6';
-    import { listDocs, createRecord, updateRecord, deleteRecord, getRecord, logEvent } from '/js/data.js';
+    import { renderHeader, renderFooter, toast, openModal, confirmDialog, serializeForm, escapeHTML, formatDate } from '/js/ui.js?v=7';
+    import { listDocs, createRecord, updateRecord, deleteRecord, getRecord, logEvent, getPosture } from '/js/data.js';
+    import { derivedApplicableRegs } from '/js/posture.js?v=7';
 
     const { user, memberships, company, member } = await requireCompany();
     renderHeader({ user, company, memberships });
@@ -91,7 +92,18 @@
     const adminOK = canAdmin(member);
     if (!editorOK) document.querySelectorAll('[data-editor-only]').forEach(el => el.setAttribute('disabled', 'disabled'));
 
-    const team = await listDocs(company.id, 'team', { orderBy: [['name', 'asc']] });
+    const [team, posture] = await Promise.all([
+      listDocs(company.id, 'team', { orderBy: [['name', 'asc']] }),
+      getPosture(company.id)
+    ]);
+    const sectors = posture?.sectors || [];
+    const managementSystem = posture?.managementSystem || '';
+    const applicableRegs = derivedApplicableRegs(posture);
+    const hipaaSector = sectors.includes('Healthcare/HIPAA');
+    const glbaSector = sectors.includes('Finance/GLBA');
+    const iso42001 = managementSystem.includes('42001');
+    const iso27001 = managementSystem.includes('27001');
+    const soc2 = managementSystem === 'SOC 2';
 
     const tierFilter = document.querySelector('[data-filter-tier]');
     const lifecycleFilter = document.querySelector('[data-filter-lifecycle]');
@@ -153,6 +165,99 @@
         return `<option value="${escapeHTML(t.name)}" ${t.name === selected ? 'selected' : ''}>${display}</option>`;
       }).join('');
       return `<select name="${fieldName}"><option value="">— unassigned —</option>${opts}</select>`;
+    }
+
+    // ---------- posture-driven inventory blocks ----------
+    // Surfaced only when the framework posture triggers the requirement.
+
+    function extraHeader(title, reason) {
+      return `
+        <div class="intake-extra-header">
+          <h3>${escapeHTML(title)}</h3>
+          <span class="intake-extra-reason">${escapeHTML(reason)}</span>
+        </div>
+      `;
+    }
+
+    function hipaaBaaBlockHTML(v) {
+      return `
+        <section class="intake-extra" data-extra="hipaaBaa">
+          ${extraHeader('HIPAA — vendor BAA', 'Shown because your posture includes Healthcare/HIPAA. Required for any vendor touching PHI.')}
+          <div class="grid-2">
+            <div class="field">
+              <label>BAA status</label>
+              <select name="baaStatus">
+                <option value="">—</option>
+                <option ${v.baaStatus==='on-file'?'selected':''} value="on-file">On file</option>
+                <option ${v.baaStatus==='pending'?'selected':''} value="pending">Pending</option>
+                <option ${v.baaStatus==='not-required'?'selected':''} value="not-required">Not required (no PHI)</option>
+                <option ${v.baaStatus==='in-house'?'selected':''} value="in-house">In-house — no vendor</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>BAA reference</label>
+              <input name="baaRef" value="${escapeHTML(v.baaRef || '')}" placeholder="Contract ID, SharePoint link, or vendor doc ID" />
+            </div>
+          </div>
+        </section>
+      `;
+    }
+
+    function glbaBlockHTML(v) {
+      return `
+        <section class="intake-extra" data-extra="glba">
+          ${extraHeader('GLBA Safeguards Rule', 'Shown because your posture includes Finance/GLBA. Every system touching NPI must map to a qualified control.')}
+          <div class="field">
+            <label>Safeguards Rule control reference</label>
+            <input name="glbaControlRef" value="${escapeHTML(v.glbaControlRef || '')}" placeholder="e.g., 16 CFR 314.4(c) — access controls, encryption" />
+          </div>
+          ${soc2 ? `
+            <div class="field">
+              <label>SOC 2 subservice (if this system is a subservice in your report)</label>
+              <input name="soc2Subservice" value="${escapeHTML(v.soc2Subservice || '')}" placeholder="Subservice name or — if carved out" />
+            </div>
+          ` : ''}
+        </section>
+      `;
+    }
+
+    function iso42001BlockHTML(v) {
+      return `
+        <section class="intake-extra" data-extra="iso42001">
+          ${extraHeader('ISO/IEC 42001 AIMS ownership', 'Shown because your posture selects ISO/IEC 42001. Every AI system needs a named control owner and linked objective.')}
+          <div class="grid-2">
+            <div class="field">
+              <label>Control owner (AIMS)</label>
+              ${teamMemberSelect('iso42001ControlOwner', v.iso42001ControlOwner, team)}
+            </div>
+            <div class="field">
+              <label>Linked AIMS objective</label>
+              <input name="iso42001ObjectiveRef" value="${escapeHTML(v.iso42001ObjectiveRef || '')}" placeholder="Objective ID or doc reference" />
+            </div>
+          </div>
+        </section>
+      `;
+    }
+
+    function iso27001BlockHTML(v) {
+      return `
+        <section class="intake-extra" data-extra="iso27001">
+          ${extraHeader('ISO/IEC 27001 security controls', 'Shown because your posture selects ISO/IEC 27001. Map this system to your Statement of Applicability.')}
+          <div class="field">
+            <label>SoA control refs (comma-separated)</label>
+            <input name="iso27001SoaRefs" value="${escapeHTML(v.iso27001SoaRefs || '')}" placeholder="e.g., A.5.23, A.8.25, A.8.28" />
+          </div>
+        </section>
+      `;
+    }
+
+    function inventoryExtrasHTML(v) {
+      const parts = [];
+      if (hipaaSector) parts.push(hipaaBaaBlockHTML(v));
+      if (glbaSector)  parts.push(glbaBlockHTML(v));
+      if (iso42001)    parts.push(iso42001BlockHTML(v));
+      if (iso27001)    parts.push(iso27001BlockHTML(v));
+      return parts.join('');
     }
 
     function formHTML(v = {}) {
@@ -251,6 +356,9 @@
             </select>
           </div>
         </div>
+
+        ${inventoryExtrasHTML(v)}
+
         <div class="field"><label>Notes</label>
           <textarea name="notes" rows="3">${escapeHTML(v.notes || '')}</textarea>
         </div>
@@ -273,6 +381,9 @@
           onClick: async ({ close }) => {
             if (!form.reportValidity()) return;
             const data = serializeForm(form);
+            // Snapshot applicable regs at save-time so historical records
+            // stay truthful if the framework posture changes later.
+            data.applicableRegsSnapshot = applicableRegs;
             try {
               if (isNew) {
                 const id = await createRecord(company.id, 'inventory', data, user.uid);
