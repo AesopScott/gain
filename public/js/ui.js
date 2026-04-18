@@ -89,7 +89,7 @@ export function renderFooter() {
     <footer class="site-footer">
       <span>GAIN · Govern AI Now</span>
       <span class="text-muted">Your data · Your company · Your framework</span>
-      <span class="text-muted" style="font-size:.7rem;opacity:.6">v13</span>
+      <span class="text-muted" style="font-size:.7rem;opacity:.6">v14</span>
     </footer>
   `;
 }
@@ -177,7 +177,7 @@ export function serializeForm(form) {
   for (const el of form.querySelectorAll('input, select, textarea')) {
     if (!el.name) continue;
     if (el.type === 'checkbox') {
-      if (el.dataset.multiple) {
+      if ('multiple' in el.dataset) {
         data[el.name] = data[el.name] || [];
         if (el.checked) data[el.name].push(el.value);
       } else {
@@ -197,7 +197,7 @@ export function setFormValues(form, values = {}) {
     if (!el.name || !(el.name in values)) continue;
     const v = values[el.name];
     if (el.type === 'checkbox') {
-      if (el.dataset.multiple) {
+      if ('multiple' in el.dataset) {
         el.checked = Array.isArray(v) && v.includes(el.value);
       } else {
         el.checked = !!v;
