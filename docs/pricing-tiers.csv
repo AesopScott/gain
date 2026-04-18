@@ -1,0 +1,26 @@
+Feature,Starter,Pro,Business,Enterprise
+Price (monthly USD),0,299,899,Custom
+Price (annual USD),0,2990,8990,25000+
+Annual discount %,0,17,17,negotiated
+Target customer,Trying it out / tiny teams,Startups / single-product orgs,Mid-market / regulated industries,Large enterprise / multi-BU
+Trial (days on new workspace),0,14,14,custom
+Workspaces (companies),1,1,3,Unlimited
+Team members per workspace,5,25,Unlimited,Unlimited
+AI systems tracked,3,25,100,Unlimited
+Intake + risk register,Basic,Full,Full,Full
+AIA workflow,No,Yes,Yes,Yes
+NIST AI RMF checklist,Yes,Yes,Yes,Yes
+Sector checklists (HIPAA FERPA GLBA SOX etc.),No,Yes,Yes,Yes
+Policy library - templates available,All 56,All 56,All 56,All 56
+Policy library - saved policies per workspace,3,Unlimited,Unlimited,Unlimited
+AI-generated policy drafting,No,No,Yes,Yes
+Posture-drift banners + snapshots,No,Yes,Yes,Yes
+Audit log export (CSV / JSON),No,Yes,Yes,Yes
+SSO - Google Workspace,No,No,Yes,Yes
+SSO - SAML / Okta / Azure AD,No,No,No,Yes
+API access,No,No,No,Yes
+Custom branding (remove GAIN footer),No,No,Yes,Yes
+BAA available,No,No,Yes,Yes
+Data residency options,No,No,No,Yes
+Support channel,Community only,Email,Priority email,Dedicated CSM + Slack
+Support SLA,None,48 hours,24 hours,4 hours

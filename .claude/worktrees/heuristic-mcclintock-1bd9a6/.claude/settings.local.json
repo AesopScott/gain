@@ -38,7 +38,13 @@
       "Bash(firebase deploy *)",
       "Bash(node -e ' *)",
       "Bash(node --check /tmp/intake-check.mjs)",
-      "Bash(node --check intake-check.mjs)"
+      "Bash(node --check intake-check.mjs)",
+      "Bash(node --check dashboard-check.mjs)",
+      "Bash(sed -i 's#ui\\\\.js?v=17#ui.js?v=18#g; s#session\\\\.js?v=17#session.js?v=18#g' *.html js/ui.js)",
+      "Bash(sed -i -e 's#opacity:.6\">v17</span>#opacity:.6\">v18</span>#' js/ui.js)",
+      "Bash(node --check admin-check.mjs)",
+      "Bash(mv docs/pricing-tiers.csv docs/pricing-tiers-initial-draft.csv)",
+      "Bash(mv docs/pricing-tiers-final.csv docs/pricing-tiers.csv)"
     ]
   }
 }

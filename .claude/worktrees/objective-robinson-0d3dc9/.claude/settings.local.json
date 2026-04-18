@@ -32,7 +32,15 @@
       "Bash(git -C /c/Users/scott/Code/gain show 63ed5cf --stat)",
       "Bash(git -C /c/Users/scott/Code/gain log --oneline -5)",
       "Bash(git -C /c/Users/scott/Code/gain log --oneline origin/main -8)",
-      "Bash(xargs -I{} basename {})"
+      "Bash(xargs -I{} basename {})",
+      "Bash(git -C /c/Users/scott/Code/gain status --short)",
+      "Bash(git -C /c/Users/scott/Code/gain add firestore.rules)",
+      "Bash(git -C /c/Users/scott/Code/gain commit -m ' *)",
+      "Bash(git -C /c/Users/scott/Code/gain push)",
+      "Bash(git -C /c/Users/scott/Code/gain pull)",
+      "Bash(git -C /c/Users/scott/Code/gain show HEAD:public/misc.html)",
+      "Bash(git -C /c/Users/scott/Code/gain show HEAD:public/js/ui.js)",
+      "Bash(npm install *)"
     ]
   }
 }
