@@ -1032,6 +1032,8 @@ table.data .actions {
 
 /* ---------- wide modal (policy editor) ---------- */
 .modal-xl { max-width: 860px; }
+.modal-xl .modal-header { position: sticky; top: 0; z-index: 2; background: var(--surface); }
+.modal-xl .modal-footer { position: sticky; bottom: 0; z-index: 2; }
 .policy-body-textarea { font-family: 'Menlo', 'Consolas', monospace; font-size: .85rem; line-height: 1.6; resize: vertical; }
 .policy-editor-form .grid-2 { gap: 14px; }
 
