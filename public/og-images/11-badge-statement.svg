@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" preserveAspectRatio="xMidYMid slice">
+  <rect width="1200" height="630" fill="#F7F8FA"/>
+  <rect width="1200" height="630" fill="none" stroke="#D8DEE8" stroke-width="2"/>
+
+  <!-- Badge -->
+  <g transform="translate(100,175)">
+    <circle cx="140" cy="140" r="135" fill="#1F3864"/>
+    <circle cx="140" cy="140" r="135" fill="none" stroke="#4FB3D9" stroke-width="8"/>
+    <text x="140" y="195" font-family="-apple-system,Segoe UI,Arial,sans-serif" font-weight="800" font-size="170" text-anchor="middle" fill="#FFFFFF">G</text>
+  </g>
+
+  <!-- Headline, framework line, URL — vertically centered to the badge -->
+  <text x="450" y="300" font-family="-apple-system,Segoe UI,Arial,sans-serif" font-weight="800" font-size="82" fill="#1A2434">Govern AI.</text>
+  <text x="450" y="385" font-family="-apple-system,Segoe UI,Arial,sans-serif" font-weight="800" font-size="82" fill="#2E75B6">Prove it.</text>
+  <rect x="450" y="410" width="120" height="5" fill="#4FB3D9"/>
+  <text x="450" y="460" font-family="-apple-system,Segoe UI,Arial,sans-serif" font-weight="500" font-size="24" fill="#7A8599">NIST AI RMF · ISO 42001 · EU AI Act</text>
+  <text x="450" y="500" font-family="-apple-system,Segoe UI,Arial,sans-serif" font-weight="400" font-size="20" fill="#7A8599">GovernAINow.com</text>
+</svg>
