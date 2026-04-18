@@ -9,6 +9,24 @@
 // This IS the contract. Every new posture option should land here first;
 // downstream pages read the same keys to decide what to render.
 export const postureEffects = {
+  // --- §1 Supplementary standards ---
+  'supportingFrameworks:ISO/IEC 23894':
+    'Risks get ISO 23894 control-mapping · adds AI-lifecycle risk categories',
+  'supportingFrameworks:OECD AI Principles':
+    'AIAs add OECD attestation block (accountability, transparency, fairness)',
+  'supportingFrameworks:UNESCO':
+    'AIAs add UNESCO ethics-principle attestation',
+  'supportingFrameworks:NIST CSF 2.0':
+    'Inventory maps to CSF IDENTIFY / PROTECT / DETECT / RESPOND / RECOVER · links AI risks to IT risk register',
+  'supportingFrameworks:NIST Privacy Framework':
+    'Intake adds PII-handling block · Inventory maps privacy controls',
+  'supportingFrameworks:COBIT 2019':
+    'Role-based approval chains on AIAs · COBIT-aligned governance objectives',
+  'supportingFrameworks:COSO ERM':
+    'Risks roll up with COSO ERM tag into enterprise risk dashboard',
+  'supportingFrameworks:FAIR':
+    'Risks gain quantitative loss-range fields (min / most-likely / max)',
+
   // --- §2 Management system ---
   'managementSystem:ISO/IEC 42001':
     'Adds management-review cadence to controls · AIA gets documented-objective field',
@@ -18,10 +36,16 @@ export const postureEffects = {
     'Adds both security-control mapping and management-review cadence',
   'managementSystem:SOC 2':
     'Adds SOC 2 subservice field to inventory · auditor-view toggle',
+  'managementOutcome:Internal alignment only':
+    'Controls library visible internally · no evidence-export or auditor view',
+  'managementOutcome:Readiness for audit (no cert)':
+    'Evidence-export shows gap-to-audit · no certification paperwork',
   'managementOutcome:Third-party certification':
     'Evidence-export pack will include all posture-derived controls',
 
   // --- §3 Jurisdictions ---
+  'jurisdictions:US-Federal':
+    'AIAs flag federal AI use-case inventory requirement (OMB M-24-10)',
   'jurisdictions:EU':
     'AIAs require EU AI Act risk classification · risks get regulatoryBasis tag (GDPR)',
   'jurisdictions:US-CA':
@@ -64,12 +88,22 @@ export const postureEffects = {
     'Intake adds biometric-disclosure block · BIPA / CPRA flags if jurisdiction matches',
 
   // --- §5 Risk appetite & maturity ---
+  'riskAppetite:averse':
+    'High-impact systems cannot move past "pilot" without AIA sign-off',
+  'riskAppetite:cautious':
+    'Intake auto-flags high-impact systems as "pilot" · AIAs require quarterly review',
+  'riskAppetite:balanced':
+    'Standard workflow · residual-risk tracking required on all high / medium risks',
+  'riskAppetite:opportunity-seeking':
+    'Lighter-weight AIAs allowed · post-deployment monitoring emphasized',
+  'maturityTarget:1':
+    'Inventory + risk log surfaced · AIAs stay optional · no policy gating',
+  'maturityTarget:2':
+    'Policies + inventory required · AIAs optional · Dashboard shows coverage %',
   'maturityTarget:3':
     'AIAs become required (not optional) for high-impact systems · Dashboard shows AIA coverage %',
   'maturityTarget:4':
     'All systems require AIAs · continuous-monitoring fields appear · quantitative risk scoring',
-  'riskAppetite:averse':
-    'High-impact systems cannot move past "pilot" without AIA sign-off',
 };
 
 // ---------- derived data (Phase 2+ consumers) ----------
