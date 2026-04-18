@@ -98,13 +98,13 @@
         const sys = inventory.find(s => s.id === r.systemId);
         return `
           <tr>
-            <td><a href="#" data-open="${escapeHTML(r.id)}">${escapeHTML(r.title || '(untitled)')}</a></td>
+            <td><a href="#" data-open="${escapeHTML(r.id)}">${escapeHTML(r.title || '(untitled)')}</a>${r.emergent ? ' <span class="badge badge-high" title="Emergent / unquantified">~</span>' : ''}</td>
             <td>${escapeHTML(sys?.name || r.systemName || '—')}</td>
             <td>${escapeHTML(r.owner || '')}</td>
             <td>${riskBadge(r.inherentScore)}</td>
             <td>${escapeHTML(r.treatment || '—')}</td>
             <td>${riskBadge(r.residualScore)}</td>
-            <td><span class="status-pill status-${escapeHTML(r.status || 'open')}">${escapeHTML(r.status || 'open')}</span></td>
+            <td><span class="status-pill status-${escapeHTML(r.status || 'open')}">${escapeHTML(r.status || 'open')}</span>${r.feedbackSource && r.feedbackSource !== 'internal' ? ` <span class="text-muted" style="font-size:.75rem">${escapeHTML(r.feedbackSource)}</span>` : ''}</td>
             <td>${editorOK ? `<button class="btn btn-ghost btn-sm" data-open="${escapeHTML(r.id)}">Open</button>` : ''}</td>
           </tr>
         `;
@@ -209,6 +209,31 @@
           </div>
         </div>
         <p class="text-muted">Residual score (L × I): <strong data-residual>—</strong></p>
+        <div class="field">
+          <label>Residual risk statement <span class="text-muted">(MANAGE 1.4 — describe unmitigated exposure for downstream users)</span></label>
+          <textarea name="residualStatement" rows="2" placeholder="e.g., After controls, a low probability of biased output remains for edge-case demographic groups. End users should verify high-stakes decisions independently.">${escapeHTML(v.residualStatement || '')}</textarea>
+        </div>
+
+        <h3 class="aia-section">Classification</h3>
+        <div class="grid-2">
+          <div class="field">
+            <label>Feedback source</label>
+            <select name="feedbackSource">
+              <option value="">—</option>
+              <option ${v.feedbackSource==='internal'?'selected':''} value="internal">Internal monitoring</option>
+              <option ${v.feedbackSource==='end-user'?'selected':''} value="end-user">End user report</option>
+              <option ${v.feedbackSource==='external-community'?'selected':''} value="external-community">External community</option>
+              <option ${v.feedbackSource==='third-party'?'selected':''} value="third-party">Third-party / vendor alert</option>
+              <option ${v.feedbackSource==='regulatory'?'selected':''} value="regulatory">Regulatory</option>
+            </select>
+          </div>
+          <div class="field" style="align-self:end">
+            <label class="checkbox-label" style="margin-top:8px">
+              <input type="checkbox" name="emergent" ${v.emergent?'checked':''} />
+              Emergent / unquantified risk <span class="text-muted">(MEASURE 3.2)</span>
+            </label>
+          </div>
+        </div>
 
         <div class="grid-2">
           <div class="field"><label>Status</label>

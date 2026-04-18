@@ -157,7 +157,30 @@
           <textarea name="fairnessFindings" rows="3">${escapeHTML(v.fairnessFindings || '')}</textarea>
         </div>
 
-        <h3 class="aia-section">4 · Safety, accuracy, robustness</h3>
+        <h3 class="aia-section">4 · NIST trustworthiness characteristics</h3>
+        <p class="text-muted" style="margin:0 0 8px">
+          Per NIST AI RMF 1.0 §3 — check all characteristics this system must satisfy.
+          Every AIA must tag at least one.
+        </p>
+        <div class="field">
+          <div class="checkbox-grid">
+            ${['valid-reliable','safe','secure-resilient','accountable-transparent','explainable-interpretable','privacy-enhanced','fair-bias-managed'].map(c => {
+              const labels = {
+                'valid-reliable': 'Valid & Reliable',
+                'safe': 'Safe',
+                'secure-resilient': 'Secure & Resilient',
+                'accountable-transparent': 'Accountable & Transparent',
+                'explainable-interpretable': 'Explainable & Interpretable',
+                'privacy-enhanced': 'Privacy-Enhanced',
+                'fair-bias-managed': 'Fair — Harmful Bias Managed',
+              };
+              const checked = (v.trustworthinessChars || []).includes(c) ? 'checked' : '';
+              return `<label class="checkbox-label"><input type="checkbox" name="trustworthinessChars" value="${c}" data-multiple ${checked}/> ${labels[c]}</label>`;
+            }).join('')}
+          </div>
+        </div>
+
+        <h3 class="aia-section">5 · Safety, accuracy, robustness</h3>
         <div class="field"><label>Known failure modes</label>
           <textarea name="failureModes" rows="2">${escapeHTML(v.failureModes || '')}</textarea>
         </div>
@@ -168,7 +191,8 @@
           <textarea name="redTeam" rows="2">${escapeHTML(v.redTeam || '')}</textarea>
         </div>
 
-        <h3 class="aia-section">5 · Human oversight</h3>
+        <h3 class="aia-section">6 · Human oversight</h3>
+
         <div class="field"><label>Decision mode</label>
           <select name="decisionMode">
             <option value="">—</option>
@@ -182,7 +206,7 @@
           <textarea name="override" rows="2">${escapeHTML(v.override || '')}</textarea>
         </div>
 
-        <h3 class="aia-section">6 · Impact score</h3>
+        <h3 class="aia-section">7 · Impact score</h3>
         <p class="text-muted">
           Score 1–5 on each. Sum scales impact (20+ → high, 10–19 → limited, ≤ 9 → minimal).
         </p>
@@ -205,7 +229,7 @@
         </div>
         <p class="text-muted">Computed impact score: <strong data-impact-total>—</strong></p>
 
-        <h3 class="aia-section">7 · Decision</h3>
+        <h3 class="aia-section">8 · Decision</h3>
         <div class="grid-2">
           <div class="field"><label>Status</label>
             <select name="status">
