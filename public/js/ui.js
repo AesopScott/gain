@@ -20,6 +20,7 @@ const DEFAULT_NAV = [
   { href: '/aia.html',       label: 'AIAs',      match: 'aia' },
   { href: '/checklists.html', label: 'Checklists', match: 'checklists' },
   { href: '/policies.html',  label: 'Policies',  match: 'policies' },
+  { href: '/misc.html',      label: 'Miscellaneous', match: 'misc' },
   { href: '/settings.html',  label: 'Settings',  match: 'settings' }
 ];
 

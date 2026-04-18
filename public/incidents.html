@@ -1,0 +1,507 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GAIN — Incident Response Tracking</title>
+  <script>(function(){try{var p=localStorage.getItem('gain.theme.palette')||'classic';var m=localStorage.getItem('gain.theme.mode')||'light';document.documentElement.setAttribute('data-palette',p);document.documentElement.setAttribute('data-mode',m);}catch(e){}})();</script>
+  <link rel="stylesheet" href="/css/gain-theme.css?v=16" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <meta name="description" content="AI governance — from intake to audit. NIST AI RMF · ISO 42001 · EU AI Act." />
+</head>
+<body>
+
+  <div data-site-header></div>
+
+  <main class="app-shell">
+
+    <div class="flex-between">
+      <div>
+        <div class="text-muted" style="font-size:.85rem;margin-bottom:4px">
+          <a href="/misc.html">Miscellaneous</a> › Incident Response Tracking
+        </div>
+        <h1 class="page-title" style="margin-top:0">Incident Response Tracking</h1>
+      </div>
+      <button class="btn btn-primary" data-new data-editor-only>+ Log incident</button>
+    </div>
+
+    <p class="page-lead">
+      Log, triage, and resolve AI-related incidents — model failures, bias events,
+      prompt-injection attempts, data leaks, or any adverse impact that needs a documented
+      response. Satisfies <strong>NIST AI RMF MANAGE 4.1</strong> and <strong>ISO 42001 A.8.3</strong>.
+    </p>
+
+    <div class="card">
+      <div class="filter-row">
+        <label>Severity:</label>
+        <select data-filter-severity>
+          <option value="">All</option>
+          <option value="critical">Critical</option>
+          <option value="high">High</option>
+          <option value="medium">Medium</option>
+          <option value="low">Low</option>
+        </select>
+        <label class="filter-gap">Status:</label>
+        <select data-filter-status>
+          <option value="">All</option>
+          <option value="new">New</option>
+          <option value="investigating">Investigating</option>
+          <option value="contained">Contained</option>
+          <option value="resolved">Resolved</option>
+          <option value="closed">Closed</option>
+        </select>
+        <label class="filter-gap">Category:</label>
+        <select data-filter-category>
+          <option value="">All</option>
+          <option value="model_failure">Model failure</option>
+          <option value="bias">Bias / fairness</option>
+          <option value="hallucination">Hallucination</option>
+          <option value="prompt_injection">Prompt injection</option>
+          <option value="data_leak">Data leak / privacy</option>
+          <option value="security">Security / access</option>
+          <option value="availability">Availability / outage</option>
+          <option value="compliance">Compliance / regulatory</option>
+          <option value="third_party">Third-party / vendor</option>
+          <option value="other">Other</option>
+        </select>
+        <label class="filter-gap checkbox-label" style="margin-left:12px">
+          <input type="checkbox" data-filter-reportable-only />
+          Reportable only
+        </label>
+      </div>
+
+      <table class="data">
+        <thead>
+          <tr>
+            <th>Incident</th>
+            <th>System</th>
+            <th>Category</th>
+            <th>Severity</th>
+            <th>Status</th>
+            <th>Reported</th>
+            <th>Owner</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody data-rows></tbody>
+      </table>
+    </div>
+
+    <div data-site-footer></div>
+  </main>
+
+  <script type="module">
+    import { requireCompany, canEdit, canAdmin } from '/js/session.js?v=16';
+    import { renderHeader, renderFooter, toast, openModal, confirmDialog, serializeForm, escapeHTML, formatDate } from '/js/ui.js?v=16';
+    import { listDocs, createRecord, updateRecord, deleteRecord, getRecord, logEvent } from '/js/data.js?v=16';
+
+    const { user, memberships, company, member } = await requireCompany();
+    renderHeader({ user, company, memberships });
+    renderFooter();
+
+    const editorOK = canEdit(member);
+    const adminOK = canAdmin(member);
+    if (!editorOK) document.querySelectorAll('[data-editor-only]').forEach(el => el.setAttribute('disabled', 'disabled'));
+
+    // Load supporting data: inventory systems and team members for dropdowns.
+    const [inventory, team] = await Promise.all([
+      listDocs(company.id, 'inventory').catch(() => []),
+      listDocs(company.id, 'team', { orderBy: [['name', 'asc']] }).catch(() => [])
+    ]);
+
+    const severityFilter = document.querySelector('[data-filter-severity]');
+    const statusFilter = document.querySelector('[data-filter-status]');
+    const categoryFilter = document.querySelector('[data-filter-category]');
+    const reportableOnlyFilter = document.querySelector('[data-filter-reportable-only]');
+    severityFilter.addEventListener('change', refresh);
+    statusFilter.addEventListener('change', refresh);
+    categoryFilter.addEventListener('change', refresh);
+    reportableOnlyFilter.addEventListener('change', refresh);
+
+    const CATEGORY_LABELS = {
+      model_failure: 'Model failure',
+      bias: 'Bias / fairness',
+      hallucination: 'Hallucination',
+      prompt_injection: 'Prompt injection',
+      data_leak: 'Data leak / privacy',
+      security: 'Security / access',
+      availability: 'Availability / outage',
+      compliance: 'Compliance / regulatory',
+      third_party: 'Third-party / vendor',
+      other: 'Other'
+    };
+
+    const SEVERITY_ORDER = { critical: 0, high: 1, medium: 2, low: 3 };
+
+    async function refresh() {
+      let rows;
+      try {
+        rows = await listDocs(company.id, 'incidents');
+      } catch (err) {
+        toast('Could not load incidents: ' + err.message, 'error', 5000);
+        return;
+      }
+
+      // Sort: open incidents first (by severity), then closed at the bottom.
+      rows.sort((a, b) => {
+        const aOpen = (a.status !== 'resolved' && a.status !== 'closed') ? 0 : 1;
+        const bOpen = (b.status !== 'resolved' && b.status !== 'closed') ? 0 : 1;
+        if (aOpen !== bOpen) return aOpen - bOpen;
+        const aSev = SEVERITY_ORDER[a.severity] ?? 4;
+        const bSev = SEVERITY_ORDER[b.severity] ?? 4;
+        if (aSev !== bSev) return aSev - bSev;
+        return (b.detectedAt || '').localeCompare(a.detectedAt || '');
+      });
+
+      const sev = severityFilter.value;
+      const st = statusFilter.value;
+      const cat = categoryFilter.value;
+      const reportableOnly = reportableOnlyFilter.checked;
+
+      const filtered = rows.filter(r =>
+        (!sev || r.severity === sev) &&
+        (!st || r.status === st) &&
+        (!cat || r.category === cat) &&
+        (!reportableOnly || r.reportableExternal === 'yes')
+      );
+
+      const tbody = document.querySelector('[data-rows]');
+      if (!filtered.length) {
+        tbody.innerHTML = `<tr><td colspan="8" class="text-muted" style="text-align:center;padding:32px">No incidents match the current filters.${rows.length === 0 && editorOK ? ' Click <strong>+ Log incident</strong> to add the first one.' : ''}</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(r => {
+        const system = inventory.find(i => i.id === r.systemId);
+        const systemName = system ? (system.name || '(unnamed)') : (r.systemFree || '—');
+        const ownerMember = team.find(t => t.id === r.ownerId);
+        const ownerName = ownerMember ? ownerMember.name : (r.ownerFree || '—');
+        return `
+          <tr>
+            <td>
+              <a href="#" data-open="${escapeHTML(r.id)}"><strong>${escapeHTML(r.title || '(untitled)')}</strong></a>
+              ${r.reportableExternal === 'yes' ? '<span class="badge badge-high" style="margin-left:8px;font-size:.7rem">Reportable</span>' : ''}
+            </td>
+            <td>${escapeHTML(systemName)}</td>
+            <td>${escapeHTML(CATEGORY_LABELS[r.category] || r.category || '—')}</td>
+            <td>${severityBadge(r.severity)}</td>
+            <td>${statusBadge(r.status)}</td>
+            <td>${escapeHTML(formatDate(r.detectedAt) || '—')}</td>
+            <td>${escapeHTML(ownerName)}</td>
+            <td><button class="btn btn-ghost btn-sm" data-open="${escapeHTML(r.id)}">Open</button></td>
+          </tr>
+        `;
+      }).join('');
+
+      tbody.querySelectorAll('[data-open]').forEach(el => {
+        el.addEventListener('click', async (e) => {
+          e.preventDefault();
+          const id = e.currentTarget.dataset.open;
+          const rec = await getRecord(company.id, 'incidents', id);
+          openIncidentEditor(rec);
+        });
+      });
+    }
+
+    function severityBadge(sev) {
+      if (!sev) return '—';
+      const cls =
+        sev === 'critical' ? 'badge-prohibited' :
+        sev === 'high' ? 'badge-high' :
+        sev === 'medium' ? 'badge-medium' :
+        sev === 'low' ? 'badge-low' : '';
+      return `<span class="badge ${cls}">${escapeHTML(sev)}</span>`;
+    }
+
+    function statusBadge(st) {
+      if (!st) return '—';
+      const openStatuses = ['new', 'investigating', 'contained'];
+      const cls = openStatuses.includes(st) ? 'badge-medium' : 'badge-low';
+      return `<span class="badge ${cls}">${escapeHTML(st)}</span>`;
+    }
+
+    refresh();
+
+    document.querySelector('[data-new]').addEventListener('click', () => {
+      if (!editorOK) return;
+      openIncidentEditor(null);
+    });
+
+    function incidentFormHTML(v) {
+      const teamOpts = team.map(t => `<option value="${escapeHTML(t.id)}" ${v.ownerId === t.id ? 'selected' : ''}>${escapeHTML(t.name || '(unnamed)')}</option>`).join('');
+      const inventoryOpts = inventory.map(i => `<option value="${escapeHTML(i.id)}" ${v.systemId === i.id ? 'selected' : ''}>${escapeHTML(i.name || '(unnamed)')}</option>`).join('');
+
+      return `
+        <div class="field">
+          <label>Title <span class="text-muted">(one-line summary)</span></label>
+          <input name="title" required value="${escapeHTML(v.title || '')}" placeholder="e.g., Chatbot returned customer SSN in response to prompt-injection" />
+        </div>
+        <div class="grid-2">
+          <div class="field">
+            <label>Category</label>
+            <select name="category" required>
+              <option value="">—</option>
+              ${Object.entries(CATEGORY_LABELS).map(([k, l]) =>
+                `<option value="${k}" ${v.category === k ? 'selected' : ''}>${escapeHTML(l)}</option>`
+              ).join('')}
+            </select>
+          </div>
+          <div class="field">
+            <label>Severity</label>
+            <select name="severity" required>
+              <option value="">—</option>
+              <option ${v.severity === 'critical' ? 'selected' : ''} value="critical">Critical</option>
+              <option ${v.severity === 'high' ? 'selected' : ''} value="high">High</option>
+              <option ${v.severity === 'medium' ? 'selected' : ''} value="medium">Medium</option>
+              <option ${v.severity === 'low' ? 'selected' : ''} value="low">Low</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="field">
+            <label>Detected at</label>
+            <input type="datetime-local" name="detectedAt" value="${escapeHTML(v.detectedAt || '')}" />
+          </div>
+          <div class="field">
+            <label>Reported at</label>
+            <input type="datetime-local" name="reportedAt" value="${escapeHTML(v.reportedAt || '')}" />
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Affected AI system</label>
+          ${inventory.length ? `
+            <select name="systemId">
+              <option value="">— Not in inventory —</option>
+              ${inventoryOpts}
+            </select>
+          ` : `
+            <input name="systemFree" value="${escapeHTML(v.systemFree || '')}" placeholder="Free-text system name (inventory is empty)" />
+          `}
+        </div>
+        ${inventory.length ? `
+          <div class="field">
+            <label>…or describe if not yet in inventory</label>
+            <input name="systemFree" value="${escapeHTML(v.systemFree || '')}" placeholder="Free-text system name" />
+          </div>
+        ` : ''}
+
+        <div class="field">
+          <label>What happened? <span class="text-muted">(facts, not analysis)</span></label>
+          <textarea name="description" rows="4" required>${escapeHTML(v.description || '')}</textarea>
+        </div>
+
+        <div class="field">
+          <label>Impact <span class="text-muted">(users affected, data exposed, financial / reputational harm)</span></label>
+          <textarea name="impact" rows="3">${escapeHTML(v.impact || '')}</textarea>
+        </div>
+
+        <div class="grid-2">
+          <div class="field">
+            <label>Users affected (count or range)</label>
+            <input name="usersAffected" value="${escapeHTML(v.usersAffected || '')}" placeholder="e.g., ~1,200 or unknown" />
+          </div>
+          <div class="field">
+            <label>Data involved</label>
+            <input name="dataInvolved" value="${escapeHTML(v.dataInvolved || '')}" placeholder="e.g., PII, PHI, none, confidential business data" />
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Detection method</label>
+          <select name="detectionMethod">
+            <option value="">—</option>
+            <option ${v.detectionMethod === 'monitoring' ? 'selected' : ''} value="monitoring">Automated monitoring</option>
+            <option ${v.detectionMethod === 'user_report' ? 'selected' : ''} value="user_report">User / customer report</option>
+            <option ${v.detectionMethod === 'internal' ? 'selected' : ''} value="internal">Internal review / audit</option>
+            <option ${v.detectionMethod === 'red_team' ? 'selected' : ''} value="red_team">Red-team / pentest</option>
+            <option ${v.detectionMethod === 'vendor' ? 'selected' : ''} value="vendor">Vendor notification</option>
+            <option ${v.detectionMethod === 'regulator' ? 'selected' : ''} value="regulator">Regulator / third party</option>
+            <option ${v.detectionMethod === 'other' ? 'selected' : ''} value="other">Other</option>
+          </select>
+        </div>
+
+        <h3 class="aia-section">Response</h3>
+
+        <div class="grid-2">
+          <div class="field">
+            <label>Status</label>
+            <select name="status">
+              <option ${(v.status || 'new') === 'new' ? 'selected' : ''} value="new">New</option>
+              <option ${v.status === 'investigating' ? 'selected' : ''} value="investigating">Investigating</option>
+              <option ${v.status === 'contained' ? 'selected' : ''} value="contained">Contained</option>
+              <option ${v.status === 'resolved' ? 'selected' : ''} value="resolved">Resolved</option>
+              <option ${v.status === 'closed' ? 'selected' : ''} value="closed">Closed</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Owner</label>
+            ${team.length ? `
+              <select name="ownerId">
+                <option value="">—</option>
+                ${teamOpts}
+              </select>
+            ` : `
+              <input name="ownerFree" value="${escapeHTML(v.ownerFree || '')}" placeholder="Owner name (team roster is empty)" />
+            `}
+          </div>
+        </div>
+        ${team.length ? `
+          <div class="field">
+            <label>…or owner name if not on the team roster</label>
+            <input name="ownerFree" value="${escapeHTML(v.ownerFree || '')}" />
+          </div>
+        ` : ''}
+
+        <div class="field">
+          <label>Containment actions taken</label>
+          <textarea name="containment" rows="3" placeholder="e.g., disabled the endpoint, rotated keys, notified affected users">${escapeHTML(v.containment || '')}</textarea>
+        </div>
+
+        <div class="field">
+          <label>Root-cause analysis</label>
+          <textarea name="rootCause" rows="3">${escapeHTML(v.rootCause || '')}</textarea>
+        </div>
+
+        <div class="field">
+          <label>Corrective / preventive actions</label>
+          <textarea name="capa" rows="3" placeholder="What will stop this class of incident from recurring?">${escapeHTML(v.capa || '')}</textarea>
+        </div>
+
+        <div class="grid-2">
+          <div class="field">
+            <label>Resolved at</label>
+            <input type="datetime-local" name="resolvedAt" value="${escapeHTML(v.resolvedAt || '')}" />
+          </div>
+          <div class="field">
+            <label>Lesson linked to risk register?</label>
+            <input name="linkedRiskId" value="${escapeHTML(v.linkedRiskId || '')}" placeholder="Risk doc id (optional)" />
+          </div>
+        </div>
+
+        <h3 class="aia-section">External reporting</h3>
+
+        <div class="grid-2">
+          <div class="field">
+            <label>Externally reportable?</label>
+            <select name="reportableExternal">
+              <option value="">—</option>
+              <option ${v.reportableExternal === 'yes' ? 'selected' : ''} value="yes">Yes</option>
+              <option ${v.reportableExternal === 'no' ? 'selected' : ''} value="no">No</option>
+              <option ${v.reportableExternal === 'unsure' ? 'selected' : ''} value="unsure">Unsure — escalate</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Reporting deadline</label>
+            <input type="date" name="reportingDeadline" value="${escapeHTML(v.reportingDeadline || '')}" />
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Regulators / parties notified</label>
+          <textarea name="notifiedParties" rows="2" placeholder="e.g., HHS OCR, state AG, affected users, insurer">${escapeHTML(v.notifiedParties || '')}</textarea>
+        </div>
+
+        <div class="field">
+          <label>Governance notes (internal)</label>
+          <textarea name="govNotes" rows="2">${escapeHTML(v.govNotes || '')}</textarea>
+        </div>
+      `;
+    }
+
+    function openIncidentEditor(rec) {
+      const isNew = !rec;
+      const form = document.createElement('form');
+      form.className = 'stacked-form';
+      form.innerHTML = incidentFormHTML(rec || {});
+
+      const actions = [
+        { label: 'Close', variant: 'ghost', onClick: ({ close }) => close() }
+      ];
+      if (editorOK) {
+        actions.push({
+          label: isNew ? 'Log incident' : 'Save',
+          variant: 'primary',
+          onClick: async ({ close }) => {
+            if (!form.reportValidity()) return;
+            const data = serializeForm(form);
+            try {
+              if (isNew) {
+                // Default detectedAt to now if the editor left it empty, so every
+                // incident has a real timestamp without blocking quick entry.
+                if (!data.detectedAt) {
+                  const now = new Date();
+                  const pad = n => String(n).padStart(2, '0');
+                  data.detectedAt = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+                }
+                const id = await createRecord(company.id, 'incidents', {
+                  ...data,
+                  status: data.status || 'new'
+                }, user.uid);
+                await logEvent(company.id, {
+                  actorUid: user.uid,
+                  actorName: user.displayName || user.email,
+                  action: 'incident.create',
+                  target: id,
+                  details: { title: data.title, severity: data.severity, category: data.category }
+                });
+                toast('Incident logged.', 'success');
+              } else {
+                await updateRecord(company.id, 'incidents', rec.id, data, user.uid);
+                await logEvent(company.id, {
+                  actorUid: user.uid,
+                  actorName: user.displayName || user.email,
+                  action: 'incident.update',
+                  target: rec.id,
+                  details: { status: data.status, severity: data.severity }
+                });
+                toast('Saved.', 'success');
+              }
+              close();
+              refresh();
+            } catch (err) {
+              toast(err.message, 'error', 5000);
+            }
+          }
+        });
+      }
+      if (!isNew && adminOK) {
+        actions.unshift({
+          label: 'Delete',
+          variant: 'danger',
+          onClick: async ({ close }) => {
+            const ok = await confirmDialog({
+              title: 'Delete this incident record?',
+              message: 'Incident records should generally be retained for audit. Deleting permanently removes the doc. Prefer setting status to "closed" instead.',
+              confirmLabel: 'Delete anyway',
+              variant: 'danger'
+            });
+            if (!ok) return;
+            try {
+              await deleteRecord(company.id, 'incidents', rec.id);
+              await logEvent(company.id, {
+                actorUid: user.uid,
+                actorName: user.displayName || user.email,
+                action: 'incident.delete',
+                target: rec.id
+              });
+              toast('Deleted.', 'success');
+              close();
+              refresh();
+            } catch (err) {
+              toast(err.message, 'error', 5000);
+            }
+          }
+        });
+      }
+
+      openModal({
+        title: isNew ? 'Log incident' : `Incident: ${rec.title || '(untitled)'}`,
+        body: form,
+        actions
+      });
+    }
+  </script>
+
+</body>
+</html>
