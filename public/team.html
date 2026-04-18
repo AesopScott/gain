@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GAIN — Team</title>
+  <link rel="stylesheet" href="/css/gain-theme.css?v=2" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+</head>
+<body>
+
+  <div data-site-header></div>
+
+  <main class="app-shell">
+
+    <div class="flex-between">
+      <h1 class="page-title">Governance Team</h1>
+      <button class="btn btn-primary" data-new data-editor-only>+ Add member</button>
+    </div>
+
+    <p class="page-lead">
+      The people accountable for your AI governance program — spanning risk, legal,
+      technology, compliance, and operations. Keeping this roster current satisfies
+      <strong>GOVERN 1.1</strong> (roles and responsibilities) and gives every AIA and
+      risk entry a clear human owner.
+    </p>
+
+    <div class="card">
+      <table class="data">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Role</th>
+            <th>Department</th>
+            <th>Email</th>
+            <th>Notes</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody data-rows></tbody>
+      </table>
+    </div>
+
+    <div data-site-footer></div>
+  </main>
+
+  <script type="module">
+    import { requireCompany, canEdit, canAdmin } from '/js/session.js';
+    import { renderHeader, renderFooter, toast, openModal, confirmDialog, serializeForm, escapeHTML } from '/js/ui.js';
+    import { listDocs, createRecord, updateRecord, deleteRecord, getRecord, logEvent } from '/js/data.js';
+
+    const { user, memberships, company, member } = await requireCompany();
+    renderHeader({ user, company, memberships });
+    renderFooter();
+
+    const editorOK = canEdit(member);
+    const adminOK  = canAdmin(member);
+    if (!editorOK) document.querySelectorAll('[data-editor-only]').forEach(el => el.setAttribute('disabled', 'disabled'));
+
+    async function refresh() {
+      const rows = await listDocs(company.id, 'team', { orderBy: [['name', 'asc']] });
+      const tbody = document.querySelector('[data-rows]');
+      if (rows.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="empty-state">No team members yet.</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = rows.map(r => {
+        const displayRole = r.role === 'other' ? (r.customRole || 'Other') : (r.role || '—');
+        return `
+          <tr>
+            <td><a href="#" data-open="${escapeHTML(r.id)}">${escapeHTML(r.name || '(unnamed)')}</a></td>
+            <td>${escapeHTML(displayRole)}</td>
+            <td>${escapeHTML(r.department || '—')}</td>
+            <td>${r.email ? `<a href="mailto:${escapeHTML(r.email)}">${escapeHTML(r.email)}</a>` : '—'}</td>
+            <td class="text-muted" style="font-size:.85rem">${escapeHTML(r.notes || '')}</td>
+            <td>${editorOK ? `<button class="btn btn-ghost btn-sm" data-open="${escapeHTML(r.id)}">Edit</button>` : ''}</td>
+          </tr>
+        `;
+      }).join('');
+      tbody.querySelectorAll('[data-open]').forEach(el => {
+        el.addEventListener('click', async (e) => {
+          e.preventDefault();
+          const id = e.currentTarget.dataset.open;
+          const rec = await getRecord(company.id, 'team', id);
+          openEditor(rec);
+        });
+      });
+    }
+    refresh();
+
+    document.querySelector('[data-new]').addEventListener('click', () => {
+      if (!editorOK) return;
+      openEditor(null);
+    });
+
+    const ROLES = [
+      { value: 'caio',           label: 'Chief AI Officer (CAIO)' },
+      { value: 'cro',            label: 'Chief Risk Officer (CRO)' },
+      { value: 'cpo',            label: 'Chief Privacy Officer (CPO)' },
+      { value: 'ciso',           label: 'Chief Information Security Officer (CISO)' },
+      { value: 'cco',            label: 'Chief Compliance Officer (CCO)' },
+      { value: 'cto',            label: 'Chief Technology Officer (CTO)' },
+      { value: 'cdo',            label: 'Chief Data Officer (CDO)' },
+      { value: 'legal',          label: 'General Counsel / Legal' },
+      { value: 'responsible-ai', label: 'Responsible AI Lead' },
+      { value: 'ai-ethics',      label: 'AI Ethics Officer' },
+      { value: 'data-science',   label: 'Data Science Lead' },
+      { value: 'ml-engineer',    label: 'ML / AI Engineer' },
+      { value: 'product',        label: 'Product Manager (AI)' },
+      { value: 'audit',          label: 'Internal Audit' },
+      { value: 'bu-rep',         label: 'Business Unit Representative' },
+      { value: 'regulatory',     label: 'Regulatory Affairs' },
+      { value: 'other',          label: 'Other (write in)' },
+    ];
+
+    function roleOptions(selected) {
+      return `<option value="">— select a role —</option>` +
+        ROLES.map(r => `<option value="${r.value}" ${selected === r.value ? 'selected' : ''}>${escapeHTML(r.label)}</option>`).join('');
+    }
+
+    function formHTML(v = {}) {
+      const isOther = v.role === 'other';
+      return `
+        <div class="grid-2">
+          <div class="field"><label>Full name *</label>
+            <input name="name" required value="${escapeHTML(v.name || '')}" />
+          </div>
+          <div class="field"><label>Email</label>
+            <input name="email" type="email" value="${escapeHTML(v.email || '')}" />
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="field"><label>Governance role *</label>
+            <select name="role" required data-role-select>${roleOptions(v.role)}</select>
+          </div>
+          <div class="field" data-custom-role-field style="${isOther ? '' : 'display:none'}">
+            <label>Custom role title *</label>
+            <input name="customRole" value="${escapeHTML(v.customRole || '')}" ${isOther ? 'required' : ''} />
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="field"><label>Department</label>
+            <input name="department" value="${escapeHTML(v.department || '')}" placeholder="e.g., Legal, Engineering, Risk" />
+          </div>
+          <div class="field"><label>Reports to</label>
+            <input name="reportsTo" value="${escapeHTML(v.reportsTo || '')}" placeholder="Name or role" />
+          </div>
+        </div>
+        <div class="field"><label>Notes</label>
+          <textarea name="notes" rows="2" placeholder="e.g., primary contact for EU AI Act queries; interim role">${escapeHTML(v.notes || '')}</textarea>
+        </div>
+      `;
+    }
+
+    function openEditor(rec) {
+      const isNew = !rec;
+      const form = document.createElement('form');
+      form.className = 'stacked-form';
+      form.innerHTML = formHTML(rec || {});
+
+      // Show/hide custom role field when "Other" is selected.
+      const roleSelect = form.querySelector('[data-role-select]');
+      const customField = form.querySelector('[data-custom-role-field]');
+      const customInput = form.querySelector('[name="customRole"]');
+      roleSelect.addEventListener('change', () => {
+        const isOther = roleSelect.value === 'other';
+        customField.style.display = isOther ? '' : 'none';
+        customInput.required = isOther;
+        if (!isOther) customInput.value = '';
+      });
+
+      const actions = [{ label: 'Close', variant: 'ghost', onClick: ({ close }) => close() }];
+      if (editorOK) {
+        actions.push({
+          label: isNew ? 'Add member' : 'Save',
+          variant: 'primary',
+          onClick: async ({ close }) => {
+            if (!form.reportValidity()) return;
+            const data = serializeForm(form);
+            try {
+              if (isNew) {
+                const id = await createRecord(company.id, 'team', data, user.uid);
+                await logEvent(company.id, { actorUid: user.uid, actorName: user.displayName || user.email, action: 'team.create', target: id, details: { name: data.name } });
+                toast('Member added.', 'success');
+              } else {
+                await updateRecord(company.id, 'team', rec.id, data, user.uid);
+                await logEvent(company.id, { actorUid: user.uid, actorName: user.displayName || user.email, action: 'team.update', target: rec.id });
+                toast('Saved.', 'success');
+              }
+              close();
+              refresh();
+            } catch (err) {
+              toast(err.message, 'error', 5000);
+            }
+          }
+        });
+      }
+      if (!isNew && adminOK) {
+        actions.unshift({
+          label: 'Delete',
+          variant: 'danger',
+          onClick: async ({ close }) => {
+            const ok = await confirmDialog({ title: 'Remove team member?', message: 'This cannot be undone.', confirmLabel: 'Delete', variant: 'danger' });
+            if (!ok) return;
+            try {
+              await deleteRecord(company.id, 'team', rec.id);
+              await logEvent(company.id, { actorUid: user.uid, actorName: user.displayName || user.email, action: 'team.delete', target: rec.id });
+              toast('Removed.', 'success');
+              close();
+              refresh();
+            } catch (err) {
+              toast(err.message, 'error', 5000);
+            }
+          }
+        });
+      }
+      openModal({
+        title: isNew ? 'Add team member' : `Team member · ${rec.name || ''}`,
+        body: form,
+        actions
+      });
+    }
+  </script>
+
+</body>
+</html>

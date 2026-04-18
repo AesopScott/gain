@@ -11,6 +11,7 @@ import { logOut, setActiveCompanyId } from './session.js';
 // against location.pathname to set the "active" style.
 const DEFAULT_NAV = [
   { href: '/dashboard.html', label: 'Dashboard', match: 'dashboard' },
+  { href: '/team.html',      label: 'Team',      match: 'team' },
   { href: '/framework.html', label: 'Framework', match: 'framework' },
   { href: '/intake.html',    label: 'Intake',    match: 'intake' },
   { href: '/inventory.html', label: 'Inventory', match: 'inventory' },
