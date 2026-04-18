@@ -4,6 +4,7 @@
 // the brand, nav, and company switcher stay consistent.
 
 import { logOut, setActiveCompanyId } from './session.js';
+import { toggleMode } from './theme.js';
 
 // ---------- header ----------
 
@@ -17,6 +18,7 @@ const DEFAULT_NAV = [
   { href: '/inventory.html', label: 'Inventory', match: 'inventory' },
   { href: '/risks.html',     label: 'Risks',     match: 'risks' },
   { href: '/aia.html',       label: 'AIAs',      match: 'aia' },
+  { href: '/checklists.html', label: 'Checklists', match: 'checklists' },
   { href: '/settings.html',  label: 'Settings',  match: 'settings' }
 ];
 
@@ -47,6 +49,9 @@ export function renderHeader({ user, company, memberships = [], pages = DEFAULT_
             ${companyOptions}
           </select>
         ` : (company ? `<span class="company-label">${escapeHTML(company.name || '')}</span>` : '')}
+        <button class="theme-toggle" data-theme-toggle aria-label="Toggle light/dark mode" title="Toggle light/dark mode">
+          <span class="icon-sun" aria-hidden="true">☀</span><span class="icon-moon" aria-hidden="true">☾</span>
+        </button>
         <div class="user-menu">
           <span class="user-name">${escapeHTML(user?.displayName || user?.email || '')}</span>
           <button class="btn btn-ghost btn-sm" data-signout>Sign out</button>
@@ -70,6 +75,11 @@ export function renderHeader({ user, company, memberships = [], pages = DEFAULT_
       window.location.href = '/index.html';
     });
   }
+
+  const themeToggleBtn = mount.querySelector('[data-theme-toggle]');
+  if (themeToggleBtn) {
+    themeToggleBtn.addEventListener('click', () => toggleMode());
+  }
 }
 
 export function renderFooter() {
@@ -79,7 +89,7 @@ export function renderFooter() {
     <footer class="site-footer">
       <span>GAIN · Govern AI Now</span>
       <span class="text-muted">Your data · Your company · Your framework</span>
-      <span class="text-muted" style="font-size:.7rem;opacity:.6">v8</span>
+      <span class="text-muted" style="font-size:.7rem;opacity:.6">v9</span>
     </footer>
   `;
 }
