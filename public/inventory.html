@@ -91,6 +91,8 @@
     const adminOK = canAdmin(member);
     if (!editorOK) document.querySelectorAll('[data-editor-only]').forEach(el => el.setAttribute('disabled', 'disabled'));
 
+    const team = await listDocs(company.id, 'team', { orderBy: [['name', 'asc']] });
+
     const tierFilter = document.querySelector('[data-filter-tier]');
     const lifecycleFilter = document.querySelector('[data-filter-lifecycle]');
     tierFilter.addEventListener('change', refresh);
@@ -142,6 +144,17 @@
       openEditor(null);
     });
 
+    function teamMemberSelect(fieldName, selected, team) {
+      const roleLabel = { caio:'Chief AI Officer', cro:'Chief Risk Officer', cpo:'Chief Privacy Officer', ciso:'CISO', cco:'Chief Compliance Officer', cto:'CTO', cdo:'Chief Data Officer', legal:'General Counsel', 'responsible-ai':'Responsible AI Lead', 'ai-ethics':'AI Ethics Officer', 'data-science':'Data Science Lead', 'ml-engineer':'ML/AI Engineer', product:'Product Manager (AI)', audit:'Internal Audit', 'bu-rep':'Business Unit Rep', regulatory:'Regulatory Affairs' };
+      if (!team.length) return `<p class="text-muted" style="font-size:.85rem">No team members yet — <a href="/team.html">add team members</a> first.</p><input type="hidden" name="${fieldName}" value="" />`;
+      const opts = team.map(t => {
+        const rl = t.role === 'other' ? (t.customRole || 'Other') : (roleLabel[t.role] || t.role || '');
+        const display = rl ? `${escapeHTML(t.name)} — ${escapeHTML(rl)}` : escapeHTML(t.name);
+        return `<option value="${escapeHTML(t.name)}" ${t.name === selected ? 'selected' : ''}>${display}</option>`;
+      }).join('');
+      return `<select name="${fieldName}"><option value="">— unassigned —</option>${opts}</select>`;
+    }
+
     function formHTML(v = {}) {
       return `
         <div class="field"><label>System name *</label>
@@ -152,7 +165,7 @@
         </div>
         <div class="grid-2">
           <div class="field"><label>System owner</label>
-            <input name="owner" value="${escapeHTML(v.owner || '')}" placeholder="Name + role" />
+            ${teamMemberSelect('owner', v.owner, team)}
           </div>
           <div class="field"><label>Business unit / department</label>
             <input name="businessUnit" value="${escapeHTML(v.businessUnit || '')}" />

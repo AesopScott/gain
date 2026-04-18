@@ -70,7 +70,10 @@
     const adminOK = canAdmin(member);
     if (!editorOK) document.querySelectorAll('[data-editor-only]').forEach(el => el.setAttribute('disabled', 'disabled'));
 
-    const inventory = await listDocs(company.id, 'inventory');
+    const [inventory, team] = await Promise.all([
+      listDocs(company.id, 'inventory'),
+      listDocs(company.id, 'team', { orderBy: [['name', 'asc']] })
+    ]);
 
     async function refresh() {
       const rows = await listDocs(company.id, 'aias', { orderBy: [['updatedAt', 'desc']] });
@@ -116,6 +119,17 @@
       if (!editorOK) return;
       openEditor(null);
     });
+
+    function teamMemberSelect(fieldName, selected, team) {
+      const roleLabel = { caio:'Chief AI Officer', cro:'Chief Risk Officer', cpo:'Chief Privacy Officer', ciso:'CISO', cco:'Chief Compliance Officer', cto:'CTO', cdo:'Chief Data Officer', legal:'General Counsel', 'responsible-ai':'Responsible AI Lead', 'ai-ethics':'AI Ethics Officer', 'data-science':'Data Science Lead', 'ml-engineer':'ML/AI Engineer', product:'Product Manager (AI)', audit:'Internal Audit', 'bu-rep':'Business Unit Rep', regulatory:'Regulatory Affairs' };
+      if (!team.length) return `<p class="text-muted" style="font-size:.85rem">No team members yet — <a href="/team.html">add team members</a> first.</p><input type="hidden" name="${fieldName}" value="" />`;
+      const opts = team.map(t => {
+        const rl = t.role === 'other' ? (t.customRole || 'Other') : (roleLabel[t.role] || t.role || '');
+        const display = rl ? `${escapeHTML(t.name)} — ${escapeHTML(rl)}` : escapeHTML(t.name);
+        return `<option value="${escapeHTML(t.name)}" ${t.name === selected ? 'selected' : ''}>${display}</option>`;
+      }).join('');
+      return `<select name="${fieldName}"><option value="">— unassigned —</option>${opts}</select>`;
+    }
 
     function inventorySelectOptions(selectedId) {
       return `
@@ -253,8 +267,8 @@
               <option ${v.status==='renewal-due'?'selected':''} value="renewal-due">renewal-due</option>
             </select>
           </div>
-          <div class="field"><label>Reviewed by (name, role, date)</label>
-            <input name="reviewedBy" value="${escapeHTML(v.reviewedBy || '')}" />
+          <div class="field"><label>Reviewed by</label>
+            ${teamMemberSelect('reviewedBy', v.reviewedBy, team)}
           </div>
         </div>
         <div class="field"><label>Residual risk acceptance statement</label>
