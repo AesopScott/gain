@@ -649,6 +649,39 @@ table.data .actions {
   font-style: italic;
 }
 .intake-extra .field:last-child { margin-bottom: 0; }
+
+/* ---------- AIA requirement banner (aia.html) ---------- */
+.aia-banner {
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  margin: 0 0 18px 0;
+  font-size: .9rem;
+  line-height: 1.45;
+}
+.aia-banner-required {
+  background: #FFF4E3;
+  border-left: 4px solid var(--risk-medium);
+  color: var(--ink);
+}
+.aia-banner-info {
+  background: var(--surface-alt);
+  border-left: 4px solid var(--accent);
+  color: var(--ink-soft);
+}
+
+/* ---------- regulatory badge on risks list ---------- */
+.badge-reg {
+  display: inline-block;
+  font-size: .72rem;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--surface-alt);
+  color: var(--navy);
+  border: 1px solid var(--accent);
+  margin-left: 4px;
+  vertical-align: middle;
+}
 .primary-nav { display: flex; gap: 2px; flex-wrap: wrap; }
 .nav-link {
   color: #CBD5E8;

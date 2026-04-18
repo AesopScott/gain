@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>GAIN — AI Impact Assessments</title>
-  <link rel="stylesheet" href="/css/gain-theme.css?v=5" />
+  <link rel="stylesheet" href="/css/gain-theme.css?v=6" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <meta name="description" content="AI governance — from intake to audit. NIST AI RMF · ISO 42001 · EU AI Act." />
   <meta property="og:type" content="website" />
@@ -59,8 +59,9 @@
 
   <script type="module">
     import { requireCompany, canEdit, canAdmin } from '/js/session.js';
-    import { renderHeader, renderFooter, toast, openModal, confirmDialog, serializeForm, escapeHTML, formatDate } from '/js/ui.js?v=5';
-    import { listDocs, createRecord, updateRecord, deleteRecord, getRecord, logEvent } from '/js/data.js';
+    import { renderHeader, renderFooter, toast, openModal, confirmDialog, serializeForm, escapeHTML, formatDate } from '/js/ui.js?v=6';
+    import { listDocs, createRecord, updateRecord, deleteRecord, getRecord, logEvent, getPosture } from '/js/data.js';
+    import { derivedAiaRequirements, derivedApplicableRegs, aiaRequiredFor } from '/js/posture.js?v=6';
 
     const { user, memberships, company, member } = await requireCompany();
     renderHeader({ user, company, memberships });
@@ -70,10 +71,23 @@
     const adminOK = canAdmin(member);
     if (!editorOK) document.querySelectorAll('[data-editor-only]').forEach(el => el.setAttribute('disabled', 'disabled'));
 
-    const [inventory, team] = await Promise.all([
+    const [inventory, team, posture] = await Promise.all([
       listDocs(company.id, 'inventory'),
-      listDocs(company.id, 'team', { orderBy: [['name', 'asc']] })
+      listDocs(company.id, 'team', { orderBy: [['name', 'asc']] }),
+      getPosture(company.id)
     ]);
+    const aiaReq = derivedAiaRequirements(posture);
+    const applicableRegs = derivedApplicableRegs(posture);
+    const maturityTarget = Number(posture?.maturityTarget || 0);
+
+    // Derive impact tier from the same threshold used in renderImpactBadge.
+    function impactTierFromScore(score) {
+      const n = Number(score);
+      if (Number.isNaN(n) || n <= 0) return '';
+      if (n >= 15) return 'high';
+      if (n >= 8) return 'limited';
+      return 'minimal';
+    }
 
     async function refresh() {
       const rows = await listDocs(company.id, 'aias', { orderBy: [['updatedAt', 'desc']] });
@@ -138,8 +152,187 @@
       `;
     }
 
+    // ---------- posture-driven regulatory blocks ----------
+    // Each block renders only if the framework posture triggered it.
+    // The requirement banner at the top of the form reflects maturityTarget
+    // gating (§5 of the posture worksheet).
+
+    function extraHeader(title, reason) {
+      return `
+        <div class="intake-extra-header">
+          <h3>${escapeHTML(title)}</h3>
+          <span class="intake-extra-reason">${escapeHTML(reason)}</span>
+        </div>
+      `;
+    }
+
+    function euAiActBlockHTML(v) {
+      return `
+        <section class="intake-extra" data-extra="euAiAct">
+          ${extraHeader('EU AI Act risk classification', 'Shown because your posture includes the European Union.')}
+          <div class="field">
+            <label>Risk classification</label>
+            <select name="euAiActRiskClass">
+              <option value="">—</option>
+              <option ${v.euAiActRiskClass==='prohibited'?'selected':''} value="prohibited">Prohibited (Art. 5)</option>
+              <option ${v.euAiActRiskClass==='high-risk'?'selected':''} value="high-risk">High-risk (Annex III)</option>
+              <option ${v.euAiActRiskClass==='limited'?'selected':''} value="limited">Limited-risk (transparency obligations)</option>
+              <option ${v.euAiActRiskClass==='minimal'?'selected':''} value="minimal">Minimal / no specific obligations</option>
+              <option ${v.euAiActRiskClass==='gpai'?'selected':''} value="gpai">General-purpose AI model</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Conformity assessment status (if high-risk)</label>
+            <select name="euConformityAssessment">
+              <option value="">—</option>
+              <option ${v.euConformityAssessment==='not-started'?'selected':''} value="not-started">Not started</option>
+              <option ${v.euConformityAssessment==='in-progress'?'selected':''} value="in-progress">In progress</option>
+              <option ${v.euConformityAssessment==='complete'?'selected':''} value="complete">Complete — CE marking obtained</option>
+              <option ${v.euConformityAssessment==='na'?'selected':''} value="na">Not applicable</option>
+            </select>
+          </div>
+        </section>
+      `;
+    }
+
+    function nycLl144BlockHTML(v) {
+      return `
+        <section class="intake-extra" data-extra="nycLl144">
+          ${extraHeader('NYC LL144 — automated employment-decision bias audit', 'Shown because your posture includes NYC + Employment/EEOC.')}
+          <div class="grid-2">
+            <div class="field">
+              <label>Most recent bias-audit date</label>
+              <input name="nycBiasAuditDate" type="date" value="${escapeHTML(v.nycBiasAuditDate || '')}" />
+            </div>
+            <div class="field">
+              <label>Next due (annual)</label>
+              <input name="nycBiasAuditNextDue" type="date" value="${escapeHTML(v.nycBiasAuditNextDue || '')}" />
+            </div>
+          </div>
+          <div class="field">
+            <label>Audit summary URL (public posting)</label>
+            <input name="nycBiasAuditUrl" value="${escapeHTML(v.nycBiasAuditUrl || '')}" placeholder="https://…" />
+          </div>
+        </section>
+      `;
+    }
+
+    function coloradoBlockHTML(v) {
+      return `
+        <section class="intake-extra" data-extra="coloradoImpact">
+          ${extraHeader('Colorado AI Act — impact assessment', 'Shown because your posture includes Colorado.')}
+          <div class="field">
+            <label>Impact-assessment status</label>
+            <select name="coloradoImpactStatus">
+              <option value="">—</option>
+              <option ${v.coloradoImpactStatus==='not-started'?'selected':''} value="not-started">Not started</option>
+              <option ${v.coloradoImpactStatus==='draft'?'selected':''} value="draft">Draft</option>
+              <option ${v.coloradoImpactStatus==='complete'?'selected':''} value="complete">Complete</option>
+              <option ${v.coloradoImpactStatus==='na'?'selected':''} value="na">Not a consequential-decision system</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Consequential-decision scope</label>
+            <textarea name="coloradoConsequentialScope" rows="2" placeholder="e.g., employment, education, housing, credit, essential goods/services…">${escapeHTML(v.coloradoConsequentialScope || '')}</textarea>
+          </div>
+        </section>
+      `;
+    }
+
+    function adverseActionBlockHTML(v) {
+      return `
+        <section class="intake-extra" data-extra="adverseAction">
+          ${extraHeader('Adverse-action explainability (ECOA / FCRA)', 'Shown because your posture includes Credit/ECOA.')}
+          <div class="field">
+            <label>Explainability method</label>
+            <select name="adverseActionMethod">
+              <option value="">—</option>
+              <option ${v.adverseActionMethod==='reason-codes'?'selected':''} value="reason-codes">Reason codes (traditional scorecard)</option>
+              <option ${v.adverseActionMethod==='shap'?'selected':''} value="shap">SHAP / feature-attribution values</option>
+              <option ${v.adverseActionMethod==='lime'?'selected':''} value="lime">LIME</option>
+              <option ${v.adverseActionMethod==='rule-extraction'?'selected':''} value="rule-extraction">Rule / tree extraction</option>
+              <option ${v.adverseActionMethod==='other'?'selected':''} value="other">Other</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Adverse-action notice template reference</label>
+            <input name="adverseActionNoticeRef" value="${escapeHTML(v.adverseActionNoticeRef || '')}" placeholder="e.g., internal template ID, vendor notice doc" />
+          </div>
+        </section>
+      `;
+    }
+
+    function naicBlockHTML(v) {
+      return `
+        <section class="intake-extra" data-extra="naic">
+          ${extraHeader('NAIC Model Bulletin — insurance AI', 'Shown because your posture includes Insurance.')}
+          <div class="field">
+            <label>Governance framework attestation (per §4)</label>
+            <select name="naicGovernanceAttested">
+              <option value="">—</option>
+              <option ${v.naicGovernanceAttested==='yes'?'selected':''} value="yes">Yes — documented</option>
+              <option ${v.naicGovernanceAttested==='partial'?'selected':''} value="partial">Partial</option>
+              <option ${v.naicGovernanceAttested==='no'?'selected':''} value="no">No</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>State-level attestations (list)</label>
+            <textarea name="naicStateAttestations" rows="2" placeholder="e.g., CO Reg 10-1-1 filed 2025-Q1; NY DFS Circular Letter 7 attestation 2024">${escapeHTML(v.naicStateAttestations || '')}</textarea>
+          </div>
+        </section>
+      `;
+    }
+
+    function iso42001BlockHTML(v) {
+      return `
+        <section class="intake-extra" data-extra="iso42001">
+          ${extraHeader('Documented AI objective (ISO/IEC 42001 §6.2)', 'Shown because your posture selects ISO/IEC 42001.')}
+          <div class="field">
+            <label>Documented AI objective reference</label>
+            <input name="iso42001ObjectiveRef" value="${escapeHTML(v.iso42001ObjectiveRef || '')}" placeholder="Objective ID or URL in AIMS documentation" />
+          </div>
+        </section>
+      `;
+    }
+
+    function regulatoryBlocksHTML(v) {
+      const parts = [];
+      if (aiaReq.euRiskClass)         parts.push(euAiActBlockHTML(v));
+      if (aiaReq.nycBiasAudit)        parts.push(nycLl144BlockHTML(v));
+      if (aiaReq.coloradoImpact)      parts.push(coloradoBlockHTML(v));
+      if (aiaReq.adverseAction)       parts.push(adverseActionBlockHTML(v));
+      if (aiaReq.naicBulletin)        parts.push(naicBlockHTML(v));
+      if (aiaReq.documentedObjective) parts.push(iso42001BlockHTML(v));
+      return parts.join('');
+    }
+
+    function aiaRequirementBannerHTML(impactScore) {
+      // Maturity gating from posture worksheet §5:
+      //   Tier 4 -> AIAs required for all systems
+      //   Tier 3 -> AIAs required for high-impact systems (score >= 15)
+      if (maturityTarget >= 4) {
+        return `<div class="aia-banner aia-banner-required">
+          <strong>AIA required</strong> — at your maturity target (4 · Optimizing), AIAs are required for <em>all</em> systems.
+        </div>`;
+      }
+      if (maturityTarget >= 3) {
+        const tier = impactTierFromScore(impactScore);
+        if (tier === 'high') {
+          return `<div class="aia-banner aia-banner-required">
+            <strong>AIA required</strong> — impact score ≥ 15 makes this system high-impact, and your maturity target (3 · Managed) requires AIAs for high-impact systems.
+          </div>`;
+        }
+        return `<div class="aia-banner aia-banner-info">
+          At maturity target 3 · Managed, AIAs become required when impact score reaches 15+ (high).
+        </div>`;
+      }
+      return '';
+    }
+
     function formHTML(v = {}) {
       return `
+        <div data-aia-required-banner>${aiaRequirementBannerHTML(v.impactScore)}</div>
+
         <div class="grid-2">
           <div class="field"><label>Linked inventory system *</label>
             <select name="systemId" required>${inventorySelectOptions(v.systemId)}</select>
@@ -183,6 +376,8 @@
         <div class="field"><label>Findings + mitigations</label>
           <textarea name="fairnessFindings" rows="3">${escapeHTML(v.fairnessFindings || '')}</textarea>
         </div>
+
+        ${regulatoryBlocksHTML(v)}
 
         <h3 class="aia-section">4 · NIST trustworthiness characteristics</h3>
         <p class="text-muted" style="margin:0 0 8px">
@@ -291,8 +486,9 @@
       form.className = 'stacked-form';
       form.innerHTML = formHTML(rec || {});
 
-      // Compute impact total live.
+      // Compute impact total live; keep the AIA-required banner in sync with it.
       const totalEl = form.querySelector('[data-impact-total]');
+      const bannerEl = form.querySelector('[data-aia-required-banner]');
       function recompute() {
         const fields = ['impactSeverity','impactReversibility','impactScale','impactSensitivity','impactAutonomy'];
         let sum = 0, has = false;
@@ -301,6 +497,7 @@
           if (!Number.isNaN(v) && v > 0) { sum += v; has = true; }
         }
         totalEl.textContent = has ? sum : '—';
+        if (bannerEl) bannerEl.innerHTML = aiaRequirementBannerHTML(has ? sum : '');
       }
       for (const f of ['impactSeverity','impactReversibility','impactScale','impactSensitivity','impactAutonomy']) {
         form.querySelector(`[name="${f}"]`).addEventListener('change', recompute);
@@ -318,6 +515,11 @@
             const score = ['impactSeverity','impactReversibility','impactScale','impactSensitivity','impactAutonomy']
               .reduce((s, k) => s + (Number(data[k]) || 0), 0);
             data.impactScore = score;
+            data.impactTier = impactTierFromScore(score);
+            // Snapshot applicable regs + maturity at save-time so historical
+            // records stay truthful if the framework posture changes later.
+            data.applicableRegsSnapshot = applicableRegs;
+            data.maturityTargetSnapshot = maturityTarget;
             if (data.status === 'approved' || data.status === 'review') {
               data.reviewedAt = new Date();
             }

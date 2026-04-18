@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>GAIN — AI Use Case Intake</title>
-  <link rel="stylesheet" href="/css/gain-theme.css?v=5" />
+  <link rel="stylesheet" href="/css/gain-theme.css?v=6" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <meta name="description" content="AI governance — from intake to audit. NIST AI RMF · ISO 42001 · EU AI Act." />
   <meta property="og:type" content="website" />
@@ -70,9 +70,9 @@
 
   <script type="module">
     import { requireCompany, canEdit, canAdmin } from '/js/session.js';
-    import { renderHeader, renderFooter, toast, openModal, confirmDialog, serializeForm, setFormValues, escapeHTML, formatDate } from '/js/ui.js?v=5';
+    import { renderHeader, renderFooter, toast, openModal, confirmDialog, serializeForm, setFormValues, escapeHTML, formatDate } from '/js/ui.js?v=6';
     import { listDocs, createRecord, updateRecord, deleteRecord, getRecord, logEvent, getPosture } from '/js/data.js';
-    import { derivedIntakeExtras, derivedApplicableRegs } from '/js/posture.js?v=5';
+    import { derivedIntakeExtras, derivedApplicableRegs } from '/js/posture.js?v=6';
 
     const { user, memberships, company, member } = await requireCompany();
     renderHeader({ user, company, memberships });

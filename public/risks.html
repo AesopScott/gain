@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>GAIN — Risk Register</title>
-  <link rel="stylesheet" href="/css/gain-theme.css?v=5" />
+  <link rel="stylesheet" href="/css/gain-theme.css?v=6" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <meta name="description" content="AI governance — from intake to audit. NIST AI RMF · ISO 42001 · EU AI Act." />
   <meta property="og:type" content="website" />
@@ -55,6 +55,10 @@
           <option value="accepted">Accepted</option>
           <option value="closed">Closed</option>
         </select>
+        <label class="filter-gap checkbox-label" style="margin-left:12px">
+          <input type="checkbox" data-filter-reg-only />
+          Regulatory only
+        </label>
       </div>
 
       <table class="data">
@@ -79,8 +83,9 @@
 
   <script type="module">
     import { requireCompany, canEdit, canAdmin } from '/js/session.js';
-    import { renderHeader, renderFooter, toast, openModal, confirmDialog, serializeForm, escapeHTML, formatDate } from '/js/ui.js?v=5';
-    import { listDocs, createRecord, updateRecord, deleteRecord, getRecord, logEvent } from '/js/data.js';
+    import { renderHeader, renderFooter, toast, openModal, confirmDialog, serializeForm, escapeHTML, formatDate } from '/js/ui.js?v=6';
+    import { listDocs, createRecord, updateRecord, deleteRecord, getRecord, logEvent, getPosture } from '/js/data.js';
+    import { derivedApplicableRegs } from '/js/posture.js?v=6';
 
     const { user, memberships, company, member } = await requireCompany();
     renderHeader({ user, company, memberships });
@@ -90,22 +95,30 @@
     const adminOK = canAdmin(member);
     if (!editorOK) document.querySelectorAll('[data-editor-only]').forEach(el => el.setAttribute('disabled', 'disabled'));
 
-    const [inventory, team] = await Promise.all([
+    const [inventory, team, posture] = await Promise.all([
       listDocs(company.id, 'inventory'),
-      listDocs(company.id, 'team', { orderBy: [['name', 'asc']] })
+      listDocs(company.id, 'team', { orderBy: [['name', 'asc']] }),
+      getPosture(company.id)
     ]);
+    // Regs the company is on the hook for, per the framework posture.
+    // Surfaced as a checkbox grid on each risk to auto-suggest regulatoryBasis.
+    const applicableRegs = derivedApplicableRegs(posture);
 
     const tierFilter = document.querySelector('[data-filter-tier]');
     const statusFilter = document.querySelector('[data-filter-status]');
+    const regOnlyFilter = document.querySelector('[data-filter-reg-only]');
     tierFilter.addEventListener('change', refresh);
     statusFilter.addEventListener('change', refresh);
+    if (regOnlyFilter) regOnlyFilter.addEventListener('change', refresh);
 
     async function refresh() {
       const rows = await listDocs(company.id, 'risks', { orderBy: [['residualScore', 'desc']] });
       const tv = tierFilter.value, sv = statusFilter.value;
+      const regOnly = !!(regOnlyFilter && regOnlyFilter.checked);
       const filtered = rows.filter(r =>
         (!tv || scoreTier(r.residualScore) === tv) &&
-        (!sv || (r.status || '') === sv)
+        (!sv || (r.status || '') === sv) &&
+        (!regOnly || (Array.isArray(r.regulatoryBasis) && r.regulatoryBasis.length > 0))
       );
       const tbody = document.querySelector('[data-rows]');
       if (filtered.length === 0) {
@@ -114,9 +127,13 @@
       }
       tbody.innerHTML = filtered.map(r => {
         const sys = inventory.find(s => s.id === r.systemId);
+        const regCount = Array.isArray(r.regulatoryBasis) ? r.regulatoryBasis.length : 0;
+        const regBadge = regCount > 0
+          ? ` <span class="badge-reg" title="Regulatory basis: ${escapeHTML(r.regulatoryBasis.join(', '))}">⚖ ${regCount}</span>`
+          : '';
         return `
           <tr>
-            <td><a href="#" data-open="${escapeHTML(r.id)}">${escapeHTML(r.title || '(untitled)')}</a>${r.emergent ? ' <span class="badge badge-high" title="Emergent / unquantified">~</span>' : ''}</td>
+            <td><a href="#" data-open="${escapeHTML(r.id)}">${escapeHTML(r.title || '(untitled)')}</a>${r.emergent ? ' <span class="badge badge-high" title="Emergent / unquantified">~</span>' : ''}${regBadge}</td>
             <td>${escapeHTML(sys?.name || r.systemName || '—')}</td>
             <td>${escapeHTML(r.owner || '')}</td>
             <td>${riskBadge(r.inherentScore)}</td>
@@ -172,6 +189,29 @@
         ${inventory.map(s => `<option ${s.id===selected?'selected':''} value="${escapeHTML(s.id)}">${escapeHTML(s.name)}</option>`).join('')}`;
     }
 
+    function regulatoryBasisBlockHTML(v) {
+      // applicableRegs always contains NIST AI RMF 1.0; suppress it from the
+      // picker since everything is governed under it by default.
+      const opts = applicableRegs.filter(r => r !== 'NIST AI RMF 1.0');
+      if (opts.length === 0) return '';
+      const selected = Array.isArray(v.regulatoryBasis) ? v.regulatoryBasis : [];
+      return `
+        <section class="intake-extra" data-extra="regulatoryBasis">
+          <div class="intake-extra-header">
+            <h3>Regulatory basis</h3>
+            <span class="intake-extra-reason">Auto-suggested from your framework posture. Check all that apply to this risk.</span>
+          </div>
+          <div class="field">
+            <div class="checkbox-grid">
+              ${opts.map(r => `
+                <label><input type="checkbox" name="regulatoryBasis" data-multiple value="${escapeHTML(r)}" ${selected.includes(r) ? 'checked' : ''} /> ${escapeHTML(r)}</label>
+              `).join('')}
+            </div>
+          </div>
+        </section>
+      `;
+    }
+
     function formHTML(v = {}) {
       return `
         <div class="field"><label>Risk title *</label>
@@ -202,6 +242,8 @@
             <option ${v.category==='misuse'?'selected':''} value="misuse">Misuse / abuse</option>
           </select>
         </div>
+
+        ${regulatoryBasisBlockHTML(v)}
 
         <h3 class="aia-section">Inherent risk (before controls)</h3>
         <div class="grid-2">
@@ -327,6 +369,9 @@
             data.inherentScore = (Number(data.inherentLikelihood) || 0) * (Number(data.inherentImpact) || 0);
             data.residualScore = (Number(data.residualLikelihood) || 0) * (Number(data.residualImpact) || 0);
             data.residualTier = scoreTier(data.residualScore);
+            // Snapshot applicable regs at save-time so historical risks remain
+            // truthful if the framework posture changes later.
+            data.applicableRegsSnapshot = applicableRegs;
             const sys = inventory.find(s => s.id === data.systemId);
             if (sys) data.systemName = sys.name;
             try {
