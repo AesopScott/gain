@@ -3,7 +3,11 @@
 // Every authenticated page should call renderHeader(...) in its init code so
 // the brand, nav, and company switcher stay consistent.
 
-import { logOut, setActiveCompanyId, isSuperadmin } from './session.js';
+// Explicit version on session.js — otherwise browsers with a cached older
+// session.js (without isSuperadmin) break the named import and ui.js fails
+// to initialize, which blanks every page. Bump this whenever session.js's
+// exported surface changes.
+import { logOut, setActiveCompanyId, isSuperadmin } from './session.js?v=18';
 import { toggleMode } from './theme.js';
 
 // ---------- header ----------
@@ -94,7 +98,7 @@ export function renderFooter() {
     <footer class="site-footer">
       <span>GAIN · Govern AI Now</span>
       <span class="text-muted">Your data · Your company · Your framework</span>
-      <span class="text-muted" style="font-size:.7rem;opacity:.6">v17</span>
+      <span class="text-muted" style="font-size:.7rem;opacity:.6">v18</span>
     </footer>
   `;
 }
