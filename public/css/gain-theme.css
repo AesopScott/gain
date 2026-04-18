@@ -1090,6 +1090,22 @@ table.data .actions {
 .auth-footnote { font-size: .8rem; color: var(--muted); margin-top: 24px; text-align: center; }
 .field-hint { font-size: .78rem; color: var(--muted); margin-top: 4px; }
 
+/* two-column auth layout */
+.auth-layout { display: flex; gap: 56px; align-items: center; max-width: 920px; width: 100%; }
+.auth-pitch { flex: 1 1 0; min-width: 0; color: #fff; }
+[data-mode="dark"] .auth-pitch { color: var(--ink); }
+.auth-pitch-eyebrow { font-size: .78rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; opacity: .7; margin-bottom: 10px; }
+.auth-pitch-headline { font-size: 2.1rem; font-weight: 800; line-height: 1.15; letter-spacing: -.02em; margin: 0 0 12px; }
+.auth-pitch-sub { font-size: 1.05rem; opacity: .85; margin: 0 0 28px; line-height: 1.5; }
+.auth-pitch-list { list-style: none; padding: 0; margin: 0 0 28px; display: flex; flex-direction: column; gap: 10px; }
+.auth-pitch-list li { display: flex; gap: 10px; font-size: .9rem; opacity: .9; line-height: 1.4; }
+.auth-pitch-list li::before { content: '✓'; font-weight: 800; flex-shrink: 0; color: rgba(255,255,255,.6); margin-top: 1px; }
+.auth-pitch-frameworks { font-size: .75rem; opacity: .55; line-height: 1.7; }
+@media (max-width: 780px) {
+  .auth-layout { flex-direction: column; gap: 0; }
+  .auth-pitch { display: none; }
+}
+
 /* ---------- card extras ---------- */
 
 .card-title { margin: 0 0 8px 0; color: var(--h-color); }
