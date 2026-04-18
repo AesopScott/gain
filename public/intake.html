@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>GAIN — AI Use Case Intake</title>
-  <link rel="stylesheet" href="/css/gain-theme.css?v=4" />
+  <link rel="stylesheet" href="/css/gain-theme.css?v=5" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <meta name="description" content="AI governance — from intake to audit. NIST AI RMF · ISO 42001 · EU AI Act." />
   <meta property="og:type" content="website" />
@@ -70,8 +70,9 @@
 
   <script type="module">
     import { requireCompany, canEdit, canAdmin } from '/js/session.js';
-    import { renderHeader, renderFooter, toast, openModal, confirmDialog, serializeForm, setFormValues, escapeHTML, formatDate } from '/js/ui.js?v=4';
-    import { listDocs, createRecord, updateRecord, deleteRecord, getRecord, logEvent } from '/js/data.js';
+    import { renderHeader, renderFooter, toast, openModal, confirmDialog, serializeForm, setFormValues, escapeHTML, formatDate } from '/js/ui.js?v=5';
+    import { listDocs, createRecord, updateRecord, deleteRecord, getRecord, logEvent, getPosture } from '/js/data.js';
+    import { derivedIntakeExtras, derivedApplicableRegs } from '/js/posture.js?v=5';
 
     const { user, memberships, company, member } = await requireCompany();
     renderHeader({ user, company, memberships });
@@ -80,6 +81,12 @@
     const editorOK = canEdit(member);
     const adminOK = canAdmin(member);
     if (!editorOK) document.querySelectorAll('[data-editor-only]').forEach(el => el.setAttribute('disabled', 'disabled'));
+
+    // Load posture once; use it to decide which conditional blocks to render
+    // and to snapshot applicable regs onto each record at save-time.
+    const posture = await getPosture(company.id);
+    const intakeExtras = derivedIntakeExtras(posture);
+    const applicableRegs = derivedApplicableRegs(posture);
 
     const statusFilter = document.querySelector('[data-filter-status]');
     statusFilter.addEventListener('change', refresh);
@@ -123,6 +130,185 @@
       if (!editorOK) return;
       openIntakeEditor(null);
     });
+
+    // ---------- posture-driven extras ----------
+    // Each block renders only if the company's framework posture triggered it.
+    // A small banner explains *why* the block is showing so the connection to
+    // the Regulatory Posture Worksheet stays visible.
+
+    function extraHeader(title, reason) {
+      return `
+        <div class="intake-extra-header">
+          <h3>${escapeHTML(title)}</h3>
+          <span class="intake-extra-reason">${escapeHTML(reason)}</span>
+        </div>
+      `;
+    }
+
+    function phiBlockHTML(v) {
+      return `
+        <section class="intake-extra" data-extra="phi">
+          ${extraHeader('Healthcare / HIPAA', 'Shown because your framework posture includes Healthcare/HIPAA.')}
+          <div class="field">
+            <label>Does this system create, receive, maintain, or transmit PHI?</label>
+            <select name="phiInvolved">
+              <option value="">—</option>
+              <option ${v.phiInvolved==='yes'?'selected':''} value="yes">Yes</option>
+              <option ${v.phiInvolved==='no'?'selected':''} value="no">No</option>
+              <option ${v.phiInvolved==='unsure'?'selected':''} value="unsure">Unsure</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Minimum-necessary PHI fields</label>
+            <textarea name="phiFields" rows="2" placeholder="List the specific PHI fields accessed">${escapeHTML(v.phiFields || '')}</textarea>
+          </div>
+          <div class="field">
+            <label>Vendor BAA required?</label>
+            <select name="phiBaaRequired">
+              <option value="">—</option>
+              <option ${v.phiBaaRequired==='onfile'?'selected':''} value="onfile">Yes — BAA on file</option>
+              <option ${v.phiBaaRequired==='pending'?'selected':''} value="pending">Yes — BAA pending</option>
+              <option ${v.phiBaaRequired==='na'?'selected':''} value="na">Not applicable</option>
+            </select>
+          </div>
+        </section>
+      `;
+    }
+
+    function studentDataBlockHTML(v) {
+      return `
+        <section class="intake-extra" data-extra="studentData">
+          ${extraHeader('Education / FERPA', 'Shown because your framework posture includes Education/FERPA.')}
+          <div class="field">
+            <label>Does this system access or derive student education records?</label>
+            <select name="studentRecordsTouched">
+              <option value="">—</option>
+              <option ${v.studentRecordsTouched==='pii'?'selected':''} value="pii">Yes — PII records</option>
+              <option ${v.studentRecordsTouched==='directory'?'selected':''} value="directory">Directory-info only</option>
+              <option ${v.studentRecordsTouched==='no'?'selected':''} value="no">No</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Parent / eligible-student consent mechanism</label>
+            <textarea name="ferpaConsent" rows="2">${escapeHTML(v.ferpaConsent || '')}</textarea>
+          </div>
+        </section>
+      `;
+    }
+
+    function coppaBlockHTML(v) {
+      return `
+        <section class="intake-extra" data-extra="coppa">
+          ${extraHeader('Children under 13 (COPPA)', 'Shown because your posture includes "Processes children\\'s data".')}
+          <div class="field">
+            <label>Will users under 13 access or be profiled by this system?</label>
+            <select name="under13">
+              <option value="">—</option>
+              <option ${v.under13==='yes'?'selected':''} value="yes">Yes</option>
+              <option ${v.under13==='no'?'selected':''} value="no">No</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Verifiable parental consent method</label>
+            <textarea name="coppaConsent" rows="2" placeholder="e.g., credit-card auth, signed form, knowledge-based auth">${escapeHTML(v.coppaConsent || '')}</textarea>
+          </div>
+        </section>
+      `;
+    }
+
+    function biometricBlockHTML(v) {
+      return `
+        <section class="intake-extra" data-extra="biometric">
+          ${extraHeader('Biometrics', 'Shown because your posture includes "Processes biometrics".')}
+          <div class="field">
+            <label>Biometric identifier types collected</label>
+            <input name="biometricTypes" value="${escapeHTML(v.biometricTypes || '')}" placeholder="e.g., fingerprint, voiceprint, face, gait" />
+          </div>
+          <div class="field">
+            <label>Retention period</label>
+            <input name="biometricRetention" value="${escapeHTML(v.biometricRetention || '')}" placeholder="e.g., purpose-fulfilled or 1 year post-termination (BIPA cap: 3y)" />
+          </div>
+          <div class="field">
+            <label>Written consent mechanism (BIPA / CPRA)</label>
+            <textarea name="biometricConsent" rows="2">${escapeHTML(v.biometricConsent || '')}</textarea>
+          </div>
+        </section>
+      `;
+    }
+
+    function employmentBlockHTML(v) {
+      return `
+        <section class="intake-extra" data-extra="employmentDecision">
+          ${extraHeader('Employment decisions (EEOC)', 'Shown because your posture includes Employment/EEOC.')}
+          <div class="field">
+            <label>Does this system make or assist employment decisions?</label>
+            <select name="employmentDecision">
+              <option value="">—</option>
+              <option ${v.employmentDecision==='yes'?'selected':''} value="yes">Yes</option>
+              <option ${v.employmentDecision==='no'?'selected':''} value="no">No</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Decision scope</label>
+            <div class="checkbox-grid">
+              <label><input type="checkbox" name="employmentScope" data-multiple value="hiring" /> Hiring / screening</label>
+              <label><input type="checkbox" name="employmentScope" data-multiple value="pay" /> Pay / promotion</label>
+              <label><input type="checkbox" name="employmentScope" data-multiple value="termination" /> Discipline / termination</label>
+              <label><input type="checkbox" name="employmentScope" data-multiple value="monitoring" /> Productivity / surveillance</label>
+            </div>
+          </div>
+        </section>
+      `;
+    }
+
+    function soxBlockHTML(v) {
+      return `
+        <section class="intake-extra" data-extra="sox">
+          ${extraHeader('Material financial processes (SOX)', 'Shown because your posture includes Public Company/SOX.')}
+          <div class="field">
+            <label>Does this system support a material financial process?</label>
+            <select name="soxMaterial">
+              <option value="">—</option>
+              <option ${v.soxMaterial==='yes'?'selected':''} value="yes">Yes</option>
+              <option ${v.soxMaterial==='no'?'selected':''} value="no">No</option>
+              <option ${v.soxMaterial==='assessing'?'selected':''} value="assessing">Assessing</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>ICFR control ID (if applicable)</label>
+            <input name="soxIcfrControlId" value="${escapeHTML(v.soxIcfrControlId || '')}" />
+          </div>
+        </section>
+      `;
+    }
+
+    function publicSectorBlockHTML(v) {
+      return `
+        <section class="intake-extra" data-extra="publicSector">
+          ${extraHeader('Public sector / procurement', 'Shown because your posture includes Government.')}
+          <div class="field">
+            <label>Procurement vehicle / contract ID</label>
+            <input name="procContractId" value="${escapeHTML(v.procContractId || '')}" />
+          </div>
+          <div class="field">
+            <label>Federal AI use-case inventory entry (OMB M-24-10)</label>
+            <input name="m2410InventoryRef" value="${escapeHTML(v.m2410InventoryRef || '')}" placeholder="agency inventory ID, if federal" />
+          </div>
+        </section>
+      `;
+    }
+
+    function extrasBlocksHTML(v) {
+      return [
+        intakeExtras.includes('phi') ? phiBlockHTML(v) : '',
+        intakeExtras.includes('studentData') ? studentDataBlockHTML(v) : '',
+        intakeExtras.includes('coppa') ? coppaBlockHTML(v) : '',
+        intakeExtras.includes('biometric') ? biometricBlockHTML(v) : '',
+        intakeExtras.includes('employmentDecision') ? employmentBlockHTML(v) : '',
+        intakeExtras.includes('sox') ? soxBlockHTML(v) : '',
+        intakeExtras.includes('publicSector') ? publicSectorBlockHTML(v) : ''
+      ].join('');
+    }
 
     function intakeFormHTML(values = {}) {
       return `
@@ -171,6 +357,7 @@
           <label>Decisions this system influences</label>
           <textarea name="decisions" rows="2" placeholder="e.g., hiring, credit, admission, diagnosis, routing, eligibility">${escapeHTML(values.decisions || '')}</textarea>
         </div>
+        ${extrasBlocksHTML(values)}
         <div class="field">
           <label>Expected benefits / success metrics</label>
           <textarea name="benefits" rows="2">${escapeHTML(values.benefits || '')}</textarea>
@@ -210,6 +397,15 @@
       form.className = 'stacked-form';
       form.innerHTML = intakeFormHTML(rec || {});
 
+      // Restore multi-checkbox state on the employmentDecision block,
+      // which isn't covered by inline value substitution.
+      if (intakeExtras.includes('employmentDecision')) {
+        const scopeVals = rec?.employmentScope || [];
+        form.querySelectorAll('input[name="employmentScope"]').forEach(cb => {
+          cb.checked = scopeVals.includes(cb.value);
+        });
+      }
+
       const actions = [
         { label: 'Close', variant: 'ghost', onClick: ({ close }) => close() }
       ];
@@ -220,6 +416,9 @@
           onClick: async ({ close }) => {
             if (!form.reportValidity()) return;
             const data = serializeForm(form);
+            // Snapshot applicable regs at the moment of save so historical
+            // records stay truthful even if posture changes later.
+            data.applicableRegsSnapshot = applicableRegs;
             try {
               if (isNew) {
                 const id = await createRecord(company.id, 'intake', {

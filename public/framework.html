@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>GAIN — Framework Selection</title>
-  <link rel="stylesheet" href="/css/gain-theme.css?v=4" />
+  <link rel="stylesheet" href="/css/gain-theme.css?v=5" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <meta name="description" content="AI governance — from intake to audit. NIST AI RMF · ISO 42001 · EU AI Act." />
   <meta property="og:type" content="website" />
@@ -184,9 +184,9 @@
 
   <script type="module">
     import { requireCompany, canAdmin } from '/js/session.js';
-    import { renderHeader, renderFooter, toast, serializeForm, setFormValues } from '/js/ui.js?v=4';
+    import { renderHeader, renderFooter, toast, serializeForm, setFormValues } from '/js/ui.js?v=5';
     import { getPosture, savePosture, logEvent } from '/js/data.js';
-    import { postureEffects } from '/js/posture.js?v=4';
+    import { postureEffects } from '/js/posture.js?v=5';
 
     const { user, memberships, company, member } = await requireCompany();
     renderHeader({ user, company, memberships });

@@ -617,6 +617,38 @@ table.data .actions {
   margin-right: 4px;
 }
 .field > .posture-effect { padding-left: 0; }
+
+/* ---------- posture-driven sector blocks (intake.html) ----------
+   Visually distinct from standard fields so users see the connection to
+   framework posture. Accent-blue left bar mirrors the framework posture-
+   effect chip vocabulary.
+*/
+.intake-extra {
+  background: var(--surface-alt);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius-sm);
+  padding: 14px 18px;
+  margin: 18px 0;
+}
+.intake-extra-header {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 0 0 10px 0;
+}
+.intake-extra-header h3 {
+  color: var(--navy);
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0;
+}
+.intake-extra-reason {
+  font-size: .75rem;
+  color: var(--muted);
+  font-style: italic;
+}
+.intake-extra .field:last-child { margin-bottom: 0; }
 .primary-nav { display: flex; gap: 2px; flex-wrap: wrap; }
 .nav-link {
   color: #CBD5E8;
