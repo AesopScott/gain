@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>GAIN — Dashboard</title>
-  <link rel="stylesheet" href="/css/gain-theme.css?v=7" />
+  <link rel="stylesheet" href="/css/gain-theme.css?v=8" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <meta name="description" content="AI governance — from intake to audit. NIST AI RMF · ISO 42001 · EU AI Act." />
   <meta property="og:type" content="website" />
@@ -91,10 +91,10 @@
   </main>
 
   <script type="module">
-    import { requireAuth, setActiveCompanyId, getActiveCompanyId } from '/js/session.js';
-    import { renderHeader, renderFooter, toast, openModal, serializeForm, escapeHTML } from '/js/ui.js?v=7';
-    import { createCompany, getCompany, getPosture, listDocs, listAllCompanies, getUserDoc, createJoinRequest, getJoinRequest, redeemApprovedRequest, dismissDeniedRequest } from '/js/data.js';
-    import { aiaRequiredFor } from '/js/posture.js?v=7';
+    import { requireAuth, setActiveCompanyId, getActiveCompanyId } from '/js/session.js?v=8';
+    import { renderHeader, renderFooter, toast, openModal, serializeForm, escapeHTML } from '/js/ui.js?v=8';
+    import { createCompany, getCompany, getPosture, listDocs, listAllCompanies, getUserDoc, createJoinRequest, getJoinRequest, redeemApprovedRequest, dismissDeniedRequest } from '/js/data.js?v=8';
+    import { aiaRequiredFor } from '/js/posture.js?v=8';
 
     const { user, memberships } = await requireAuth();
 
