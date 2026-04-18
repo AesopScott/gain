@@ -87,11 +87,7 @@
   <script type="module">
     import { requireCompany, canEdit, canAdmin } from '/js/session.js?v=16';
     import { renderHeader, renderFooter, toast, openModal, confirmDialog, serializeForm, escapeHTML, formatDate } from '/js/ui.js?v=16';
-<<<<<<< Updated upstream
-    import { listDocs, createRecord, updateRecord, deleteRecord, getRecord, logEvent, getPosture } from '/js/data.js?v=16';
-=======
     import { listDocs, createRecord, updateRecord, deleteRecord, getRecord, logEvent, getPosture, getAISettings } from '/js/data.js?v=16';
->>>>>>> Stashed changes
     import { POLICY_LIBRARY, FRAMEWORKS, GAIN_COLLECTIONS, suggestedPolicies } from '/js/policyLibrary.js?v=16';
 
     const { user, memberships, company, member } = await requireCompany();
