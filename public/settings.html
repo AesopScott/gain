@@ -84,7 +84,7 @@
 
   <script type="module">
     import { requireCompany, canAdmin, isOwner } from '/js/session.js';
-    import { renderHeader, renderFooter, toast, openModal, confirmDialog, serializeForm, setFormValues, escapeHTML, formatDate } from '/js/ui.js';
+    import { renderHeader, renderFooter, toast, openModal, confirmDialog, serializeForm, setFormValues, escapeHTML, formatDate } from '/js/ui.js?v=1';
     import { updateCompany, listMembers, updateMemberRole, removeMember, createInvite, listInvitesForCompany, deleteInvite, logEvent } from '/js/data.js';
 
     const { user, memberships, company, member } = await requireCompany();

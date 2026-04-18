@@ -86,7 +86,7 @@
 
   <script type="module">
     import { requireAuth, setActiveCompanyId, getActiveCompanyId } from '/js/session.js';
-    import { renderHeader, renderFooter, toast, openModal, serializeForm, escapeHTML } from '/js/ui.js';
+    import { renderHeader, renderFooter, toast, openModal, serializeForm, escapeHTML } from '/js/ui.js?v=1';
     import { createCompany, getCompany, getPosture, listDocs } from '/js/data.js';
 
     const { user, memberships } = await requireAuth();
