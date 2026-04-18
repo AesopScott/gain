@@ -669,15 +669,20 @@ table.data .actions {
 .nist-foundation-inner strong { color: #fff; }
 .nist-functions { display: flex; gap: 8px; flex-wrap: wrap; }
 .nist-fn {
-  background: rgba(255,255,255,.18);
-  border: 1px solid rgba(255,255,255,.35);
+  border: none;
   border-radius: 4px;
-  padding: 3px 10px;
+  padding: 5px 0;
+  width: 90px;
+  text-align: center;
   font-size: .8rem;
-  font-weight: 700;
-  letter-spacing: .05em;
-  color: #fff;
+  font-weight: 800;
+  letter-spacing: .06em;
+  color: #0d1b4b;
 }
+.nist-fn-govern  { background: #FFD166; }
+.nist-fn-map     { background: #06D6A0; }
+.nist-fn-measure { background: #FF6B6B; color: #fff; }
+.nist-fn-manage  { background: #74B9FF; }
 
 /* ---------- forms (stacked + extras) ---------- */
 
