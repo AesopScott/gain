@@ -655,6 +655,30 @@ table.data .actions {
 .subsection { margin-top: 24px; color: var(--navy); font-size: 1rem; font-weight: 600; }
 .page-lead { color: var(--ink-soft); max-width: 850px; margin-bottom: 18px; }
 
+/* NIST AI RMF foundation banner — framework.html */
+.nist-foundation-banner {
+  background: linear-gradient(135deg, var(--navy) 0%, var(--blue) 100%);
+  color: #fff;
+  border-radius: 8px;
+  padding: 14px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.nist-foundation-inner { font-size: .92rem; line-height: 1.5; }
+.nist-foundation-inner strong { color: #fff; }
+.nist-functions { display: flex; gap: 8px; flex-wrap: wrap; }
+.nist-fn {
+  background: rgba(255,255,255,.18);
+  border: 1px solid rgba(255,255,255,.35);
+  border-radius: 4px;
+  padding: 3px 10px;
+  font-size: .8rem;
+  font-weight: 700;
+  letter-spacing: .05em;
+  color: #fff;
+}
+
 /* ---------- forms (stacked + extras) ---------- */
 
 .stacked-form .field { margin-bottom: 14px; }

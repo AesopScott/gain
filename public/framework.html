@@ -26,38 +26,42 @@
 
   <main class="app-shell">
 
-    <h1 class="page-title">Framework Selection Worksheet</h1>
+    <h1 class="page-title">Regulatory Posture Worksheet</h1>
     <p class="page-lead">
-      Decide the <strong>operating framework</strong>, <strong>management system</strong>,
-      <strong>jurisdictions</strong>, <strong>sectors</strong>, and <strong>maturity target</strong>
-      that your governance program will align to. This posture drives what's required in
-      intake, AIAs, and the risk register. It can be updated later — but changes should be
-      ratified deliberately, not casually.
+      GAIN runs on <strong>NIST AI RMF 1.0</strong> as its always-on foundation — every
+      intake, AIA, and risk entry is structured around GOVERN / MAP / MEASURE / MANAGE.
+      This worksheet records which <strong>additional regulatory regimes</strong>,
+      <strong>management systems</strong>, <strong>jurisdictions</strong>, and
+      <strong>sectors</strong> apply on top of that baseline, and sets your
+      <strong>maturity target</strong>. Ratify it with your governance body when ready.
     </p>
 
     <form id="posture-form" class="stacked-form">
 
       <section class="card">
-        <h2 class="card-title">1 · Operating framework</h2>
-        <p class="text-muted">
-          The operating framework supplies vocabulary, functions, and practices. You can
-          blend more than one; pick the primary.
-        </p>
-        <div class="field">
-          <label>Primary framework</label>
-          <select name="operatingFramework" required>
-            <option value="">— select —</option>
-            <option value="NIST AI RMF">NIST AI Risk Management Framework (AI RMF 1.0)</option>
-            <option value="ISO/IEC 23894">ISO/IEC 23894 — AI risk management</option>
-            <option value="OECD AI Principles">OECD AI Principles</option>
-            <option value="UNESCO">UNESCO Ethics of AI Recommendation</option>
-            <option value="Custom">Custom / hybrid</option>
-          </select>
+        <h2 class="card-title">1 · NIST AI RMF 1.0 — always-on foundation</h2>
+        <div class="nist-foundation-banner">
+          <div class="nist-foundation-inner">
+            <strong>NIST AI Risk Management Framework 1.0</strong> is the operating foundation
+            for every GAIN program. It cannot be deselected. All intake, AIA, risk register,
+            and monitoring workflows are structured around its four functions.
+          </div>
+          <div class="nist-functions">
+            <span class="nist-fn">GOVERN</span>
+            <span class="nist-fn">MAP</span>
+            <span class="nist-fn">MEASURE</span>
+            <span class="nist-fn">MANAGE</span>
+          </div>
         </div>
-        <div class="field">
-          <label>Secondary / supporting frameworks (optional)</label>
+        <input type="hidden" name="operatingFramework" value="NIST AI RMF" />
+
+        <div class="field" style="margin-top:16px">
+          <label>Supplementary standards (optional — select all that apply)</label>
           <div class="checkbox-grid">
-            <label><input type="checkbox" name="supportingFrameworks" data-multiple value="NIST CSF 2.0" /> NIST CSF 2.0</label>
+            <label><input type="checkbox" name="supportingFrameworks" data-multiple value="ISO/IEC 23894" /> ISO/IEC 23894 — AI risk management guidance</label>
+            <label><input type="checkbox" name="supportingFrameworks" data-multiple value="OECD AI Principles" /> OECD AI Principles</label>
+            <label><input type="checkbox" name="supportingFrameworks" data-multiple value="UNESCO" /> UNESCO Ethics of AI Recommendation</label>
+            <label><input type="checkbox" name="supportingFrameworks" data-multiple value="NIST CSF 2.0" /> NIST CSF 2.0 (cybersecurity)</label>
             <label><input type="checkbox" name="supportingFrameworks" data-multiple value="NIST Privacy Framework" /> NIST Privacy Framework</label>
             <label><input type="checkbox" name="supportingFrameworks" data-multiple value="COBIT 2019" /> COBIT 2019</label>
             <label><input type="checkbox" name="supportingFrameworks" data-multiple value="COSO ERM" /> COSO ERM</label>
