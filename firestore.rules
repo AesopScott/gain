@@ -168,6 +168,23 @@ service cloud.firestore {
         allow delete: if isAdmin(companyId);
       }
 
+      // --- training tracker (Miscellaneous) ---
+      match /trainingRoster/{personId} {
+        allow read: if isMember(companyId) || isSuperadmin();
+        allow create, update: if isEditor(companyId);
+        allow delete: if isAdmin(companyId);
+      }
+      match /trainingCourses/{courseId} {
+        allow read: if isMember(companyId) || isSuperadmin();
+        allow create, update: if isEditor(companyId);
+        allow delete: if isAdmin(companyId);
+      }
+      match /trainingClasses/{classId} {
+        allow read: if isMember(companyId) || isSuperadmin();
+        allow create, update: if isEditor(companyId);
+        allow delete: if isAdmin(companyId);
+      }
+
       // --- audit log ---
       // Append-only journal written by editors, readable by members, never updated or deleted
       match /audit/{eventId} {
