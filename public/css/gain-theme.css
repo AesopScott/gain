@@ -588,6 +588,35 @@ table.data .actions {
 .brand-tagline { color: var(--ink-soft); font-size: .95rem; display: block; margin-top: 8px; }
 .brand-logo { height: 40px; width: auto; display: block; }
 .brand-logo-lg { height: 72px; }
+
+/* ---------- posture effects (framework.html) ----------
+   Inline hint under each framework-posture input showing the downstream
+   workflow effect. Revealed (transitioned) only when that option is active.
+*/
+.posture-effect {
+  display: block;
+  margin-top: 0;
+  padding-left: 24px;
+  font-size: .8rem;
+  color: var(--blue);
+  line-height: 1.4;
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-height .2s ease-out, opacity .2s ease-out, margin-top .2s;
+}
+.posture-effect.is-active {
+  max-height: 64px;
+  opacity: 1;
+  margin-top: 4px;
+}
+.posture-effect::before {
+  content: "↳ ";
+  color: var(--accent);
+  font-weight: 700;
+  margin-right: 4px;
+}
+.field > .posture-effect { padding-left: 0; }
 .primary-nav { display: flex; gap: 2px; flex-wrap: wrap; }
 .nav-link {
   color: #CBD5E8;

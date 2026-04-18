@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>GAIN — Framework Selection</title>
-  <link rel="stylesheet" href="/css/gain-theme.css?v=2" />
+  <link rel="stylesheet" href="/css/gain-theme.css?v=3" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <meta name="description" content="AI governance — from intake to audit. NIST AI RMF · ISO 42001 · EU AI Act." />
   <meta property="og:type" content="website" />
@@ -27,14 +27,6 @@
   <main class="app-shell">
 
     <h1 class="page-title">Regulatory Posture Worksheet</h1>
-    <p class="page-lead">
-      GAIN runs on <strong>NIST AI RMF 1.0</strong> as its always-on foundation — every
-      intake, AIA, and risk entry is structured around GOVERN / MAP / MEASURE / MANAGE.
-      This worksheet records which <strong>additional regulatory regimes</strong>,
-      <strong>management systems</strong>, <strong>jurisdictions</strong>, and
-      <strong>sectors</strong> apply on top of that baseline, and sets your
-      <strong>maturity target</strong>. Ratify it with your governance body when ready.
-    </p>
 
     <form id="posture-form" class="stacked-form">
 
@@ -194,6 +186,7 @@
     import { requireCompany, canAdmin } from '/js/session.js';
     import { renderHeader, renderFooter, toast, serializeForm, setFormValues } from '/js/ui.js?v=1';
     import { getPosture, savePosture, logEvent } from '/js/data.js';
+    import { postureEffects } from '/js/posture.js?v=1';
 
     const { user, memberships, company, member } = await requireCompany();
     renderHeader({ user, company, memberships });
@@ -223,6 +216,60 @@
         }
       }
     }
+
+    // ---- Phase 1: inline posture effects ----
+    // Inject a hint under every input whose value has a downstream effect.
+    // The hint is revealed when the user checks/selects that value, making
+    // the framework-selection -> downstream-workflow contract visible at
+    // the moment of the decision.
+    function injectPostureEffects(form) {
+      for (const [key, effect] of Object.entries(postureEffects)) {
+        const [field, value] = key.split(':');
+        const checkbox = form.querySelector(`input[type="checkbox"][name="${field}"][value="${value}"]`);
+        if (checkbox) {
+          const label = checkbox.closest('label');
+          if (label && !label.querySelector('.posture-effect')) {
+            const span = document.createElement('span');
+            span.className = 'posture-effect';
+            span.dataset.effectFor = key;
+            span.textContent = effect;
+            label.appendChild(span);
+          }
+          continue;
+        }
+        const select = form.querySelector(`select[name="${field}"]`);
+        if (select) {
+          const fieldWrap = select.closest('.field');
+          if (fieldWrap && !fieldWrap.querySelector(`.posture-effect[data-effect-for="${key}"]`)) {
+            const span = document.createElement('span');
+            span.className = 'posture-effect';
+            span.dataset.effectFor = key;
+            span.textContent = effect;
+            fieldWrap.appendChild(span);
+          }
+        }
+      }
+      updatePostureEffects(form);
+    }
+
+    function updatePostureEffects(form) {
+      form.querySelectorAll('.posture-effect').forEach(span => {
+        const [field, value] = (span.dataset.effectFor || '').split(':');
+        if (!field) return;
+        const cb = form.querySelector(`input[type="checkbox"][name="${field}"][value="${value}"]`);
+        let active = false;
+        if (cb) {
+          active = cb.checked;
+        } else {
+          const sel = form.querySelector(`select[name="${field}"]`);
+          if (sel) active = sel.value === value;
+        }
+        span.classList.toggle('is-active', active);
+      });
+    }
+
+    injectPostureEffects(form);
+    form.addEventListener('change', () => updatePostureEffects(form));
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
