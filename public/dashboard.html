@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>GAIN — Dashboard</title>
   <script>(function(){try{var p=localStorage.getItem('gain.theme.palette')||'classic';var m=localStorage.getItem('gain.theme.mode')||'light';document.documentElement.setAttribute('data-palette',p);document.documentElement.setAttribute('data-mode',m);}catch(e){}})();</script>
-  <link rel="stylesheet" href="/css/gain-theme.css?v=9" />
+  <link rel="stylesheet" href="/css/gain-theme.css?v=10" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <meta name="description" content="AI governance — from intake to audit. NIST AI RMF · ISO 42001 · EU AI Act." />
   <meta property="og:type" content="website" />
@@ -92,10 +92,10 @@
   </main>
 
   <script type="module">
-    import { requireAuth, setActiveCompanyId, getActiveCompanyId } from '/js/session.js?v=9';
-    import { renderHeader, renderFooter, toast, openModal, serializeForm, escapeHTML } from '/js/ui.js?v=9';
-    import { createCompany, getCompany, getPosture, listDocs, listAllCompanies, getUserDoc, createJoinRequest, getJoinRequest, redeemApprovedRequest, dismissDeniedRequest } from '/js/data.js?v=9';
-    import { aiaRequiredFor } from '/js/posture.js?v=9';
+    import { requireAuth, setActiveCompanyId, getActiveCompanyId } from '/js/session.js?v=10';
+    import { renderHeader, renderFooter, toast, openModal, serializeForm, escapeHTML } from '/js/ui.js?v=10';
+    import { createCompany, getCompany, getPosture, listDocs, listAllCompanies, getUserDoc, createJoinRequest, getJoinRequest, redeemApprovedRequest, dismissDeniedRequest } from '/js/data.js?v=10';
+    import { aiaRequiredFor } from '/js/posture.js?v=10';
 
     const { user, memberships } = await requireAuth();
 
@@ -134,12 +134,14 @@
       hasCompanies.classList.remove('hidden');
 
       // Load stats in parallel.
-      const [inventory, intake, risks, posture, aias] = await Promise.all([
+      const [inventory, intake, risks, posture, aias, team, checklists] = await Promise.all([
         listDocs(company.id, 'inventory'),
         listDocs(company.id, 'intake'),
         listDocs(company.id, 'risks'),
         getPosture(company.id),
-        listDocs(company.id, 'aias')
+        listDocs(company.id, 'aias'),
+        listDocs(company.id, 'team'),
+        listDocs(company.id, 'checklists')
       ]);
 
       document.querySelector('[data-stat-inventory]').textContent = inventory.length;
@@ -148,7 +150,7 @@
       const highRisks = risks.filter(r => ['prohibited', 'high'].includes((r.residualTier || '').toLowerCase())).length;
       document.querySelector('[data-stat-risks]').textContent = highRisks;
 
-      renderProgress({ posture, inventory, intake, risks, aias });
+      renderProgress({ posture, inventory, intake, risks, aias, team, checklists });
     }
 
     // ---------- progress checklist ----------
@@ -176,14 +178,14 @@
       return { gated: false, approvedAny: approvedAias.length > 0 };
     }
 
-    function renderProgress({ posture, inventory, intake, risks, aias }) {
+    function renderProgress({ posture, inventory, intake, risks, aias, team, checklists }) {
       const coverage = computeAiaCoverage(posture, inventory, aias);
       const target = Number(posture?.maturityTarget || 0);
 
       let aiaStep;
       if (coverage.gated && coverage.required === 0) {
         aiaStep = {
-          label: '4. Run AI Impact Assessments',
+          label: '5. Run AI Impact Assessments',
           hint: `Your maturity target (${coverage.maturityLabel}) requires AIAs for ${coverage.label}. No ${coverage.label} in inventory yet — add systems first.`,
           href: '/aia.html',
           done: coverage.approvedAny === true || aias.length > 0
@@ -191,45 +193,62 @@
       } else if (coverage.gated) {
         const pct = coverage.required > 0 ? Math.round((coverage.covered / coverage.required) * 100) : 0;
         aiaStep = {
-          label: `4. AIA coverage — ${coverage.covered}/${coverage.required} ${coverage.label} (${pct}%)`,
+          label: `5. AIA coverage — ${coverage.covered}/${coverage.required} ${coverage.label} (${pct}%)`,
           hint: `At ${coverage.maturityLabel}, every ${coverage.label.replace(/s$/, '')} requires a completed AIA before go-live.`,
           href: '/aia.html',
           done: coverage.required > 0 && coverage.covered === coverage.required
         };
       } else {
         aiaStep = {
-          label: '4. Run AI Impact Assessments',
+          label: '5. Run AI Impact Assessments',
           hint: 'Every high-impact system needs a completed AIA before it goes live. Required at maturity target 3+.',
           href: '/aia.html',
           done: aias.length > 0
         };
       }
 
+      // Checklists "done" = at least one item checked across any checklist.
+      const checklistsTouched = (checklists || []).some(cl =>
+        Object.values(cl.items || {}).some(it => it?.checked === true)
+      );
+
       const steps = [
         {
-          label: '1. Set your regulatory posture',
+          label: '1. Build your team',
+          hint: 'Add the people accountable for your AI governance program — CAIO, CRO, CPO, legal, engineering, and business leads. Owners on every risk and AIA come from this roster (GOVERN 1.1).',
+          href: '/team.html',
+          done: (team || []).length > 0
+        },
+        {
+          label: '2. Set your regulatory posture',
           hint: 'NIST AI RMF 1.0 is your always-on foundation. Record your additional regulatory overlays, management system, jurisdictions, and maturity target.',
           href: '/framework.html',
           done: !!(posture && posture.ratifiedAt)
         },
         {
-          label: '2. Start your AI system inventory',
+          label: '3. Start your AI system inventory',
           hint: 'Record every AI system — in production, pilot, and planned.',
           href: '/inventory.html',
           done: inventory.length > 0
         },
         {
-          label: '3. Route new ideas through intake',
+          label: '4. Route new ideas through intake',
           hint: 'Every new AI use case begins with a standardized intake request.',
           href: '/intake.html',
           done: intake.length > 0
         },
         aiaStep,
         {
-          label: '5. Maintain the risk register',
+          label: '6. Maintain the risk register',
           hint: 'Track inherent and residual risk per system; treat each entry.',
           href: '/risks.html',
           done: risks.length > 0
+        },
+        {
+          label: '7. Review checklists',
+          hint: 'Work through the NIST AI RMF checklist plus any sector checklists activated by your posture (HIPAA, FERPA, GLBA, SOX, etc.). Tick items as your program meets each requirement.',
+          href: '/checklists.html',
+          done: checklistsTouched
         }
       ];
       const container = document.querySelector('[data-progress]');
