@@ -176,3 +176,14 @@ export function canAdmin(member) {
 export function isOwner(member) {
   return member && member.role === 'owner';
 }
+
+// ---------- super admin ----------
+// Only this email is a platform-wide super admin. The actual account (and its
+// password) must be created directly in Firebase Auth — never in source code.
+// Super admin access is enforced both in the UI (below) and in Firestore rules
+// (via request.auth.token.email check).
+export const SUPERADMIN_EMAIL = 'admin@governainow.com';
+
+export function isSuperadmin(user) {
+  return !!(user && user.email && user.email.toLowerCase() === SUPERADMIN_EMAIL);
+}

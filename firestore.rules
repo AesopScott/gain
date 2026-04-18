@@ -30,6 +30,12 @@ service cloud.firestore {
       return isMember(companyId) && memberRole(companyId) in ['owner', 'admin', 'editor'];
     }
 
+    // Platform-wide super admin. Only one identity, enforced by email match.
+    // The actual Auth user must be created in the Firebase Console.
+    function isSuperadmin() {
+      return isSignedIn() && request.auth.token.email == 'admin@governainow.com';
+    }
+
     // ---------- user profiles ----------
     // Each authenticated user has a /users/{uid} doc with their display name and
     // list of companies they belong to. A user may only read or write their own.
@@ -64,7 +70,7 @@ service cloud.firestore {
       // A member doc models role + email + joined date. Members can see each
       // other; admins can add/remove members; users can read their own member doc.
       match /members/{memberUid} {
-        allow read: if isMember(companyId) || uid() == memberUid;
+        allow read: if isMember(companyId) || uid() == memberUid || isSuperadmin();
         // Three paths to create a member doc:
         //   (a) an existing admin adds someone,
         //   (b) the owner self-creates their owner record at company-creation time,
@@ -86,27 +92,27 @@ service cloud.firestore {
 
       // --- framework posture ---
       match /frameworkPosture/{docId} {
-        allow read: if isMember(companyId);
+        allow read: if isMember(companyId) || isSuperadmin();
         allow write: if isAdmin(companyId);
       }
 
       // --- use case intake ---
       match /intake/{useCaseId} {
-        allow read: if isMember(companyId);
+        allow read: if isMember(companyId) || isSuperadmin();
         allow create, update: if isEditor(companyId);
         allow delete: if isAdmin(companyId);
       }
 
       // --- AI system inventory ---
       match /inventory/{systemId} {
-        allow read: if isMember(companyId);
+        allow read: if isMember(companyId) || isSuperadmin();
         allow create, update: if isEditor(companyId);
         allow delete: if isAdmin(companyId);
       }
 
       // --- AI Impact Assessments ---
       match /aias/{aiaId} {
-        allow read: if isMember(companyId);
+        allow read: if isMember(companyId) || isSuperadmin();
         allow create, update: if isEditor(companyId);
         allow delete: if isAdmin(companyId);
       }
@@ -124,21 +130,21 @@ service cloud.firestore {
 
       // --- Compliance checklists (per-company completion state) ---
       match /checklists/{checklistKey} {
-        allow read: if isMember(companyId);
+        allow read: if isMember(companyId) || isSuperadmin();
         allow create, update: if isEditor(companyId);
         allow delete: if isAdmin(companyId);
       }
 
       // --- Governance team roster ---
       match /team/{memberId} {
-        allow read: if isMember(companyId);
+        allow read: if isMember(companyId) || isSuperadmin();
         allow create, update: if isEditor(companyId);
         allow delete: if isAdmin(companyId);
       }
 
       // --- Risk register ---
       match /risks/{riskId} {
-        allow read: if isMember(companyId);
+        allow read: if isMember(companyId) || isSuperadmin();
         allow create, update: if isEditor(companyId);
         allow delete: if isAdmin(companyId);
       }
@@ -150,14 +156,14 @@ service cloud.firestore {
 
       // --- governance policies ---
       match /policies/{policyId} {
-        allow read: if isMember(companyId);
+        allow read: if isMember(companyId) || isSuperadmin();
         allow create, update: if isEditor(companyId);
         allow delete: if isAdmin(companyId);
       }
 
       // --- incident response tracking (Miscellaneous) ---
       match /incidents/{incidentId} {
-        allow read: if isMember(companyId);
+        allow read: if isMember(companyId) || isSuperadmin();
         allow create, update: if isEditor(companyId);
         allow delete: if isAdmin(companyId);
       }
@@ -165,7 +171,7 @@ service cloud.firestore {
       // --- audit log ---
       // Append-only journal written by editors, readable by members, never updated or deleted
       match /audit/{eventId} {
-        allow read: if isMember(companyId);
+        allow read: if isMember(companyId) || isSuperadmin();
         allow create: if isEditor(companyId) &&
           request.resource.data.actorUid == uid();
         allow update, delete: if false;

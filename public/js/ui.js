@@ -3,7 +3,7 @@
 // Every authenticated page should call renderHeader(...) in its init code so
 // the brand, nav, and company switcher stay consistent.
 
-import { logOut, setActiveCompanyId } from './session.js';
+import { logOut, setActiveCompanyId, isSuperadmin } from './session.js';
 import { toggleMode } from './theme.js';
 
 // ---------- header ----------
@@ -29,7 +29,10 @@ export function renderHeader({ user, company, memberships = [], pages = DEFAULT_
   if (!mount) return;
 
   const currentPath = window.location.pathname;
-  const navHTML = pages.map(p => {
+  const effectivePages = isSuperadmin(user)
+    ? [...pages, { href: '/admin.html', label: 'Admin', match: 'admin' }]
+    : pages;
+  const navHTML = effectivePages.map(p => {
     const active = currentPath.includes(p.match) ? ' active' : '';
     return `<a class="nav-link${active}" href="${p.href}">${escapeHTML(p.label)}</a>`;
   }).join('');
@@ -91,7 +94,7 @@ export function renderFooter() {
     <footer class="site-footer">
       <span>GAIN · Govern AI Now</span>
       <span class="text-muted">Your data · Your company · Your framework</span>
-      <span class="text-muted" style="font-size:.7rem;opacity:.6">v16</span>
+      <span class="text-muted" style="font-size:.7rem;opacity:.6">v17</span>
     </footer>
   `;
 }
