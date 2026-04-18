@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>GAIN — AI System Inventory</title>
-  <link rel="stylesheet" href="/css/gain-theme.css?v=7" />
+  <link rel="stylesheet" href="/css/gain-theme.css?v=8" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <meta name="description" content="AI governance — from intake to audit. NIST AI RMF · ISO 42001 · EU AI Act." />
   <meta property="og:type" content="website" />
@@ -80,9 +80,9 @@
 
   <script type="module">
     import { requireCompany, canEdit, canAdmin } from '/js/session.js';
-    import { renderHeader, renderFooter, toast, openModal, confirmDialog, serializeForm, escapeHTML, formatDate } from '/js/ui.js?v=7';
+    import { renderHeader, renderFooter, toast, openModal, confirmDialog, serializeForm, escapeHTML, formatDate } from '/js/ui.js?v=8';
     import { listDocs, createRecord, updateRecord, deleteRecord, getRecord, logEvent, getPosture } from '/js/data.js';
-    import { derivedApplicableRegs } from '/js/posture.js?v=7';
+    import { derivedApplicableRegs, driftBannerHTML } from '/js/posture.js?v=8';
 
     const { user, memberships, company, member } = await requireCompany();
     renderHeader({ user, company, memberships });
@@ -262,6 +262,7 @@
 
     function formHTML(v = {}) {
       return `
+        ${driftBannerHTML(v.applicableRegsSnapshot, applicableRegs)}
         <div class="field"><label>System name *</label>
           <input name="name" required value="${escapeHTML(v.name || '')}" />
         </div>

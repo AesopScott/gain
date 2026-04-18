@@ -179,3 +179,43 @@ export function aiaRequiredFor(posture, system) {
   if (target >= 3 && system?.impactTier === 'high') return true;
   return false;
 }
+
+// ---------- posture drift (Phase 5) ----------
+// When an existing record's applicableRegsSnapshot differs from the current
+// posture's derived regs, show a banner so reviewers know the record was
+// saved under a different posture. Records stay truthful (snapshot never
+// mutates retroactively), but reviewers see that the world has moved.
+
+export function computeRegDrift(snapshot, current) {
+  const snap = Array.isArray(snapshot) ? snapshot : [];
+  const curr = Array.isArray(current) ? current : [];
+  // No snapshot -> record predates the snapshot mechanism; don't surface drift.
+  if (snap.length === 0) return { changed: false, added: [], removed: [] };
+  const snapSet = new Set(snap);
+  const currSet = new Set(curr);
+  const added = curr.filter(r => !snapSet.has(r));
+  const removed = snap.filter(r => !currSet.has(r));
+  return { changed: added.length > 0 || removed.length > 0, added, removed };
+}
+
+// Reg names come from derivedApplicableRegs — a closed allowlist of hard-coded
+// strings in this module. No user input reaches the template, so raw
+// interpolation is safe.
+export function driftBannerHTML(snapshot, current) {
+  const { changed, added, removed } = computeRegDrift(snapshot, current);
+  if (!changed) return '';
+  const list = (items) => items.map(r => `<li>${r}</li>`).join('');
+  const addedCol = added.length
+    ? `<div class="drift-col"><span class="drift-label drift-added">Now applies</span><ul>${list(added)}</ul></div>`
+    : '';
+  const removedCol = removed.length
+    ? `<div class="drift-col"><span class="drift-label drift-removed">No longer applies</span><ul>${list(removed)}</ul></div>`
+    : '';
+  return `
+    <div class="drift-banner">
+      <strong>Framework posture has changed since this record was saved.</strong>
+      <div class="drift-cols">${addedCol}${removedCol}</div>
+      <p class="drift-hint">Re-save this record to refresh its posture snapshot.</p>
+    </div>
+  `;
+}
