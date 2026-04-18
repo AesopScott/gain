@@ -63,8 +63,8 @@
   </main>
 
   <script type="module">
-    import { requireCompany } from '/js/session.js?v=16';
-    import { renderHeader, renderFooter } from '/js/ui.js?v=16';
+    import { requireCompany } from '/js/session.js?v=17';
+    import { renderHeader, renderFooter } from '/js/ui.js?v=17';
 
     const { user, memberships, company } = await requireCompany();
     renderHeader({ user, company, memberships });
