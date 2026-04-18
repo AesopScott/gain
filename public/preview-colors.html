@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>NIST Function Chip — Final</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; background: #f0f2f5; padding: 24px; }
+    h1 { font-size: 1.1rem; color: #333; margin-bottom: 20px; }
+    .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+    .option { border-radius: 8px; overflow: hidden; }
+    .label { background: #fff; font-size: .75rem; font-weight: 700; color: #555;
+             padding: 6px 12px; border: 1px solid #ddd; border-bottom: none;
+             border-radius: 8px 8px 0 0; }
+    .banner {
+      background: linear-gradient(135deg, #0d1b4b 0%, #1a56db 100%);
+      color: #fff;
+      padding: 14px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      border-radius: 0 0 8px 8px;
+    }
+    .text { font-size: .85rem; line-height: 1.5; }
+    .text strong { color: #fff; }
+    .chips { display: flex; gap: 8px; flex-wrap: wrap; }
+    .chip {
+      border-radius: 4px;
+      padding: 5px 0;
+      width: 90px;
+      text-align: center;
+      font-size: .8rem;
+      font-weight: 800;
+      letter-spacing: .06em;
+      color: #0d1b4b;
+      border: none;
+    }
+    /* Option 1 — Tropical */
+    .o1 .chip-a { background: #FFD166; }
+    .o1 .chip-b { background: #06D6A0; }
+    .o1 .chip-c { background: #FF6B6B; }
+    .o1 .chip-d { background: #74B9FF; }
+    /* Option 2 — Pastel Pop */
+    .o2 .chip-a { background: #FFDDD2; }
+    .o2 .chip-b { background: #C9F0D0; }
+    .o2 .chip-c { background: #D0E8FF; }
+    .o2 .chip-d { background: #EDD9FF; }
+    /* Option 3 — Neon Signal */
+    .o3 .chip-a { background: #00F5A0; }
+    .o3 .chip-b { background: #FFC300; }
+    .o3 .chip-c { background: #FF5F6D; color:#fff; }
+    .o3 .chip-d { background: #00D2FF; }
+    /* Option 4 — Warm Earth */
+    .o4 .chip-a { background: #F4A261; }
+    .o4 .chip-b { background: #E9C46A; }
+    .o4 .chip-c { background: #A8DADC; }
+    .o4 .chip-d { background: #F1FAEE; }
+    /* Option 5 — Jewel Tones */
+    .o5 .chip-a { background: #9B5DE5; color:#fff; }
+    .o5 .chip-b { background: #00BBF9; }
+    .o5 .chip-c { background: #00F5D4; }
+    .o5 .chip-d { background: #FEE440; }
+    /* Option 6 — Gradient Complements */
+    .o6 .chip-a { background: #E0F7FA; }
+    .o6 .chip-b { background: #B2EBF2; }
+    .o6 .chip-c { background: #FFE0B2; }
+    .o6 .chip-d { background: #F3E5F5; }
+    /* Option 7 — Traffic Light + Info */
+    .o7 .chip-a { background: #48CAE4; }
+    .o7 .chip-b { background: #80B918; }
+    .o7 .chip-c { background: #FFAA00; }
+    .o7 .chip-d { background: #FF5555; color:#fff; }
+    /* Option 8 — Monochrome Fade */
+    .o8 .chip-a { background: rgba(255,255,255,.95); }
+    .o8 .chip-b { background: rgba(255,255,255,.72); }
+    .o8 .chip-c { background: rgba(255,255,255,.48); color:#fff; }
+    .o8 .chip-d { background: rgba(255,255,255,.25); color:#fff; }
+    /* Option 9 — Candy */
+    .o9 .chip-a { background: #FF99C8; }
+    .o9 .chip-b { background: #FCF6BD; }
+    .o9 .chip-c { background: #D0F4DE; }
+    .o9 .chip-d { background: #A9DEF9; }
+    /* Option 10 — Sunset Gradient */
+    .o10 .chip-a { background: #FFBE0B; }
+    .o10 .chip-b { background: #FB5607; color:#fff; }
+    .o10 .chip-c { background: #FF006E; color:#fff; }
+    .o10 .chip-d { background: #8338EC; color:#fff; }
+  </style>
+</head>
+<body>
+  <h1>10 color options for NIST function chips — pick one</h1>
+  <div class="grid">
+
+    <div class="option o1">
+      <div class="label">1 · Tropical</div>
+      <div class="banner">
+        <div class="text"><strong>NIST AI Risk Management Framework 1.0</strong> is the operating foundation for every GAIN program. It cannot be deselected. All intake, AIA, risk register, and monitoring workflows are structured around its four functions:</div>
+        <div class="chips">
+          <span class="chip chip-a">GOVERN</span>
+          <span class="chip chip-b">MAP</span>
+          <span class="chip chip-c">MEASURE</span>
+          <span class="chip chip-d">MANAGE</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="option o2">
+      <div class="label">2 · Pastel Pop</div>
+      <div class="banner">
+        <div class="text"><strong>NIST AI Risk Management Framework 1.0</strong> is the operating foundation for every GAIN program. It cannot be deselected. All intake, AIA, risk register, and monitoring workflows are structured around its four functions:</div>
+        <div class="chips">
+          <span class="chip chip-a">GOVERN</span>
+          <span class="chip chip-b">MAP</span>
+          <span class="chip chip-c">MEASURE</span>
+          <span class="chip chip-d">MANAGE</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="option o3">
+      <div class="label">3 · Neon Signal</div>
+      <div class="banner">
+        <div class="text"><strong>NIST AI Risk Management Framework 1.0</strong> is the operating foundation for every GAIN program. It cannot be deselected. All intake, AIA, risk register, and monitoring workflows are structured around its four functions:</div>
+        <div class="chips">
+          <span class="chip chip-a">GOVERN</span>
+          <span class="chip chip-b">MAP</span>
+          <span class="chip chip-c">MEASURE</span>
+          <span class="chip chip-d">MANAGE</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="option o4">
+      <div class="label">4 · Warm Earth</div>
+      <div class="banner">
+        <div class="text"><strong>NIST AI Risk Management Framework 1.0</strong> is the operating foundation for every GAIN program. It cannot be deselected. All intake, AIA, risk register, and monitoring workflows are structured around its four functions:</div>
+        <div class="chips">
+          <span class="chip chip-a">GOVERN</span>
+          <span class="chip chip-b">MAP</span>
+          <span class="chip chip-c">MEASURE</span>
+          <span class="chip chip-d">MANAGE</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="option o5">
+      <div class="label">5 · Jewel Tones</div>
+      <div class="banner">
+        <div class="text"><strong>NIST AI Risk Management Framework 1.0</strong> is the operating foundation for every GAIN program. It cannot be deselected. All intake, AIA, risk register, and monitoring workflows are structured around its four functions:</div>
+        <div class="chips">
+          <span class="chip chip-a">GOVERN</span>
+          <span class="chip chip-b">MAP</span>
+          <span class="chip chip-c">MEASURE</span>
+          <span class="chip chip-d">MANAGE</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="option o6">
+      <div class="label">6 · Gradient Complements</div>
+      <div class="banner">
+        <div class="text"><strong>NIST AI Risk Management Framework 1.0</strong> is the operating foundation for every GAIN program. It cannot be deselected. All intake, AIA, risk register, and monitoring workflows are structured around its four functions:</div>
+        <div class="chips">
+          <span class="chip chip-a">GOVERN</span>
+          <span class="chip chip-b">MAP</span>
+          <span class="chip chip-c">MEASURE</span>
+          <span class="chip chip-d">MANAGE</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="option o7">
+      <div class="label">7 · Traffic Light + Info</div>
+      <div class="banner">
+        <div class="text"><strong>NIST AI Risk Management Framework 1.0</strong> is the operating foundation for every GAIN program. It cannot be deselected. All intake, AIA, risk register, and monitoring workflows are structured around its four functions:</div>
+        <div class="chips">
+          <span class="chip chip-a">GOVERN</span>
+          <span class="chip chip-b">MAP</span>
+          <span class="chip chip-c">MEASURE</span>
+          <span class="chip chip-d">MANAGE</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="option o8">
+      <div class="label">8 · Monochrome Fade</div>
+      <div class="banner">
+        <div class="text"><strong>NIST AI Risk Management Framework 1.0</strong> is the operating foundation for every GAIN program. It cannot be deselected. All intake, AIA, risk register, and monitoring workflows are structured around its four functions:</div>
+        <div class="chips">
+          <span class="chip chip-a">GOVERN</span>
+          <span class="chip chip-b">MAP</span>
+          <span class="chip chip-c">MEASURE</span>
+          <span class="chip chip-d">MANAGE</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="option o9">
+      <div class="label">9 · Candy</div>
+      <div class="banner">
+        <div class="text"><strong>NIST AI Risk Management Framework 1.0</strong> is the operating foundation for every GAIN program. It cannot be deselected. All intake, AIA, risk register, and monitoring workflows are structured around its four functions:</div>
+        <div class="chips">
+          <span class="chip chip-a">GOVERN</span>
+          <span class="chip chip-b">MAP</span>
+          <span class="chip chip-c">MEASURE</span>
+          <span class="chip chip-d">MANAGE</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="option o10">
+      <div class="label">10 · Sunset Gradient</div>
+      <div class="banner">
+        <div class="text"><strong>NIST AI Risk Management Framework 1.0</strong> is the operating foundation for every GAIN program. It cannot be deselected. All intake, AIA, risk register, and monitoring workflows are structured around its four functions:</div>
+        <div class="chips">
+          <span class="chip chip-a">GOVERN</span>
+          <span class="chip chip-b">MAP</span>
+          <span class="chip chip-c">MEASURE</span>
+          <span class="chip chip-d">MANAGE</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</body>
+</html>
