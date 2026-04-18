@@ -50,8 +50,9 @@ service cloud.firestore {
       allow create: if isSignedIn() &&
         request.resource.data.ownerUid == uid();
 
-      // Only members can read the company document.
-      allow read: if isMember(companyId);
+      // Any signed-in user can read the company document (name, industry, size)
+      // for company discovery / join requests. Subcollection rules remain member-only.
+      allow read: if isSignedIn();
 
       // Only owners/admins can update top-level company fields.
       allow update: if isAdmin(companyId);
@@ -107,6 +108,17 @@ service cloud.firestore {
       match /aias/{aiaId} {
         allow read: if isMember(companyId);
         allow create, update: if isEditor(companyId);
+        allow delete: if isAdmin(companyId);
+      }
+
+      // --- join requests (company discovery / self-service access) ---
+      // Any signed-in user may submit a request for their own uid.
+      // The requester may read their own request to check status.
+      // Only admins can approve / deny / delete.
+      match /joinRequests/{requestId} {
+        allow create: if isSignedIn() && request.resource.data.uid == uid();
+        allow read:   if isSignedIn() && (resource.data.uid == uid() || isAdmin(companyId));
+        allow update: if isAdmin(companyId);
         allow delete: if isAdmin(companyId);
       }
 

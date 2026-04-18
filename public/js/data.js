@@ -151,6 +151,97 @@ export async function deleteInvite(inviteId) {
   await deleteDoc(doc(db, 'invites', inviteId));
 }
 
+// ---------- company discovery ----------
+
+export async function listAllCompanies() {
+  const snap = await getDocs(query(collection(db, 'companies'), orderBy('name')));
+  return snap.docs
+    .map(d => ({ id: d.id, name: d.data().name, industry: d.data().industry || '', size: d.data().size || '', archived: d.data().archived }))
+    .filter(c => !c.archived && c.name);
+}
+
+export async function getUserDoc(uid) {
+  const snap = await getDoc(doc(db, 'users', uid));
+  return snap.exists() ? snap.data() : {};
+}
+
+// ---------- join requests ----------
+
+export async function createJoinRequest(companyId, { uid, email, displayName, message }) {
+  const requestRef = doc(collection(db, 'companies', companyId, 'joinRequests'));
+  const userRef = doc(db, 'users', uid);
+  await runTransaction(db, async (tx) => {
+    const userSnap = await tx.get(userRef);
+    const prev = userSnap.exists() ? (userSnap.data().pendingJoinRequests || []) : [];
+    tx.set(requestRef, {
+      uid, email, displayName: displayName || '', message: message || '',
+      status: 'pending', requestedAt: serverTimestamp()
+    });
+    tx.set(userRef, {
+      pendingJoinRequests: [...prev.filter(r => r.companyId !== companyId), { companyId, requestId: requestRef.id }]
+    }, { merge: true });
+  });
+  return requestRef.id;
+}
+
+export async function listPendingJoinRequests(companyId) {
+  const q = query(
+    collection(db, 'companies', companyId, 'joinRequests'),
+    where('status', '==', 'pending'),
+    orderBy('requestedAt', 'asc')
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}
+
+export async function getJoinRequest(companyId, requestId) {
+  const snap = await getDoc(doc(db, 'companies', companyId, 'joinRequests', requestId));
+  return snap.exists() ? { id: snap.id, ...snap.data() } : null;
+}
+
+export async function approveJoinRequest(companyId, requestId, requestData, { role, adminUid, adminName }) {
+  const requestRef = doc(db, 'companies', companyId, 'joinRequests', requestId);
+  const memberRef = doc(db, 'companies', companyId, 'members', requestData.uid);
+  await runTransaction(db, async (tx) => {
+    tx.set(memberRef, {
+      role, email: requestData.email, displayName: requestData.displayName || '', joinedAt: serverTimestamp()
+    });
+    tx.update(requestRef, {
+      status: 'approved', processedAt: serverTimestamp(),
+      processedBy: adminUid, processedByName: adminName || ''
+    });
+  });
+}
+
+export async function denyJoinRequest(companyId, requestId, { adminUid, adminName }) {
+  await updateDoc(doc(db, 'companies', companyId, 'joinRequests', requestId), {
+    status: 'denied', processedAt: serverTimestamp(),
+    processedBy: adminUid, processedByName: adminName || ''
+  });
+}
+
+// Called by the requesting user after their request is approved.
+// Adds companyId to their own user doc and clears the pending entry.
+export async function redeemApprovedRequest(uid, companyId, requestId) {
+  const userRef = doc(db, 'users', uid);
+  const userSnap = await getDoc(userRef);
+  const data = userSnap.exists() ? userSnap.data() : {};
+  await updateDoc(userRef, {
+    companyIds: [...new Set([...(data.companyIds || []), companyId])],
+    pendingJoinRequests: (data.pendingJoinRequests || []).filter(r => r.requestId !== requestId)
+  });
+}
+
+// Called by user to dismiss a denied request from their pending list.
+export async function dismissDeniedRequest(uid, requestId) {
+  const userRef = doc(db, 'users', uid);
+  const userSnap = await getDoc(userRef);
+  const data = userSnap.exists() ? userSnap.data() : {};
+  await updateDoc(userRef, {
+    pendingJoinRequests: (data.pendingJoinRequests || []).filter(r => r.requestId !== requestId)
+  });
+}
+
 // ---------- framework posture ----------
 
 export async function getPosture(companyId) {

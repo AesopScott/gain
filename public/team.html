@@ -25,6 +25,11 @@
       risk entry a clear human owner.
     </p>
 
+    <div id="join-requests-section" class="card hidden" style="margin-bottom:16px;border-left:3px solid var(--blue)">
+      <h2 class="card-title" style="margin-bottom:12px">Pending access requests</h2>
+      <div id="join-requests-list"></div>
+    </div>
+
     <div class="card">
       <table class="data">
         <thead>
@@ -46,8 +51,8 @@
 
   <script type="module">
     import { requireCompany, canEdit, canAdmin } from '/js/session.js';
-    import { renderHeader, renderFooter, toast, openModal, confirmDialog, serializeForm, escapeHTML } from '/js/ui.js';
-    import { listDocs, createRecord, updateRecord, deleteRecord, getRecord, logEvent } from '/js/data.js';
+    import { renderHeader, renderFooter, toast, openModal, confirmDialog, serializeForm, escapeHTML, formatDate } from '/js/ui.js?v=5';
+    import { listDocs, createRecord, updateRecord, deleteRecord, getRecord, logEvent, listPendingJoinRequests, approveJoinRequest, denyJoinRequest } from '/js/data.js';
 
     const { user, memberships, company, member } = await requireCompany();
     renderHeader({ user, company, memberships });
@@ -56,6 +61,87 @@
     const editorOK = canEdit(member);
     const adminOK  = canAdmin(member);
     if (!editorOK) document.querySelectorAll('[data-editor-only]').forEach(el => el.setAttribute('disabled', 'disabled'));
+
+    if (adminOK) refreshJoinRequests();
+
+    async function refreshJoinRequests() {
+      const requests = await listPendingJoinRequests(company.id);
+      const section = document.getElementById('join-requests-section');
+      const list = document.getElementById('join-requests-list');
+      if (!requests.length) { section.classList.add('hidden'); return; }
+      section.classList.remove('hidden');
+      list.innerHTML = requests.map(r => `
+        <div class="join-request-row" data-req="${escapeHTML(r.id)}">
+          <div class="join-request-info">
+            <strong>${escapeHTML(r.displayName || r.email)}</strong>
+            <span class="text-muted">${escapeHTML(r.email)}</span>
+            ${r.message ? `<p class="text-muted" style="margin:2px 0 0;font-size:.85rem">"${escapeHTML(r.message)}"</p>` : ''}
+          </div>
+          <div class="join-request-meta">
+            <span class="text-muted" style="font-size:.8rem">${formatDate(r.requestedAt)}</span>
+          </div>
+          <div class="join-request-actions">
+            <button class="btn btn-primary btn-sm" data-approve="${escapeHTML(r.id)}">Approve</button>
+            <button class="btn btn-ghost btn-sm" data-deny="${escapeHTML(r.id)}">Deny</button>
+          </div>
+        </div>
+      `).join('');
+
+      list.querySelectorAll('[data-approve]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const req = requests.find(r => r.id === btn.dataset.approve);
+          openApproveModal(req);
+        });
+      });
+      list.querySelectorAll('[data-deny]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const req = requests.find(r => r.id === btn.dataset.deny);
+          const ok = await confirmDialog({ title: 'Deny access request?', message: `Deny ${req.displayName || req.email}'s request to join this company?`, confirmLabel: 'Deny', variant: 'danger' });
+          if (!ok) return;
+          try {
+            await denyJoinRequest(company.id, req.id, { adminUid: user.uid, adminName: user.displayName || user.email });
+            await logEvent(company.id, { actorUid: user.uid, actorName: user.displayName || user.email, action: 'joinRequest.deny', target: req.uid });
+            toast('Request denied.', 'success');
+            refreshJoinRequests();
+          } catch (err) { toast(err.message, 'error', 5000); }
+        });
+      });
+    }
+
+    function openApproveModal(req) {
+      const form = document.createElement('form');
+      form.className = 'stacked-form';
+      form.innerHTML = `
+        <p>Grant <strong>${escapeHTML(req.displayName || req.email)}</strong> access to <strong>${escapeHTML(company.name)}</strong>.</p>
+        <div class="field" style="margin-top:12px"><label>Role *</label>
+          <select name="role" required>
+            <option value="">— select a role —</option>
+            <option value="admin">Admin — can manage members and all content</option>
+            <option value="editor">Editor — can create and edit records</option>
+            <option value="viewer">Viewer — read-only access</option>
+          </select>
+        </div>
+      `;
+      openModal({
+        title: 'Approve access request',
+        body: form,
+        actions: [
+          { label: 'Cancel', variant: 'ghost', onClick: ({ close }) => close() },
+          { label: 'Approve & add member', variant: 'primary', onClick: async ({ close }) => {
+            if (!form.reportValidity()) return;
+            const data = serializeForm(form);
+            try {
+              await approveJoinRequest(company.id, req.id, req, { role: data.role, adminUid: user.uid, adminName: user.displayName || user.email });
+              await logEvent(company.id, { actorUid: user.uid, actorName: user.displayName || user.email, action: 'joinRequest.approve', target: req.uid, details: { role: data.role } });
+              toast(`${req.displayName || req.email} added as ${data.role}.`, 'success');
+              close();
+              refreshJoinRequests();
+              refresh();
+            } catch (err) { toast(err.message, 'error', 5000); }
+          }}
+        ]
+      });
+    }
 
     async function refresh() {
       const rows = await listDocs(company.id, 'team', { orderBy: [['name', 'asc']] });

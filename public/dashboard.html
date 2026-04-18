@@ -30,11 +30,17 @@
       <div class="card card-hero">
         <h1 class="page-title">Welcome to GAIN</h1>
         <p>
-          You're not a member of any companies yet. Create a new company
-          workspace to start building your AI governance program, or wait for
-          an admin to invite you.
+          You're not a member of any companies yet. Create a new workspace to
+          start your AI governance program, or request access to an existing company.
         </p>
-        <button class="btn btn-primary" data-new-company>Create a company</button>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:4px">
+          <button class="btn btn-primary" data-new-company>Create a company</button>
+          <button class="btn btn-secondary" data-request-join>Request to join a company</button>
+        </div>
+      </div>
+      <div id="pending-requests-section" class="hidden card" style="margin-top:16px">
+        <h2 class="card-title">Your pending access requests</h2>
+        <div id="pending-requests-list"></div>
       </div>
     </section>
 
@@ -87,7 +93,7 @@
   <script type="module">
     import { requireAuth, setActiveCompanyId, getActiveCompanyId } from '/js/session.js';
     import { renderHeader, renderFooter, toast, openModal, serializeForm, escapeHTML } from '/js/ui.js?v=5';
-    import { createCompany, getCompany, getPosture, listDocs } from '/js/data.js';
+    import { createCompany, getCompany, getPosture, listDocs, listAllCompanies, getUserDoc, createJoinRequest, getJoinRequest, redeemApprovedRequest, dismissDeniedRequest } from '/js/data.js';
 
     const { user, memberships } = await requireAuth();
 
@@ -98,6 +104,11 @@
       noCompanies.classList.remove('hidden');
       renderHeader({ user, company: null, memberships });
       renderFooter();
+
+      // Check for any approved / denied join requests.
+      await checkPendingRequests();
+
+      document.querySelector('[data-request-join]').addEventListener('click', openJoinModal);
     } else {
       // Ensure active company is valid.
       let activeId = getActiveCompanyId();
@@ -182,6 +193,102 @@
           </div>
         </li>
       `).join('');
+    }
+
+    // ---------- join request helpers ----------
+
+    async function checkPendingRequests() {
+      const userDoc = await getUserDoc(user.uid);
+      const pending = userDoc.pendingJoinRequests || [];
+      if (!pending.length) return;
+
+      const section = document.getElementById('pending-requests-section');
+      const list = document.getElementById('pending-requests-list');
+      section.classList.remove('hidden');
+
+      const results = await Promise.all(pending.map(async ({ companyId, requestId }) => {
+        try {
+          const req = await getJoinRequest(companyId, requestId);
+          return { companyId, requestId, req };
+        } catch { return null; }
+      }));
+
+      let html = '';
+      for (const r of results.filter(Boolean)) {
+        const { companyId, requestId, req } = r;
+        if (!req) continue;
+        if (req.status === 'approved') {
+          // Silently redeem — add company to memberships and reload.
+          await redeemApprovedRequest(user.uid, companyId, requestId);
+          toast('Access approved! Loading your workspace…', 'success');
+          setTimeout(() => location.reload(), 1200);
+          return;
+        } else if (req.status === 'denied') {
+          html += `<div class="status-row">
+            <span>Request to <strong>${escapeHTML(req.companyName || companyId)}</strong> was <span class="status-pill status-rejected">denied</span></span>
+            <button class="btn btn-ghost btn-sm" data-dismiss="${escapeHTML(requestId)}">Dismiss</button>
+          </div>`;
+        } else {
+          html += `<div class="status-row">
+            <span>Awaiting admin approval at <strong>${escapeHTML(req.companyName || companyId)}</strong></span>
+            <span class="status-pill status-triage">pending</span>
+          </div>`;
+        }
+      }
+      list.innerHTML = html || '<p class="text-muted">All requests resolved.</p>';
+      list.querySelectorAll('[data-dismiss]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          await dismissDeniedRequest(user.uid, btn.dataset.dismiss);
+          await checkPendingRequests();
+        });
+      });
+    }
+
+    async function openJoinModal() {
+      let companies = [];
+      try { companies = await listAllCompanies(); } catch (e) { toast('Could not load companies.', 'error'); return; }
+
+      const form = document.createElement('form');
+      form.className = 'stacked-form';
+      if (!companies.length) {
+        form.innerHTML = `<p class="text-muted">No companies found. Ask an admin to create one first.</p>`;
+        openModal({ title: 'Request to join a company', body: form, actions: [{ label: 'Close', variant: 'ghost', onClick: ({ close }) => close() }] });
+        return;
+      }
+      form.innerHTML = `
+        <div class="field"><label>Company *</label>
+          <select name="companyId" required>
+            <option value="">— select a company —</option>
+            ${companies.map(c => `<option value="${escapeHTML(c.id)}">${escapeHTML(c.name)}${c.industry ? ' · ' + escapeHTML(c.industry) : ''}</option>`).join('')}
+          </select>
+        </div>
+        <div class="field"><label>Message to admins (optional)</label>
+          <textarea name="message" rows="2" placeholder="e.g., I'm the new compliance lead joining the governance team"></textarea>
+        </div>
+      `;
+      openModal({
+        title: 'Request to join a company',
+        body: form,
+        actions: [
+          { label: 'Cancel', variant: 'ghost', onClick: ({ close }) => close() },
+          { label: 'Send request', variant: 'primary', onClick: async ({ close }) => {
+            if (!form.reportValidity()) return;
+            const data = serializeForm(form);
+            const company = companies.find(c => c.id === data.companyId);
+            try {
+              await createJoinRequest(data.companyId, {
+                uid: user.uid, email: user.email,
+                displayName: user.displayName || '',
+                message: data.message,
+                companyName: company?.name || ''
+              });
+              toast('Request sent. Admins will be notified.', 'success');
+              close();
+              await checkPendingRequests();
+            } catch (err) { toast(err.message, 'error', 5000); }
+          }}
+        ]
+      });
     }
 
     // ---------- new company modal ----------
