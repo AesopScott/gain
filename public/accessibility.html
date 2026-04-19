@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <title>GAIN — Accessibility Statement</title>
+  <script>(function(){try{var p=localStorage.getItem('gain.theme.palette')||'classic';var m=localStorage.getItem('gain.theme.mode')||'light';document.documentElement.setAttribute('data-palette',p);document.documentElement.setAttribute('data-mode',m);}catch(e){}})();</script>
+  <link rel="stylesheet" href="/css/gain-theme.css?v=44" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <meta name="description" content="GAIN's commitment to accessibility — WCAG 2.1 AA target, current status, known issues, and how to report problems." />
+</head>
+<body>
+
+  <div data-site-header></div>
+
+  <main class="app-shell" id="main-content" tabindex="-1">
+
+    <h1 class="page-title">Accessibility Statement</h1>
+    <p class="page-lead">Last reviewed: <strong>2026-04-19</strong> · Target: WCAG 2.1 Level AA · Platform: <a href="https://governainow.com">governainow.com</a></p>
+
+    <div class="card section-sep">
+      <h2 class="card-title">Our commitment</h2>
+      <p>GAIN is an AI governance platform. We believe the people who use it — compliance leads, risk officers, privacy teams, auditors, external counsel — should be able to do their job regardless of how they interact with the web. Our commitment is to design, build, and maintain the platform so that people using assistive technology have substantially the same experience as people who don't.</p>
+      <p>We target <strong>WCAG 2.1 Level AA</strong> conformance for all customer-facing pages of the authenticated application and the marketing site at governainow.com.</p>
+    </div>
+
+    <div class="card section-sep">
+      <h2 class="card-title">Scope</h2>
+      <p>This statement covers:</p>
+      <ul>
+        <li>The authenticated GAIN application at <a href="https://governainow.com">governainow.com</a> — Dashboard, Team, Framework, Intake, Inventory, Risks, AIAs, Checklists, Policies, Settings, Pricing, Support, Help, and Admin pages</li>
+        <li>Marketing and legal pages served from the same domain (Pricing, Terms, Privacy, DPA, Sub-processors)</li>
+        <li>Transactional email templates sent from the platform</li>
+      </ul>
+      <p>Third-party services embedded in the platform (Stripe Checkout, the Firebase Authentication UI, and Anthropic's API) are governed by their own accessibility statements and are not within the direct scope of this document.</p>
+    </div>
+
+    <div class="card section-sep">
+      <h2 class="card-title">Current conformance</h2>
+      <p>As of the date above, we have verified or implemented the following:</p>
+      <ul>
+        <li><strong>Skip-to-content link.</strong> A visible-on-focus skip link appears as the first focusable element on every authenticated page and jumps past the navigation to the main content.</li>
+        <li><strong>Landmarks.</strong> Each page declares <code>&lt;main&gt;</code>, <code>&lt;nav aria-label="Primary"&gt;</code>, and <code>&lt;footer&gt;</code> landmarks for screen-reader navigation.</li>
+        <li><strong>Keyboard operability.</strong> All interactive controls (links, buttons, form fields, tab triggers, modal dialogs) are reachable and operable with a keyboard. Focus is never trapped outside a modal.</li>
+        <li><strong>Focus visibility.</strong> A consistent 2-pixel primary-color outline appears on all interactive elements on <code>:focus-visible</code> (keyboard focus), matching WCAG 2.4.7.</li>
+        <li><strong>Dialog focus management.</strong> Modal dialogs announce themselves via <code>aria-labelledby</code>, trap Tab and Shift+Tab focus inside the dialog, close on Escape, and return focus to the element that opened them.</li>
+        <li><strong>Live region announcements.</strong> Success and error toasts are emitted through an <code>aria-live="polite"</code> region so that screen readers announce them without interrupting the user.</li>
+        <li><strong>Form labels.</strong> Every form field has a programmatically associated <code>&lt;label&gt;</code> or an <code>aria-label</code>. Password fields declare the correct <code>autocomplete</code> token.</li>
+        <li><strong>Reduced motion.</strong> The <code>prefers-reduced-motion: reduce</code> media query disables non-essential animations and transitions for users who have opted out at the operating-system level.</li>
+        <li><strong>Responsive design.</strong> The platform reflows to a single-column layout at ≤720 px viewports without loss of content or functionality, meeting WCAG 1.4.10.</li>
+        <li><strong>Color contrast.</strong> Body text and interactive elements in the default Classic Light palette meet or exceed a 4.5:1 contrast ratio against their background.</li>
+        <li><strong>Theme support.</strong> Seven palettes and a light/dark mode toggle are available; color is never the sole indicator of state (status pills and risk badges include text labels in addition to color).</li>
+      </ul>
+    </div>
+
+    <div class="card section-sep">
+      <h2 class="card-title">Known issues</h2>
+      <p>In the interest of transparency, the following items are known gaps or are only partially conformant today. We track them as work and plan to close each one in a future release.</p>
+      <ul>
+        <li><strong>Non-default palettes.</strong> Contrast in the Slate Dark, Ocean Dark, Forest Dark, Royal Dark, and Graphite Dark palettes has not been exhaustively audited against WCAG 1.4.3. The High Contrast and Classic Light palettes are our recommended baselines for assistive-technology users.</li>
+        <li><strong>Wide data tables.</strong> The inventory, risk register, AIA, audit log, and policy tables scroll horizontally inside their card on narrow viewports rather than restructuring into a stacked card layout. This meets WCAG 1.4.10 reflow but is not an ideal experience; a stacked mobile card view is planned.</li>
+        <li><strong>Modal focus order.</strong> The Tab focus trap in modal dialogs does not currently skip hidden form fields that may be inserted dynamically by feature-gated code paths. In practice this only manifests on the AIA and intake editor modals.</li>
+        <li><strong>Keyboard shortcuts.</strong> We have not yet published a shortcuts reference. The only non-Tab keyboard shortcut today is Escape to close a dialog.</li>
+        <li><strong>Video / audio.</strong> The platform does not currently publish video content; when we do, captions and transcripts will be supplied.</li>
+      </ul>
+    </div>
+
+    <div class="card section-sep">
+      <h2 class="card-title">Assistive technology we test against</h2>
+      <p>We verify changes to the authenticated application against:</p>
+      <ul>
+        <li><strong>NVDA</strong> on Windows with Chrome</li>
+        <li><strong>VoiceOver</strong> on macOS with Safari</li>
+        <li><strong>VoiceOver</strong> on iOS with Safari</li>
+        <li>Keyboard-only operation across the full application</li>
+        <li>200% browser zoom</li>
+        <li>Windows High Contrast mode</li>
+      </ul>
+      <p>Screen-reader testing is not exhaustive on every release — we prioritize it on changes that touch authentication, modal dialogs, forms, and navigation.</p>
+    </div>
+
+    <div class="card section-sep">
+      <h2 class="card-title">Report an accessibility issue</h2>
+      <p>If you encounter any accessibility barrier while using GAIN, we want to hear about it. We treat accessibility reports as first-class bug reports and respond within two business days.</p>
+      <p>Please include, where possible:</p>
+      <ul>
+        <li>The URL of the page where the issue occurred</li>
+        <li>Your browser, operating system, and (if relevant) assistive technology and version</li>
+        <li>What you were trying to do and what happened instead</li>
+      </ul>
+      <p>Send reports to <a href="mailto:accessibility@governainow.com">accessibility@governainow.com</a> or file a ticket via the in-app <a href="/support.html">Support</a> page with the subject "Accessibility."</p>
+    </div>
+
+    <div class="card section-sep">
+      <h2 class="card-title">How we maintain this</h2>
+      <ul>
+        <li>Accessibility is reviewed as part of every pull request that touches the UI. We do not ship a regression to WCAG 2.1 AA conformance on the Classic Light palette.</li>
+        <li>This statement is reviewed at least annually and updated whenever the "Known issues" list materially changes.</li>
+        <li>Major releases are accompanied by a manual keyboard and screen-reader smoke test covering sign-in, dashboard load, creating a risk, creating a policy, opening a modal, and submitting a form.</li>
+        <li>We welcome independent accessibility audits from customers with formal procurement requirements; contact <a href="mailto:accessibility@governainow.com">accessibility@governainow.com</a> to arrange one.</li>
+      </ul>
+    </div>
+
+    <div class="card section-sep">
+      <h2 class="card-title">Legal basis</h2>
+      <p>This statement is provided in the spirit of <strong>Section 508 of the U.S. Rehabilitation Act</strong>, the <strong>Americans with Disabilities Act (ADA) Title III</strong>, the <strong>European Accessibility Act</strong> (2025), and equivalent accessibility frameworks worldwide. Nothing in this statement constitutes a warranty of fitness for a particular purpose or a contractual representation beyond what is specifically provided in our <a href="/terms.html">Terms of Service</a>.</p>
+      <p>A formal <strong>Voluntary Product Accessibility Template (VPAT)</strong> or <strong>Accessibility Conformance Report (ACR)</strong> is available on request for customers with procurement requirements; contact <a href="mailto:accessibility@governainow.com">accessibility@governainow.com</a>.</p>
+    </div>
+
+    <div data-site-footer></div>
+  </main>
+
+  <script type="module">
+    import { renderHeader, renderFooter } from '/js/ui.js?v=44';
+    try {
+      const { auth } = await import('/js/config.js?v=44');
+      const { onAuthStateChanged } = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js');
+      const { loadMemberships } = await import('/js/session.js?v=44');
+      onAuthStateChanged(auth, async (user) => {
+        if (user) {
+          const memberships = await loadMemberships(user.uid);
+          renderHeader({ user, company: null, memberships });
+        } else {
+          renderPublicHeader();
+        }
+      });
+    } catch (e) {
+      renderPublicHeader();
+    }
+    renderFooter();
+
+    function renderPublicHeader() {
+      const mount = document.querySelector('[data-site-header]');
+      if (!mount) return;
+      mount.innerHTML = `
+        <header class="site-header">
+          <a class="brand" href="/" aria-label="GAIN — Govern AI Now">
+            <img src="/logo-dark.svg" alt="GAIN" class="brand-logo" />
+          </a>
+          <nav class="primary-nav" aria-label="Primary">
+            <a class="nav-link" href="/pricing.html">Pricing</a>
+            <a class="nav-link active" href="/accessibility.html">Accessibility</a>
+          </nav>
+          <div class="header-right">
+            <a class="btn btn-ghost btn-sm" href="/index.html">Sign in</a>
+            <a class="btn btn-primary btn-sm" href="/index.html">Get started</a>
+          </div>
+        </header>
+      `;
+    }
+  </script>
+
+</body>
+</html>

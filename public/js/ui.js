@@ -112,10 +112,11 @@ export function renderFooter() {
         <a href="/support.html" style="color:inherit">Support</a>
         <a href="/terms.html" style="color:inherit">Terms</a>
         <a href="/privacy.html" style="color:inherit">Privacy</a>
+        <a href="/accessibility.html" style="color:inherit">Accessibility</a>
         <a href="/dpa.html" style="color:inherit">DPA</a>
         <a href="/sub-processors.html" style="color:inherit">Sub-processors</a>
       </span>
-      <span class="text-muted" style="font-size:.7rem;opacity:.6">v43</span>
+      <span class="text-muted" style="font-size:.7rem;opacity:.6">v44</span>
     </footer>
   `;
 }
