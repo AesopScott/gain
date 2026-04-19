@@ -348,7 +348,9 @@ exports.dailyAlerts = onSchedule(
 // the request. Rate-limited per company per day.
 
 const DAILY_POLICY_GEN_LIMIT = 20;
-const POLICY_GEN_MODEL = 'claude-sonnet-4-5-20250929';
+// Model ID per Anthropic 4.x family (Sonnet 4.6). Matches the default used in
+// the old client-side path (policies.html).
+const POLICY_GEN_MODEL = 'claude-sonnet-4-6';
 
 exports.generatePolicy = onCall(
   { secrets: [anthropicKey], timeoutSeconds: 120, memory: '512MiB' },
