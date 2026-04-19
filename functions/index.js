@@ -348,9 +348,10 @@ exports.dailyAlerts = onSchedule(
 // the request. Rate-limited per company per day.
 
 const DAILY_POLICY_GEN_LIMIT = 20;
-// Model ID per Anthropic 4.x family (Sonnet 4.6). Matches the default used in
-// the old client-side path (policies.html).
-const POLICY_GEN_MODEL = 'claude-sonnet-4-6';
+// Haiku 4.5 — fastest + cheapest in the Claude 4.x family. Good enough for
+// structured governance policy drafting; upgrade to claude-sonnet-4-6 if
+// output quality becomes a limiter.
+const POLICY_GEN_MODEL = 'claude-haiku-4-5-20251001';
 
 exports.generatePolicy = onCall(
   { secrets: [anthropicKey], timeoutSeconds: 120, memory: '512MiB' },
