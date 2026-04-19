@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>GAIN — Policies</title>
   <script>(function(){try{var p=localStorage.getItem('gain.theme.palette')||'classic';var m=localStorage.getItem('gain.theme.mode')||'light';document.documentElement.setAttribute('data-palette',p);document.documentElement.setAttribute('data-mode',m);}catch(e){}})();</script>
-  <link rel="stylesheet" href="/css/gain-theme.css?v=27" />
+  <link rel="stylesheet" href="/css/gain-theme.css?v=28" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 </head>
 <body>
@@ -54,6 +54,8 @@
           <option value="archived">Archived</option>
         </select>
       </div>
+      <div id="review-alert" class="hidden" style="margin-bottom:16px"></div>
+
       <table class="data">
         <thead>
           <tr>
@@ -62,6 +64,7 @@
             <th>Relates to</th>
             <th>Status</th>
             <th>Owner</th>
+            <th>Next review</th>
             <th>Updated</th>
             <th></th>
           </tr>
@@ -85,12 +88,12 @@
   </main>
 
   <script type="module">
-    import { requireCompany, canEdit, canAdmin } from '/js/session.js?v=27';
-    import { renderHeader, renderFooter, toast, openModal, confirmDialog, serializeForm, escapeHTML, formatDate } from '/js/ui.js?v=27';
-    import { listDocs, createRecord, updateRecord, deleteRecord, getRecord, logEvent, getPosture } from '/js/data.js?v=27';
-    import { POLICY_LIBRARY, FRAMEWORKS, GAIN_COLLECTIONS, suggestedPolicies } from '/js/policyLibrary.js?v=27';
+    import { requireCompany, canEdit, canAdmin } from '/js/session.js?v=28';
+    import { renderHeader, renderFooter, toast, openModal, confirmDialog, serializeForm, escapeHTML, formatDate } from '/js/ui.js?v=28';
+    import { listDocs, createRecord, updateRecord, deleteRecord, getRecord, logEvent, getPosture } from '/js/data.js?v=28';
+    import { POLICY_LIBRARY, FRAMEWORKS, GAIN_COLLECTIONS, suggestedPolicies } from '/js/policyLibrary.js?v=28';
     import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js';
-    import { app } from '/js/config.js?v=27';
+    import { app } from '/js/config.js?v=28';
 
     const { user, memberships, company, member } = await requireCompany();
     renderHeader({ user, company, memberships });
@@ -122,6 +125,54 @@
       archived: 'status-withdrawn',
     };
 
+    // Returns { label, bucket } for a policy's review date.
+    // bucket: 'overdue' | 'due-soon' | 'ok' | 'none'
+    function reviewStatus(r) {
+      const raw = r.nextReviewDate;
+      if (!raw) return { label: '—', bucket: 'none' };
+      // nextReviewDate is stored as a YYYY-MM-DD string from the date input.
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const due = new Date(raw + 'T00:00:00');
+      if (isNaN(due.getTime())) return { label: '—', bucket: 'none' };
+      const msPerDay = 86400000;
+      const daysLeft = Math.floor((due - today) / msPerDay);
+      let bucket = 'ok';
+      if (daysLeft < 0) bucket = 'overdue';
+      else if (daysLeft <= 30) bucket = 'due-soon';
+      const display = raw;
+      const suffix = daysLeft < 0 ? ` (${Math.abs(daysLeft)}d overdue)` :
+                     daysLeft === 0 ? ' (today)' :
+                     daysLeft <= 30 ? ` (${daysLeft}d)` : '';
+      return { label: display + suffix, bucket };
+    }
+
+    function renderReviewAlert(rows) {
+      const el = document.getElementById('review-alert');
+      // Exclude archived — they're not actively maintained.
+      const active = rows.filter(r => r.status !== 'archived');
+      const overdue = active.filter(r => reviewStatus(r).bucket === 'overdue');
+      const dueSoon = active.filter(r => reviewStatus(r).bucket === 'due-soon');
+      if (overdue.length === 0 && dueSoon.length === 0) {
+        el.classList.add('hidden');
+        return;
+      }
+      el.classList.remove('hidden');
+      const parts = [];
+      if (overdue.length) {
+        parts.push(`<strong style="color:var(--risk-high)">${overdue.length} overdue</strong> ${overdue.length === 1 ? 'policy needs' : 'policies need'} review`);
+      }
+      if (dueSoon.length) {
+        parts.push(`<strong>${dueSoon.length} due in the next 30 days</strong>`);
+      }
+      el.innerHTML = `
+        <div class="card" style="border-left:4px solid var(--risk-high);background:var(--surface-alt);padding:14px 18px">
+          <div style="font-weight:600;color:var(--h-color);margin-bottom:4px">⚠ Policy review attention needed</div>
+          <div class="text-muted" style="font-size:.9rem">${parts.join(' · ')}. Scan the <strong>Next review</strong> column below and update each policy's review date after re-approval.</div>
+        </div>
+      `;
+    }
+
     async function refresh() {
       const rows = await listDocs(company.id, 'policies', { orderBy: [['updatedAt', 'desc']] });
       const ff = frameworkFilter.value, sf = statusFilter.value;
@@ -129,12 +180,23 @@
         (!ff || r.framework === ff) &&
         (!sf || r.status === sf)
       );
+
+      renderReviewAlert(rows);
+
       const tbody = document.querySelector('[data-rows]');
       if (filtered.length === 0) {
         const msg = ff || sf ? 'No policies match those filters.' : 'No policies yet — add one or load from suggestions below.';
-        tbody.innerHTML = `<tr><td colspan="7" class="empty-state">${msg}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="8" class="empty-state">${msg}</td></tr>`;
       } else {
-        tbody.innerHTML = filtered.map(r => `
+        tbody.innerHTML = filtered.map(r => {
+          const rs = reviewStatus(r);
+          const badgeClass = rs.bucket === 'overdue' ? 'badge-high' :
+                             rs.bucket === 'due-soon' ? 'badge-medium' :
+                             rs.bucket === 'ok' ? 'badge-low' : '';
+          const reviewCell = rs.bucket === 'none'
+            ? `<span class="text-muted">—</span>`
+            : `<span class="badge ${badgeClass}" style="font-size:.78rem;font-weight:600">${escapeHTML(rs.label)}</span>`;
+          return `
           <tr>
             <td>
               <a href="#" data-open="${escapeHTML(r.id)}">${escapeHTML(r.name || '(untitled)')}</a>
@@ -144,10 +206,12 @@
             <td>${escapeHTML(collectionLabel[r.gainCollection] || r.gainCollection || '—')}</td>
             <td><span class="status-pill ${STATUS_CLASS[r.status] || 'status-submitted'}">${escapeHTML(r.status || 'draft')}</span></td>
             <td>${escapeHTML(r.owner || '—')}</td>
+            <td>${reviewCell}</td>
             <td>${formatDate(r.updatedAt)}</td>
             <td>${editorOK ? `<button class="btn btn-ghost btn-sm" data-open="${escapeHTML(r.id)}">Open</button>` : ''}</td>
           </tr>
-        `).join('');
+        `;
+        }).join('');
       }
       tbody.querySelectorAll('[data-open]').forEach(el => {
         el.addEventListener('click', async e => {
