@@ -8,7 +8,7 @@
   <meta http-equiv="Expires" content="0" />
   <title>GAIN — Settings</title>
   <script>(function(){try{var p=localStorage.getItem('gain.theme.palette')||'classic';var m=localStorage.getItem('gain.theme.mode')||'light';document.documentElement.setAttribute('data-palette',p);document.documentElement.setAttribute('data-mode',m);}catch(e){}})();</script>
-  <link rel="stylesheet" href="/css/gain-theme.css?v=38" />
+  <link rel="stylesheet" href="/css/gain-theme.css?v=39" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <meta name="description" content="AI governance — from intake to audit. NIST AI RMF · ISO 42001 · EU AI Act." />
   <meta property="og:type" content="website" />
@@ -43,6 +43,7 @@
         <li><a href="#ai-settings-card">AI Policy Generation</a></li>
         <li><a href="#branding-card">Branding</a></li>
         <li><a href="#notifications-card">Notifications</a></li>
+        <li><a href="#tour-card">Walkthrough tour</a></li>
         <li><a href="#data-rights">Data &amp; deletion rights</a></li>
       </ul>
     </nav>
@@ -195,6 +196,15 @@
       </label>
     </div>
 
+    <div class="card settings-card section-sep" id="tour-card">
+      <h2 class="card-title"><a href="#tour-card" class="section-anchor">Walkthrough tour</a></h2>
+      <p class="text-muted" style="margin-bottom:14px">
+        A 10-stop guided tour of every core page, explaining what it does and
+        pointing at sample data. Useful for new teammates.
+      </p>
+      <button type="button" class="btn btn-primary btn-sm" id="btn-restart-tour">▶ Start the tour</button>
+    </div>
+
     <!-- Data Rights -->
     <div class="card settings-card section-sep" id="data-rights">
       <h2 class="card-title"><a href="#data-rights" class="section-anchor">Data &amp; deletion rights</a></h2>
@@ -265,15 +275,16 @@
   </main>
 
   <script type="module">
-    import { requireCompany, canAdmin, isOwner, resolvePlan, changePassword } from '/js/session.js?v=38';
-    import { renderHeader, renderFooter, toast, openModal, confirmDialog, serializeForm, setFormValues, escapeHTML, formatDate } from '/js/ui.js?v=38';
-    import { updateCompany, listMembers, updateMemberRole, removeMember, createInvite, listInvitesForCompany, deleteInvite, logEvent } from '/js/data.js?v=38';
-    import { PALETTES, getPalette, getMode, setPalette, setMode } from '/js/theme.js?v=38';
-    import { app, db } from '/js/config.js?v=38';
+    import { requireCompany, canAdmin, isOwner, resolvePlan, changePassword } from '/js/session.js?v=39';
+    import { renderHeader, renderFooter, toast, openModal, confirmDialog, serializeForm, setFormValues, escapeHTML, formatDate } from '/js/ui.js?v=39';
+    import { updateCompany, listMembers, updateMemberRole, removeMember, createInvite, listInvitesForCompany, deleteInvite, logEvent } from '/js/data.js?v=39';
+    import { PALETTES, getPalette, getMode, setPalette, setMode } from '/js/theme.js?v=39';
+    import { app, db } from '/js/config.js?v=39';
     import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js';
     import { signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
-    import { auth } from '/js/config.js?v=38';
+    import { auth } from '/js/config.js?v=39';
     import { collection, query, orderBy, getDocs } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+    import { startTour, resetTour } from '/js/tour.js?v=39';
 
     const { user, memberships, company, member } = await requireCompany();
     renderHeader({ user, company, memberships });
@@ -869,6 +880,15 @@
         auditJsonBtn.disabled = false;
       }
     });
+
+    // ---------- walkthrough tour ----------
+    const restartTourBtn = document.getElementById('btn-restart-tour');
+    if (restartTourBtn) {
+      restartTourBtn.addEventListener('click', () => {
+        resetTour();
+        startTour();
+      });
+    }
   </script>
 
 </body>
