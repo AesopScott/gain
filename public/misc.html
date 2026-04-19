@@ -78,8 +78,8 @@
   </main>
 
   <script type="module">
-    import { requireCompany } from '/js/session.js?v=19';
-    import { renderHeader, renderFooter } from '/js/ui.js?v=19';
+    import { requireCompany } from '/js/session.js?v=20';
+    import { renderHeader, renderFooter } from '/js/ui.js?v=20';
 
     const { user, memberships, company } = await requireCompany();
     renderHeader({ user, company, memberships });

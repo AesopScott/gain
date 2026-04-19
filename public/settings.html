@@ -124,9 +124,9 @@
   </main>
 
   <script type="module">
-    import { requireCompany, canAdmin, isOwner } from '/js/session.js?v=19';
-    import { renderHeader, renderFooter, toast, openModal, confirmDialog, serializeForm, setFormValues, escapeHTML, formatDate } from '/js/ui.js?v=19';
-    import { updateCompany, listMembers, updateMemberRole, removeMember, createInvite, listInvitesForCompany, deleteInvite, logEvent, getAISettings, saveAISettings } from '/js/data.js?v=19';
+    import { requireCompany, canAdmin, isOwner } from '/js/session.js?v=20';
+    import { renderHeader, renderFooter, toast, openModal, confirmDialog, serializeForm, setFormValues, escapeHTML, formatDate } from '/js/ui.js?v=20';
+    import { updateCompany, listMembers, updateMemberRole, removeMember, createInvite, listInvitesForCompany, deleteInvite, logEvent, getAISettings, saveAISettings } from '/js/data.js?v=20';
     import { PALETTES, getPalette, getMode, setPalette, setMode } from '/js/theme.js?v=16';
 
     const { user, memberships, company, member } = await requireCompany();

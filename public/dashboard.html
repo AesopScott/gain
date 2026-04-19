@@ -7,6 +7,19 @@
   <script>(function(){try{var p=localStorage.getItem('gain.theme.palette')||'classic';var m=localStorage.getItem('gain.theme.mode')||'light';document.documentElement.setAttribute('data-palette',p);document.documentElement.setAttribute('data-mode',m);}catch(e){}})();</script>
   <link rel="stylesheet" href="/css/gain-theme.css?v=16" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <style>
+    .deadline-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #eee;flex-wrap:wrap}
+    .deadline-row:last-child{border-bottom:none}
+    .deadline-badge{font-size:.72rem;font-weight:600;padding:2px 8px;border-radius:4px;background:#f0f0f6;color:#555;white-space:nowrap;text-transform:capitalize}
+    .deadline-label{flex:1;font-size:.9rem;min-width:120px}
+    .deadline-label a{color:inherit;text-decoration:none}
+    .deadline-label a:hover{text-decoration:underline}
+    .deadline-date{font-size:.82rem;color:#888;white-space:nowrap}
+    .deadline-pill{font-size:.72rem;font-weight:700;padding:2px 8px;border-radius:4px;white-space:nowrap}
+    .deadline-overdue .deadline-pill{background:#fee2e2;color:#dc2626}
+    .deadline-urgent  .deadline-pill{background:#fff7ed;color:#ea580c}
+    .deadline-soon    .deadline-pill{background:#fefce8;color:#ca8a04}
+  </style>
   <meta name="description" content="AI governance — from intake to audit. NIST AI RMF · ISO 42001 · EU AI Act." />
   <meta property="og:type" content="website" />
   <meta property="og:title" content="GAIN — Dashboard" />
@@ -80,6 +93,14 @@
         </div>
       </div>
 
+      <div class="card section-sep" id="deadlines-card">
+        <div class="flex-between" style="margin-bottom:12px">
+          <h2 class="card-title" style="margin:0">Upcoming deadlines</h2>
+          <span class="text-muted" style="font-size:.82rem">Next 30 days</span>
+        </div>
+        <div id="deadlines-list"><p class="text-muted" style="margin:0">Loading…</p></div>
+      </div>
+
       <div class="card section-sep">
         <h2 class="card-title">Program build checklist</h2>
         <p class="text-muted">Work through these in order. You can revisit any step at any time.</p>
@@ -92,8 +113,8 @@
   </main>
 
   <script type="module">
-    import { requireAuth, setActiveCompanyId, getActiveCompanyId } from '/js/session.js?v=19';
-    import { renderHeader, renderFooter, toast, openModal, serializeForm, escapeHTML } from '/js/ui.js?v=19';
+    import { requireAuth, setActiveCompanyId, getActiveCompanyId } from '/js/session.js?v=20';
+    import { renderHeader, renderFooter, toast, openModal, serializeForm, escapeHTML } from '/js/ui.js?v=20';
     import { createCompany, getCompany, getPosture, listDocs, listAllCompanies, getUserDoc, createJoinRequest, getJoinRequest, redeemApprovedRequest, dismissDeniedRequest } from '/js/data.js?v=16';
     import { aiaRequiredFor } from '/js/posture.js?v=16';
 
@@ -143,17 +164,23 @@
         listDocs(company.id, 'aias'),
         listDocs(company.id, 'team'),
         listDocs(company.id, 'checklists'),
-        listDocs(company.id, 'policies')
+        listDocs(company.id, 'policies'),
+        listDocs(company.id, 'contracts'),
+        listDocs(company.id, 'trainingClasses'),
+        listDocs(company.id, 'incidents')
       ]);
       const unwrap = (r, fallback) => r.status === 'fulfilled' ? r.value : fallback;
-      const inventory  = unwrap(results[0], []);
-      const intake     = unwrap(results[1], []);
-      const risks      = unwrap(results[2], []);
-      const posture    = unwrap(results[3], null);
-      const aias       = unwrap(results[4], []);
-      const team       = unwrap(results[5], []);
-      const checklists = unwrap(results[6], []);
-      const policies   = unwrap(results[7], []);
+      const inventory       = unwrap(results[0], []);
+      const intake          = unwrap(results[1], []);
+      const risks           = unwrap(results[2], []);
+      const posture         = unwrap(results[3], null);
+      const aias            = unwrap(results[4], []);
+      const team            = unwrap(results[5], []);
+      const checklists      = unwrap(results[6], []);
+      const policies        = unwrap(results[7], []);
+      const contracts       = unwrap(results[8], []);
+      const trainingClasses = unwrap(results[9], []);
+      const incidents       = unwrap(results[10], []);
       for (const [i, r] of results.entries()) {
         if (r.status === 'rejected') console.warn('dashboard load failure', i, r.reason);
       }
@@ -165,6 +192,71 @@
       document.querySelector('[data-stat-risks]').textContent = highRisks;
 
       renderProgress({ posture, inventory, intake, risks, aias, team, checklists, policies });
+      renderDeadlines({ contracts, policies, risks, trainingClasses, incidents });
+    }
+
+    // ---------- deadlines widget ----------
+    function renderDeadlines({ contracts, policies, risks, trainingClasses, incidents }) {
+      const el = document.getElementById('deadlines-list');
+      if (!el) return;
+
+      function toDate(val) {
+        if (!val) return null;
+        if (val.toDate) return val.toDate();
+        const d = new Date(val);
+        return isNaN(d.getTime()) ? null : d;
+      }
+
+      const today = new Date(); today.setHours(0,0,0,0);
+      const d7  = new Date(today); d7.setDate(d7.getDate() + 7);
+      const d30 = new Date(today); d30.setDate(d30.getDate() + 30);
+      const events = [];
+
+      const push = (date, label, href, type) => {
+        if (!date || date > d30) return;
+        events.push({ date, label, href, type });
+      };
+
+      for (const c of contracts) {
+        const name = c.vendorName || c.contractType || 'Contract';
+        push(toDate(c.expirationDate), `Expires: ${name}`, '/contracts.html', 'contract');
+        push(toDate(c.nextReviewDate), `Review due: ${name}`, '/contracts.html', 'contract');
+      }
+      for (const p of policies) {
+        push(toDate(p.nextReviewDate), `Policy review: ${p.title || p.name || 'Policy'}`, '/policies.html', 'policy');
+      }
+      for (const r of risks) {
+        push(toDate(r.nextReview), `Risk review: ${r.title || r.systemName || 'Risk'}`, '/risks.html', 'risk');
+      }
+      for (const t of trainingClasses) {
+        const d = toDate(t.date);
+        if (d && d >= today) push(d, `Training: ${t.courseName || t.name || 'Class'}`, '/training.html', 'training');
+      }
+      for (const i of incidents) {
+        if (i.resolvedAt) continue;
+        push(toDate(i.reportingDeadline), `Reporting deadline: ${i.title || i.name || 'Incident'}`, '/incidents.html', 'incident');
+      }
+
+      events.sort((a, b) => a.date - b.date);
+
+      if (!events.length) {
+        el.innerHTML = '<p class="text-muted" style="margin:0">No upcoming deadlines in the next 30 days.</p>';
+        return;
+      }
+
+      el.innerHTML = events.map(ev => {
+        const overdue = ev.date < today;
+        const urgent  = !overdue && ev.date <= d7;
+        const cls     = overdue ? 'deadline-overdue' : urgent ? 'deadline-urgent' : 'deadline-soon';
+        const pill    = overdue ? 'Overdue' : urgent ? 'Due soon' : 'Upcoming';
+        const dateStr = ev.date.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+        return `<div class="deadline-row ${cls}">
+          <span class="deadline-badge">${ev.type}</span>
+          <span class="deadline-label"><a href="${ev.href}">${escapeHTML(ev.label)}</a></span>
+          <span class="deadline-date">${dateStr}</span>
+          <span class="deadline-pill">${pill}</span>
+        </div>`;
+      }).join('');
     }
 
     // ---------- progress checklist ----------

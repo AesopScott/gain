@@ -1,4 +1,5 @@
 const { onDocumentCreated, onDocumentUpdated } = require('firebase-functions/v2/firestore');
+const { onSchedule } = require('firebase-functions/v2/scheduler');
 const { defineSecret } = require('firebase-functions/params');
 const admin = require('firebase-admin');
 
@@ -185,5 +186,105 @@ exports.onJoinRequestUpdated = onDocumentUpdated(
         `
       )
     });
+  }
+);
+
+// ---------------------------------------------------------------------------
+// 4. Daily digest — email admins about overdue/upcoming deadlines (8am ET)
+// ---------------------------------------------------------------------------
+exports.dailyAlerts = onSchedule(
+  { schedule: '0 12 * * *', timeZone: 'America/New_York', secrets: [brevoKey] },
+  async () => {
+    const today = new Date(); today.setHours(0,0,0,0);
+    const d7  = new Date(today); d7.setDate(d7.getDate() + 7);
+
+    function toDate(val) {
+      if (!val) return null;
+      if (val.toDate) return val.toDate();
+      const d = new Date(val);
+      return isNaN(d.getTime()) ? null : d;
+    }
+
+    const companiesSnap = await db.collection('companies').get();
+
+    for (const companyDoc of companiesSnap.docs) {
+      const companyId   = companyDoc.id;
+      const companyName = companyDoc.data().name || companyId;
+
+      const membersSnap = await db.collection(`companies/${companyId}/members`).get();
+      const admins = membersSnap.docs
+        .filter(d => ['owner', 'admin'].includes(d.data().role) && d.data().email)
+        .map(d => ({ email: d.data().email, displayName: d.data().displayName || '' }));
+      if (!admins.length) continue;
+
+      const alerts = [];
+      const check = (date, label, href) => {
+        if (!date || date > d7) return;
+        const overdue = date < today;
+        const days = Math.ceil((date - today) / 86400000);
+        const prefix = overdue ? 'OVERDUE' : `Due in ${days} day${days !== 1 ? 's' : ''}`;
+        alerts.push({ label: `${prefix}: ${label}`, href, overdue, date });
+      };
+
+      const [contractsSnap, policiesSnap, risksSnap, classesSnap, incidentsSnap] =
+        await Promise.all([
+          db.collection(`companies/${companyId}/contracts`).get(),
+          db.collection(`companies/${companyId}/policies`).get(),
+          db.collection(`companies/${companyId}/risks`).get(),
+          db.collection(`companies/${companyId}/trainingClasses`).get(),
+          db.collection(`companies/${companyId}/incidents`).get()
+        ]);
+
+      for (const doc of contractsSnap.docs) {
+        const d = doc.data(), name = d.vendorName || d.contractType || 'Contract';
+        check(toDate(d.expirationDate), `Expires — ${name}`, '/contracts.html');
+        check(toDate(d.nextReviewDate), `Review due — ${name}`, '/contracts.html');
+      }
+      for (const doc of policiesSnap.docs) {
+        const d = doc.data();
+        check(toDate(d.nextReviewDate), `Policy review — ${d.title || 'Policy'}`, '/policies.html');
+      }
+      for (const doc of risksSnap.docs) {
+        const d = doc.data();
+        check(toDate(d.nextReview), `Risk review — ${d.title || d.systemName || 'Risk'}`, '/risks.html');
+      }
+      for (const doc of classesSnap.docs) {
+        const d = doc.data(), dt = toDate(d.date);
+        if (dt && dt >= today) check(dt, `Training — ${d.courseName || d.name || 'Class'}`, '/training.html');
+      }
+      for (const doc of incidentsSnap.docs) {
+        const d = doc.data();
+        if (d.resolvedAt) continue;
+        check(toDate(d.reportingDeadline), `Reporting deadline — ${d.title || 'Incident'}`, '/incidents.html');
+      }
+
+      if (!alerts.length) continue;
+      alerts.sort((a, b) => a.date - b.date);
+
+      const overdueCount = alerts.filter(a => a.overdue).length;
+      const subject = overdueCount > 0
+        ? `[GAIN] ${overdueCount} overdue item${overdueCount !== 1 ? 's' : ''} — ${companyName}`
+        : `[GAIN] Upcoming deadlines — ${companyName}`;
+
+      const rows = alerts.map(a => `
+        <tr>
+          <td style="padding:8px 12px;border-bottom:1px solid #eee;color:${a.overdue ? '#dc2626' : '#333'};font-weight:${a.overdue ? '600' : '400'}">${a.label}</td>
+        </tr>`).join('');
+
+      await Promise.all(admins.map(admin =>
+        sendEmail({
+          apiKey: brevoKey.value().replace(/\s/g, ''),
+          to: admin.email,
+          toName: admin.displayName,
+          subject,
+          htmlContent: emailShell(`
+            <p>Hi${admin.displayName ? ` ${admin.displayName}` : ''},</p>
+            <p>Here's your daily governance summary for <strong>${companyName}</strong>:</p>
+            <table style="width:100%;border-collapse:collapse;margin:16px 0">${rows}</table>
+            <p><a class="btn" href="${APP_URL}/dashboard.html">View Dashboard</a></p>
+          `)
+        })
+      ));
+    }
   }
 );
