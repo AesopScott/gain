@@ -8,7 +8,7 @@
   <meta http-equiv="Expires" content="0" />
   <title>GAIN — Terms of Service</title>
   <script>(function(){try{var p=localStorage.getItem('gain.theme.palette')||'classic';var m=localStorage.getItem('gain.theme.mode')||'light';document.documentElement.setAttribute('data-palette',p);document.documentElement.setAttribute('data-mode',m);}catch(e){}})();</script>
-  <link rel="stylesheet" href="/css/gain-theme.css?v=46" />
+  <link rel="stylesheet" href="/css/gain-theme.css?v=47" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <meta name="description" content="GAIN Terms of Service — the agreement governing your use of the GAIN platform." />
 </head>
@@ -156,10 +156,30 @@
   </main>
 
   <script type="module">
-    import { renderFooter } from '/js/ui.js?v=46';
+    import { renderHeader, renderFooter } from '/js/ui.js?v=47';
     renderFooter();
-    const mount = document.querySelector('[data-site-header]');
-    if (mount) {
+
+    try {
+      const { auth } = await import('/js/config.js?v=47');
+      const { onAuthStateChanged } = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js');
+      const { loadMemberships } = await import('/js/session.js?v=47');
+      onAuthStateChanged(auth, async (user) => {
+        if (user) {
+          try {
+            const memberships = await loadMemberships(user.uid);
+            renderHeader({ user, company: null, memberships });
+          } catch (_) { renderPublicHeader(); }
+        } else {
+          renderPublicHeader();
+        }
+      });
+    } catch (_) {
+      renderPublicHeader();
+    }
+
+    function renderPublicHeader() {
+      const mount = document.querySelector('[data-site-header]');
+      if (!mount) return;
       mount.innerHTML = `
         <header class="site-header">
           <a class="brand" href="/" aria-label="GAIN — Govern AI Now">
