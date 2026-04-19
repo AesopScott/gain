@@ -190,7 +190,54 @@ exports.onJoinRequestUpdated = onDocumentUpdated(
 );
 
 // ---------------------------------------------------------------------------
-// 4. Daily digest — email admins about overdue/upcoming deadlines (8am ET)
+// 4. Support ticket created → email GAIN admin + confirmation to user
+// ---------------------------------------------------------------------------
+exports.onSupportTicketCreated = onDocumentCreated(
+  { document: 'supportTickets/{ticketId}', secrets: [brevoKey] },
+  async (event) => {
+    const t = event.data.data();
+    const apiKey = brevoKey.value().replace(/\s/g, '');
+    const ticketId = event.data.id;
+
+    await sendEmail({
+      apiKey,
+      to: 'admin@governainow.com',
+      toName: 'GAIN Support',
+      subject: `[Support #${ticketId.slice(-6)}] ${t.category} — ${t.subject}`,
+      htmlContent: emailShell(`
+        <p><strong>New support ticket</strong></p>
+        <table style="width:100%;border-collapse:collapse;margin:12px 0">
+          <tr><td style="padding:6px 0;color:#888;width:120px">From</td><td>${t.userName || ''} &lt;${t.userEmail}&gt;</td></tr>
+          <tr><td style="padding:6px 0;color:#888">Company</td><td>${t.companyName || '—'}</td></tr>
+          <tr><td style="padding:6px 0;color:#888">Category</td><td>${t.category}</td></tr>
+          <tr><td style="padding:6px 0;color:#888">Subject</td><td>${t.subject}</td></tr>
+        </table>
+        <p style="white-space:pre-wrap">${t.message}</p>
+      `)
+    });
+
+    if (t.userEmail) {
+      await sendEmail({
+        apiKey,
+        to: t.userEmail,
+        toName: t.userName || '',
+        subject: `We received your support request — ${t.subject}`,
+        htmlContent: emailShell(`
+          <p>Hi${t.userName ? ` ${t.userName}` : ''},</p>
+          <p>We've received your ticket and will respond within 48 hours.</p>
+          <table style="width:100%;border-collapse:collapse;margin:12px 0;background:#f9f9f9;border-radius:6px">
+            <tr><td style="padding:8px 12px;color:#888;width:100px">Category</td><td style="padding:8px 12px">${t.category}</td></tr>
+            <tr><td style="padding:8px 12px;color:#888">Subject</td><td style="padding:8px 12px">${t.subject}</td></tr>
+          </table>
+          <p>— The GAIN Support Team</p>
+        `)
+      });
+    }
+  }
+);
+
+// ---------------------------------------------------------------------------
+// 5. Daily digest — email admins about overdue/upcoming deadlines (8am ET)
 // ---------------------------------------------------------------------------
 exports.dailyAlerts = onSchedule(
   { schedule: '0 12 * * *', timeZone: 'America/New_York', secrets: [brevoKey] },

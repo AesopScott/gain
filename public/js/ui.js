@@ -25,8 +25,8 @@ const DEFAULT_NAV = [
   { href: '/checklists.html', label: 'Checklists', match: 'checklists' },
   { href: '/policies.html',  label: 'Policies',  match: 'policies' },
   { href: '/misc.html',      label: 'Miscellaneous', match: 'misc' },
-  { href: '/settings.html',  label: 'Settings',  match: 'settings' },
-  { href: '/pricing.html',   label: 'Pricing',   match: 'pricing' }
+  { href: '/settings.html',  label: 'SETTINGS',  match: 'settings' },
+  { href: '/pricing.html',   label: 'PRICING',   match: 'pricing' }
 ];
 
 export function renderHeader({ user, company, memberships = [], pages = DEFAULT_NAV }) {
@@ -99,6 +99,7 @@ export function renderFooter() {
     <footer class="site-footer">
       <span>GAIN · Govern AI Now</span>
       <span class="text-muted">Your data · Your company · Your framework</span>
+      <a href="/support.html" style="font-size:.8rem;color:inherit;opacity:.7">Support</a>
       <span class="text-muted" style="font-size:.7rem;opacity:.6">v21</span>
     </footer>
   `;

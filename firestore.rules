@@ -202,6 +202,13 @@ service cloud.firestore {
       }
     }
 
+    // ---------- support tickets ----------
+    match /supportTickets/{ticketId} {
+      allow create: if isSignedIn() && request.resource.data.uid == uid();
+      allow read: if isSignedIn() && (resource.data.uid == uid() || isSuperadmin());
+      allow update, delete: if isSuperadmin();
+    }
+
     // ---------- invites ----------
     // Sent by an admin with a target email. When a new user signs up with that
     // email, their client redeems the invite (creates a member doc, deletes invite).
