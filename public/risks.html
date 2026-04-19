@@ -85,12 +85,12 @@
   </main>
 
   <script type="module">
-    import { requireCompany, canEdit, canAdmin } from '/js/session.js?v=51';
-    import '/js/tour.js?v=51';
-    import { renderHeader, renderFooter, toast, openModal, confirmDialog, serializeForm, escapeHTML, formatDate } from '/js/ui.js?v=51';
-    import { listDocs, createRecord, updateRecord, deleteRecord, getRecord, logEvent, getPosture } from '/js/data.js?v=51';
-    import { derivedApplicableRegs, driftBannerHTML } from '/js/posture.js?v=51';
-    import { RISKS_SAMPLES, sampleBannerHTML } from '/js/samples.js?v=51';
+    import { requireCompany, canEdit, canAdmin } from '/js/session.js?v=47';
+    import '/js/tour.js?v=47';
+    import { renderHeader, renderFooter, toast, openModal, confirmDialog, serializeForm, escapeHTML, formatDate } from '/js/ui.js?v=47';
+    import { listDocs, createRecord, updateRecord, deleteRecord, getRecord, logEvent, getPosture } from '/js/data.js?v=47';
+    import { derivedApplicableRegs, driftBannerHTML } from '/js/posture.js?v=47';
+    import { RISKS_SAMPLES, sampleBannerHTML } from '/js/samples.js?v=47';
 
     const { user, memberships, company, member } = await requireCompany();
     renderHeader({ user, company, memberships });

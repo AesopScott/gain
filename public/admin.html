@@ -54,9 +54,9 @@
   </main>
 
   <script type="module">
-    import { requireAuth, isSuperadmin, SUPERADMIN_EMAIL } from '/js/session.js?v=51';
-    import { renderHeader, renderFooter, toast, escapeHTML, formatDate } from '/js/ui.js?v=51';
-    import { listAllCompanies, listDocs, listMembers } from '/js/data.js?v=51';
+    import { requireAuth, isSuperadmin, SUPERADMIN_EMAIL } from '/js/session.js?v=47';
+    import { renderHeader, renderFooter, toast, escapeHTML, formatDate } from '/js/ui.js?v=47';
+    import { listAllCompanies, listDocs, listMembers } from '/js/data.js?v=47';
 
     const { user, memberships } = await requireAuth();
     renderHeader({ user, company: null, memberships });

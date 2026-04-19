@@ -275,16 +275,16 @@
   </main>
 
   <script type="module">
-    import { requireCompany, canAdmin, isOwner, resolvePlan, changePassword } from '/js/session.js?v=51';
-    import { renderHeader, renderFooter, toast, openModal, confirmDialog, serializeForm, setFormValues, escapeHTML, formatDate } from '/js/ui.js?v=51';
-    import { updateCompany, listMembers, updateMemberRole, removeMember, createInvite, listInvitesForCompany, deleteInvite, logEvent } from '/js/data.js?v=51';
-    import { PALETTES, getPalette, getMode, setPalette, setMode } from '/js/theme.js?v=51';
-    import { app, db } from '/js/config.js?v=51';
+    import { requireCompany, canAdmin, isOwner, resolvePlan, changePassword } from '/js/session.js?v=47';
+    import { renderHeader, renderFooter, toast, openModal, confirmDialog, serializeForm, setFormValues, escapeHTML, formatDate } from '/js/ui.js?v=47';
+    import { updateCompany, listMembers, updateMemberRole, removeMember, createInvite, listInvitesForCompany, deleteInvite, logEvent } from '/js/data.js?v=47';
+    import { PALETTES, getPalette, getMode, setPalette, setMode } from '/js/theme.js?v=47';
+    import { app, db } from '/js/config.js?v=47';
     import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js';
     import { signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
-    import { auth } from '/js/config.js?v=51';
+    import { auth } from '/js/config.js?v=47';
     import { collection, query, orderBy, getDocs } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
-    import { startTour, resetTour } from '/js/tour.js?v=51';
+    import { startTour, resetTour } from '/js/tour.js?v=47';
 
     const { user, memberships, company, member } = await requireCompany();
     renderHeader({ user, company, memberships });

@@ -184,13 +184,13 @@
   </main>
 
   <script type="module">
-    import { renderHeader, renderFooter } from '/js/ui.js?v=51';
+    import { renderHeader, renderFooter } from '/js/ui.js?v=47';
     renderFooter();
 
     try {
-      const { auth } = await import('/js/config.js?v=51');
+      const { auth } = await import('/js/config.js?v=47');
       const { onAuthStateChanged } = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js');
-      const { loadMemberships } = await import('/js/session.js?v=51');
+      const { loadMemberships } = await import('/js/session.js?v=47');
       onAuthStateChanged(auth, async (user) => {
         if (user) {
           try {

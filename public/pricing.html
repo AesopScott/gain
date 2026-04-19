@@ -226,11 +226,11 @@
     // Try to render the authenticated header if the user is signed in.
     // Pricing is a public page — if they're not signed in, we render a
     // lightweight header instead.
-    import { renderHeader, renderFooter } from '/js/ui.js?v=51';
+    import { renderHeader, renderFooter } from '/js/ui.js?v=47';
     try {
-      const { auth } = await import('/js/config.js?v=51');
+      const { auth } = await import('/js/config.js?v=47');
       const { onAuthStateChanged } = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js');
-      const { loadMemberships } = await import('/js/session.js?v=51');
+      const { loadMemberships } = await import('/js/session.js?v=47');
       onAuthStateChanged(auth, async (user) => {
         if (user) {
           const memberships = await loadMemberships(user.uid);

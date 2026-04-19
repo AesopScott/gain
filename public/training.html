@@ -154,12 +154,12 @@
   </main>
 
   <script type="module">
-    import { requireCompany, canEdit, canAdmin } from '/js/session.js?v=51';
-    import { renderHeader, renderFooter, toast, openModal, confirmDialog, serializeForm, escapeHTML, formatDate } from '/js/ui.js?v=51';
-    import { listDocs, createRecord, updateRecord, deleteRecord, logEvent } from '/js/data.js?v=51';
-    import { db } from '/js/config.js?v=51';
+    import { requireCompany, canEdit, canAdmin } from '/js/session.js?v=47';
+    import { renderHeader, renderFooter, toast, openModal, confirmDialog, serializeForm, escapeHTML, formatDate } from '/js/ui.js?v=47';
+    import { listDocs, createRecord, updateRecord, deleteRecord, logEvent } from '/js/data.js?v=47';
+    import { db } from '/js/config.js?v=47';
     import { doc, setDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
-    import { TRAINING_ROSTER_SAMPLES, TRAINING_COURSES_SAMPLES, TRAINING_CLASSES_SAMPLES, sampleBannerHTML } from '/js/samples.js?v=51';
+    import { TRAINING_ROSTER_SAMPLES, TRAINING_COURSES_SAMPLES, TRAINING_CLASSES_SAMPLES, sampleBannerHTML } from '/js/samples.js?v=47';
 
     const { user, memberships, company, member } = await requireCompany();
     renderHeader({ user, company, memberships });

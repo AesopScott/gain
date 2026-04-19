@@ -7,7 +7,7 @@
 // session.js (without isSuperadmin) break the named import and ui.js fails
 // to initialize, which blanks every page. Bump this whenever session.js's
 // exported surface changes.
-import { logOut, setActiveCompanyId, isSuperadmin } from './session.js?v=51';
+import { logOut, setActiveCompanyId, isSuperadmin } from './session.js?v=47';
 import { toggleMode } from './theme.js';
 
 // ---------- header ----------
@@ -121,19 +121,11 @@ export function renderFooter() {
   // aren't white-labelable because they're compliance-required.
   let hideBrand = false;
   try { hideBrand = sessionStorage.getItem('gain.hideBrandFooter') === '1'; } catch (_) {}
-  const brandBlock = hideBrand ? '' : `
-      <div class="site-footer-brand" style="display:flex;flex-direction:column;gap:2px;text-align:right;font-size:.85rem;line-height:1.4">
-        <span>GAIN · Govern AI Now</span>
-        <span class="text-muted">Your data · Your company · Your framework</span>
-      </div>`;
-  // Build version is kept as an HTML comment + a data-version attribute so
-  // View-Source / DevTools still show it (useful for confirming the FTP
-  // deploy is live) without cluttering the visible UI. To check the live
-  // build: inspect <footer data-version="…"> or search source for
-  // "gain-build".
+  const brandSpans = hideBrand ? '' : `
+      <span>GAIN · Govern AI Now</span>
+      <span class="text-muted">Your data · Your company · Your framework</span>`;
   mount.innerHTML = `
-    <!-- gain-build: v50 -->
-    <footer class="site-footer" data-version="50" style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap">
+    <footer class="site-footer">${brandSpans}
       <span class="site-footer-links" style="display:flex;gap:14px;font-size:.8rem;opacity:.7;flex-wrap:wrap">
         <a href="/help.html" style="color:inherit">Help</a>
         <a href="/support.html" style="color:inherit">Support</a>
@@ -143,7 +135,7 @@ export function renderFooter() {
         <a href="/dpa.html" style="color:inherit">DPA</a>
         <a href="/sub-processors.html" style="color:inherit">Sub-processors</a>
       </span>
-      ${brandBlock}
+      <span class="text-muted" style="font-size:.7rem;opacity:.6">v51</span>
     </footer>
   `;
 }

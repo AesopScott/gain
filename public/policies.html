@@ -89,14 +89,14 @@
   </main>
 
   <script type="module">
-    import { requireCompany, canEdit, canAdmin } from '/js/session.js?v=51';
-    import '/js/tour.js?v=51';
-    import { renderHeader, renderFooter, toast, openModal, confirmDialog, serializeForm, escapeHTML, formatDate } from '/js/ui.js?v=51';
-    import { listDocs, createRecord, updateRecord, deleteRecord, getRecord, logEvent, getPosture } from '/js/data.js?v=51';
-    import { POLICY_LIBRARY, FRAMEWORKS, GAIN_COLLECTIONS, suggestedPolicies } from '/js/policyLibrary.js?v=51';
+    import { requireCompany, canEdit, canAdmin } from '/js/session.js?v=47';
+    import '/js/tour.js?v=47';
+    import { renderHeader, renderFooter, toast, openModal, confirmDialog, serializeForm, escapeHTML, formatDate } from '/js/ui.js?v=47';
+    import { listDocs, createRecord, updateRecord, deleteRecord, getRecord, logEvent, getPosture } from '/js/data.js?v=47';
+    import { POLICY_LIBRARY, FRAMEWORKS, GAIN_COLLECTIONS, suggestedPolicies } from '/js/policyLibrary.js?v=47';
     import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js';
-    import { app } from '/js/config.js?v=51';
-    import { POLICIES_SAMPLES, sampleBannerHTML } from '/js/samples.js?v=51';
+    import { app } from '/js/config.js?v=47';
+    import { POLICIES_SAMPLES, sampleBannerHTML } from '/js/samples.js?v=47';
 
     const { user, memberships, company, member } = await requireCompany();
     renderHeader({ user, company, memberships });

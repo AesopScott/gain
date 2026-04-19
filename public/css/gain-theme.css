@@ -2557,3 +2557,103 @@ button:focus-visible,
   }
   .site-header .nav-link .nav-label { font-size: .66rem; }
 }
+
+/* ============================================================
+   DEADLINES widget (dashboard "Upcoming deadlines" card)
+   Also used by per-page overdue banners on contracts / risks / policies.
+   ============================================================ */
+
+.deadline-row {
+  display: grid;
+  grid-template-columns: 100px 1fr 130px 90px;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-soft);
+  font-size: .9rem;
+}
+.deadline-row:last-child { border-bottom: none; }
+
+.deadline-badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: .7rem;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  background: var(--surface-alt);
+  color: var(--ink-soft);
+  text-align: center;
+  width: max-content;
+}
+.deadline-label a { color: var(--ink); font-weight: 500; }
+.deadline-label a:hover { color: var(--primary); }
+.deadline-date { color: var(--muted); font-size: .85rem; font-variant-numeric: tabular-nums; }
+.deadline-pill {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: .72rem;
+  font-weight: 700;
+  text-align: center;
+  letter-spacing: .03em;
+  white-space: nowrap;
+}
+
+/* Severity tints */
+.deadline-row.deadline-overdue .deadline-badge {
+  background: rgba(196, 49, 49, .12); color: var(--risk-high);
+}
+.deadline-row.deadline-overdue .deadline-pill {
+  background: var(--risk-high); color: #fff;
+}
+.deadline-row.deadline-overdue .deadline-label a { color: var(--risk-high); font-weight: 600; }
+
+.deadline-row.deadline-urgent .deadline-badge {
+  background: rgba(217, 146, 31, .14); color: var(--risk-medium);
+}
+.deadline-row.deadline-urgent .deadline-pill {
+  background: var(--risk-medium); color: #fff;
+}
+.deadline-row.deadline-urgent .deadline-label a { color: var(--risk-medium); font-weight: 600; }
+
+.deadline-row.deadline-soon .deadline-badge {
+  background: var(--accent-soft); color: var(--primary);
+}
+.deadline-row.deadline-soon .deadline-pill {
+  background: var(--accent-soft); color: var(--primary);
+}
+
+/* Responsive: stack columns on phones */
+@media (max-width: 720px) {
+  .deadline-row {
+    grid-template-columns: 1fr;
+    gap: 4px;
+    padding: 12px 0;
+  }
+  .deadline-date, .deadline-pill, .deadline-badge { font-size: .75rem; }
+  .deadline-label { order: 1; }
+  .deadline-badge { order: 2; justify-self: start; }
+  .deadline-date { order: 3; }
+  .deadline-pill { order: 4; justify-self: start; }
+}
+
+/* Per-page overdue alert card — same shape as the one on policies.html.
+   Used inside contracts.html, risks.html, etc. */
+.review-alert-card {
+  border-left: 4px solid var(--risk-high);
+  background: var(--surface-alt);
+  padding: 14px 18px;
+  border-radius: var(--radius);
+  margin-bottom: 16px;
+}
+.review-alert-title {
+  font-weight: 600;
+  color: var(--h-color);
+  margin-bottom: 4px;
+}
+.review-alert-body {
+  color: var(--ink-soft);
+  font-size: .9rem;
+}

@@ -81,10 +81,10 @@
   </main>
 
   <script type="module">
-    import { requireCompany, canEdit, canAdmin } from '/js/session.js?v=51';
-    import { renderHeader, renderFooter, toast, openModal, confirmDialog, serializeForm, setFormValues, escapeHTML, formatDate, formatDateTime } from '/js/ui.js?v=51';
-    import { listDocs, createRecord, deleteRecord, logEvent } from '/js/data.js?v=51';
-    import { CONSENT_SAMPLES, sampleBannerHTML } from '/js/samples.js?v=51';
+    import { requireCompany, canEdit, canAdmin } from '/js/session.js?v=47';
+    import { renderHeader, renderFooter, toast, openModal, confirmDialog, serializeForm, setFormValues, escapeHTML, formatDate, formatDateTime } from '/js/ui.js?v=47';
+    import { listDocs, createRecord, deleteRecord, logEvent } from '/js/data.js?v=47';
+    import { CONSENT_SAMPLES, sampleBannerHTML } from '/js/samples.js?v=47';
 
     const { user, memberships, company, member } = await requireCompany();
     renderHeader({ user, company, memberships });
