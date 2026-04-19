@@ -117,10 +117,10 @@
 
   <script type="module">
     import { requireAuth, setActiveCompanyId, getActiveCompanyId } from '/js/session.js?v=43';
-    import { renderHeader, renderFooter, toast, openModal, serializeForm, escapeHTML } from '/js/ui.js?v=44';
+    import { renderHeader, renderFooter, toast, openModal, serializeForm, escapeHTML } from '/js/ui.js?v=45';
     import { createCompany, getCompany, getPosture, listDocs, listAllCompanies, getUserDoc, createJoinRequest, getJoinRequest, redeemApprovedRequest, dismissDeniedRequest } from '/js/data.js?v=43';
     import { aiaRequiredFor } from '/js/posture.js?v=43';
-    import { startTour, hasCompletedTour } from '/js/tour.js?v=43';
+    import { startTour, hasCompletedTour } from '/js/tour.js?v=44';
 
     const { user, memberships } = await requireAuth();
 
