@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>GAIN — Training Tracker</title>
   <script>(function(){try{var p=localStorage.getItem('gain.theme.palette')||'classic';var m=localStorage.getItem('gain.theme.mode')||'light';document.documentElement.setAttribute('data-palette',p);document.documentElement.setAttribute('data-mode',m);}catch(e){}})();</script>
-  <link rel="stylesheet" href="/css/gain-theme.css?v=51" />
+  <link rel="stylesheet" href="/css/gain-theme.css?v=52" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <!-- SheetJS for Excel/CSV parsing -->
   <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.mini.min.js"></script>
@@ -132,6 +132,7 @@
           <button class="btn btn-primary" id="btn-new-class" data-editor-only style="flex-shrink:0;margin-left:16px">+ New class</button>
         </div>
         <div data-sample-banner-classes></div>
+        <div id="classes-alert" class="hidden" style="margin-bottom:16px"></div>
         <table class="data">
           <thead>
             <tr>
@@ -307,6 +308,28 @@
         }));
     }
 
+    // ── Classes alert banner ───────────────────────────────────────────────
+    function renderClassesAlert() {
+      const el = document.getElementById('classes-alert');
+      const todayStr  = new Date().toISOString().slice(0, 10);
+      const warn30Str = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
+      const active = classes.filter(cl => !['completed', 'cancelled'].includes(cl.status || 'scheduled'));
+      // Overdue: scheduled/in-progress but past date; Due soon: scheduled within 30 days
+      const overdue = active.filter(cl => (cl.date && cl.date < todayStr) || (cl.nextScheduled && cl.nextScheduled < todayStr));
+      const dueSoon = active.filter(cl => !overdue.includes(cl) && (
+        (cl.date && cl.date <= warn30Str) || (cl.nextScheduled && cl.nextScheduled <= warn30Str)
+      ));
+      if (!overdue.length && !dueSoon.length) { el.classList.add('hidden'); return; }
+      el.classList.remove('hidden');
+      const parts = [];
+      if (overdue.length) parts.push(`<strong style="color:var(--risk-high)">${overdue.length} overdue</strong> ${overdue.length === 1 ? 'class needs' : 'classes need'} attention`);
+      if (dueSoon.length) parts.push(`<strong>${dueSoon.length} scheduled in the next 30 days</strong>`);
+      el.innerHTML = `<div class="review-alert-card">
+        <div style="font-weight:600;color:var(--h-color);margin-bottom:4px">⚠ Training attention needed</div>
+        <div class="text-muted" style="font-size:.9rem">${parts.join(' · ')}. Check the <strong>Classes</strong> tab below.</div>
+      </div>`;
+    }
+
     // ── Render classes ─────────────────────────────────────────────────────
     function renderClasses() {
       document.getElementById('classes-count').textContent = classes.length;
@@ -319,6 +342,7 @@
       const tbody = document.getElementById('classes-rows');
       const bannerMount = document.querySelector('[data-sample-banner-classes]');
       if (bannerMount) bannerMount.innerHTML = '';
+      renderClassesAlert();
 
       let display = filtered;
       let showingSamples = false;
@@ -652,8 +676,12 @@
               </select></div>
           </div>
           <div class="grid-2">
-            <div class="field"><label>Date</label>
+            <div class="field"><label>Date delivered / scheduled</label>
               <input type="date" name="date" value="${escapeHTML(v.date||'')}" /></div>
+            <div class="field"><label>Next scheduled date</label>
+              <input type="date" name="nextScheduled" value="${escapeHTML(v.nextScheduled||'')}" title="Next planned delivery — feeds the Upcoming Deadlines widget" /></div>
+          </div>
+          <div class="grid-2">
             <div class="field"><label>Status</label>
               <select name="status">
                 <option ${v.status==='scheduled'||!v.status?'selected':''} value="scheduled">Scheduled</option>
@@ -661,10 +689,10 @@
                 <option ${v.status==='completed'?'selected':''} value="completed">Completed</option>
                 <option ${v.status==='cancelled'?'selected':''} value="cancelled">Cancelled</option>
               </select></div>
-          </div>
-          <div class="grid-2">
             <div class="field"><label>Instructor</label>
               <input name="instructor" value="${escapeHTML(v.instructor||'')}" placeholder="Instructor name or vendor" /></div>
+          </div>
+          <div class="grid-2">
             <div class="field"><label>Format</label>
               <select name="format">
                 <option value="">—</option>

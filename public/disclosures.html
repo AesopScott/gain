@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>GAIN — Public Disclosure Tracker</title>
   <script>(function(){try{var p=localStorage.getItem('gain.theme.palette')||'classic';var m=localStorage.getItem('gain.theme.mode')||'light';document.documentElement.setAttribute('data-palette',p);document.documentElement.setAttribute('data-mode',m);}catch(e){}})();</script>
-  <link rel="stylesheet" href="/css/gain-theme.css?v=51" />
+  <link rel="stylesheet" href="/css/gain-theme.css?v=52" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 </head>
 <body>
@@ -295,6 +295,11 @@
             <input name="version" value="${escapeHTML(v.version || '')}" placeholder="e.g., v1.2, filing-2024-Q3" />
           </div>
         </div>
+        <div class="grid-2">
+          <div class="field"><label>Next due date</label>
+            <input name="nextDueDate" type="date" value="${escapeHTML(v.nextDueDate || '')}" title="Next annual filing or renewal deadline — feeds the Upcoming Deadlines widget on the dashboard" />
+          </div>
+        </div>
         <div class="field"><label>Framework references satisfied by this disclosure</label>
           <div class="checkbox-grid">${refsHTML}</div>
         </div>
@@ -324,6 +329,8 @@
           const sys  = inventory.find(s => s.id === data.systemId);
           data.systemName  = sys?.name || '';
           data.disclosedAt = data.disclosedAt ? new Date(data.disclosedAt) : new Date();
+          if (data.nextDueDate) data.nextDueDate = new Date(data.nextDueDate);
+          else delete data.nextDueDate;
           try {
             if (isNew) {
               const id = await createRecord(company.id, 'disclosures', data, user.uid);

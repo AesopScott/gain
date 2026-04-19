@@ -135,7 +135,7 @@ export function renderFooter() {
         <a href="/dpa.html" style="color:inherit">DPA</a>
         <a href="/sub-processors.html" style="color:inherit">Sub-processors</a>
       </span>
-      <span class="text-muted" style="font-size:.7rem;opacity:.6">v51</span>
+      <span class="text-muted" style="font-size:.7rem;opacity:.6">v52</span>
     </footer>
   `;
 }
