@@ -2353,3 +2353,58 @@ body.modal-open { overflow: hidden; }
   .nav-link { padding: 6px 9px; font-size: .82rem; }
   .page-title { font-size: 1.3rem; }
 }
+
+/* ============================================================
+   A11Y quick pass (v40.5)
+   Skip link · consistent focus rings · reduced-motion respect
+   ============================================================ */
+
+/* Skip-to-content link — visible only on keyboard focus */
+.skip-link {
+  position: absolute;
+  left: 8px;
+  top: -999px;
+  z-index: 9999;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  background: var(--primary);
+  color: var(--on-primary);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: .9rem;
+  box-shadow: var(--shadow-lg);
+}
+.skip-link:focus,
+.skip-link:focus-visible {
+  top: 8px;
+  outline: none;
+  text-decoration: none;
+  color: var(--on-primary);
+}
+
+/* Visible keyboard focus on interactive elements (leaves mouse clicks
+   untouched so we don't get sticky outlines on click). */
+.btn:focus-visible,
+.nav-link:focus-visible,
+a:focus-visible,
+button:focus-visible,
+[role="button"]:focus-visible,
+.billing-toggle-btn:focus-visible,
+.palette-card:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+.site-header .nav-link:focus-visible {
+  outline-color: var(--header-ink);
+}
+
+/* Respect prefers-reduced-motion — cut all non-essential animations. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
