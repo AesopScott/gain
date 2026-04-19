@@ -1562,11 +1562,12 @@ table.data .actions {
 .pricing-matrix td, .pricing-matrix th { vertical-align: middle; }
 .pricing-matrix th.center, .pricing-matrix td.center { text-align: center; }
 .pricing-matrix-group td {
-  background: var(--surface-alt);
+  background: var(--accent-soft);
+  border-left: 3px solid var(--accent);
   font-weight: 700;
-  color: var(--h-color, var(--ink));
+  color: var(--primary);
   font-size: .85rem;
-  letter-spacing: .04em;
+  letter-spacing: .06em;
   text-transform: uppercase;
   padding: 12px 14px;
 }
