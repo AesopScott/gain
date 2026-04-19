@@ -100,7 +100,7 @@ export function renderFooter() {
       <span>GAIN · Govern AI Now</span>
       <span class="text-muted">Your data · Your company · Your framework</span>
       <a href="/support.html" style="font-size:.8rem;color:inherit;opacity:.7">Support</a>
-      <span class="text-muted" style="font-size:.7rem;opacity:.6">v26</span>
+      <span class="text-muted" style="font-size:.7rem;opacity:.6">v27</span>
     </footer>
   `;
 }
