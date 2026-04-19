@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>GAIN — AI Impact Assessments</title>
   <script>(function(){try{var p=localStorage.getItem('gain.theme.palette')||'classic';var m=localStorage.getItem('gain.theme.mode')||'light';document.documentElement.setAttribute('data-palette',p);document.documentElement.setAttribute('data-mode',m);}catch(e){}})();</script>
-  <link rel="stylesheet" href="/css/gain-theme.css?v=15" />
+  <link rel="stylesheet" href="/css/gain-theme.css?v=24" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <meta name="description" content="AI governance — from intake to audit. NIST AI RMF · ISO 42001 · EU AI Act." />
   <meta property="og:type" content="website" />
@@ -59,10 +59,10 @@
   </main>
 
   <script type="module">
-    import { requireCompany, canEdit, canAdmin } from '/js/session.js?v=20';
-    import { renderHeader, renderFooter, toast, openModal, confirmDialog, serializeForm, escapeHTML, formatDate } from '/js/ui.js?v=22';
-    import { listDocs, createRecord, updateRecord, deleteRecord, getRecord, logEvent, getPosture } from '/js/data.js?v=15';
-    import { derivedAiaRequirements, derivedApplicableRegs, aiaRequiredFor, driftBannerHTML } from '/js/posture.js?v=15';
+    import { requireCompany, canEdit, canAdmin } from '/js/session.js?v=24';
+    import { renderHeader, renderFooter, toast, openModal, confirmDialog, serializeForm, escapeHTML, formatDate } from '/js/ui.js?v=24';
+    import { listDocs, createRecord, updateRecord, deleteRecord, getRecord, logEvent, getPosture } from '/js/data.js?v=24';
+    import { derivedAiaRequirements, derivedApplicableRegs, aiaRequiredFor, driftBannerHTML } from '/js/posture.js?v=24';
 
     const { user, memberships, company, member } = await requireCompany();
     renderHeader({ user, company, memberships });
@@ -453,7 +453,37 @@
         </div>
         <p class="text-muted">Computed impact score: <strong data-impact-total>—</strong></p>
 
-        <h3 class="aia-section">8 · Decision</h3>
+        <h3 class="aia-section">8 · Technical safeguards</h3>
+        <p class="text-muted" style="margin:0 0 8px">
+          Document the controls that protect this AI system and its data.
+          Required for HIPAA, ISO 42001, and high-impact AIAs.
+        </p>
+        <div class="field">
+          <div class="checkbox-grid">
+            ${[
+              ['enc-transit',    'Encryption in transit (TLS 1.2+) confirmed'],
+              ['enc-rest',       'Encryption at rest (AES-256 or equivalent) confirmed'],
+              ['rbac',           'Role-based access controls limit AI system access to minimum necessary'],
+              ['mfa',            'Multi-factor authentication enabled for all access paths'],
+              ['secrets-mgmt',   'API keys / secrets managed via vault or secret manager (not hardcoded)'],
+              ['data-masking',   'PII / sensitive data masked or anonymized in logs and non-prod environments'],
+              ['audit-logging',  'AI-specific audit log captures model ID, inputs, outputs, and authorizer'],
+              ['bias-monitoring','Ongoing bias / fairness monitoring in production'],
+              ['drift-detection','Model drift detection or periodic revalidation in place'],
+              ['pen-tested',     'Security / penetration testing performed within the last 12 months'],
+              ['ir-coverage',    'Incident response plan updated to cover AI-specific failure modes'],
+              ['network-seg',    'AI processing environment network-segmented from general systems'],
+            ].map(([c, label]) => {
+              const checked = (v.technicalSafeguards || []).includes(c) ? 'checked' : '';
+              return `<label class="checkbox-label"><input type="checkbox" name="technicalSafeguards" value="${c}" data-multiple ${checked}/> ${label}</label>`;
+            }).join('')}
+          </div>
+        </div>
+        <div class="field"><label>Additional safeguard notes</label>
+          <textarea name="safeguardNotes" rows="2">${escapeHTML(v.safeguardNotes || '')}</textarea>
+        </div>
+
+        <h3 class="aia-section">9 · Decision</h3>
         <div class="grid-2">
           <div class="field"><label>Status</label>
             <select name="status">

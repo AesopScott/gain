@@ -1,0 +1,374 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GAIN — Consent Records</title>
+  <script>(function(){try{var p=localStorage.getItem('gain.theme.palette')||'classic';var m=localStorage.getItem('gain.theme.mode')||'light';document.documentElement.setAttribute('data-palette',p);document.documentElement.setAttribute('data-mode',m);}catch(e){}})();</script>
+  <link rel="stylesheet" href="/css/gain-theme.css?v=24" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+</head>
+<body>
+
+  <div data-site-header></div>
+
+  <main class="app-shell">
+
+    <div class="flex-between">
+      <div>
+        <h1 class="page-title">Consent Records</h1>
+        <p class="page-lead">
+          Capture and track individual consent for AI-driven data processing.
+          Select a regulation to see its template, then log a consent record.
+          Satisfies HIPAA Authorization (§164.508), GDPR Art. 7, FERPA, CCPA, GLBA, and EU AI Act Art. 13.
+        </p>
+      </div>
+      <button class="btn btn-primary" id="new-btn" data-editor-only>+ Log consent</button>
+    </div>
+
+    <!-- Regulation tabs -->
+    <div class="card" style="margin-bottom:16px">
+      <h2 class="card-title">Consent form templates</h2>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px" id="reg-tabs">
+        <button class="btn btn-primary btn-sm" data-reg="hipaa">HIPAA</button>
+        <button class="btn btn-ghost btn-sm" data-reg="ferpa">FERPA</button>
+        <button class="btn btn-ghost btn-sm" data-reg="gdpr">GDPR</button>
+        <button class="btn btn-ghost btn-sm" data-reg="glba">GLBA</button>
+        <button class="btn btn-ghost btn-sm" data-reg="ccpa">CCPA</button>
+        <button class="btn btn-ghost btn-sm" data-reg="ecoa">ECOA</button>
+        <button class="btn btn-ghost btn-sm" data-reg="naic">NAIC</button>
+        <button class="btn btn-ghost btn-sm" data-reg="euai">EU AI Act</button>
+      </div>
+      <div id="template-body"></div>
+    </div>
+
+    <!-- Consent log table -->
+    <div class="card">
+      <div class="flex-between" style="margin-bottom:12px">
+        <h2 class="card-title" style="margin:0">Recorded consents</h2>
+        <select id="filter-reg" class="btn btn-ghost btn-sm" style="min-width:160px">
+          <option value="">All regulations</option>
+          <option value="hipaa">HIPAA</option>
+          <option value="ferpa">FERPA</option>
+          <option value="gdpr">GDPR</option>
+          <option value="glba">GLBA</option>
+          <option value="ccpa">CCPA</option>
+          <option value="ecoa">ECOA</option>
+          <option value="naic">NAIC</option>
+          <option value="euai">EU AI Act</option>
+        </select>
+      </div>
+      <table class="data">
+        <thead>
+          <tr>
+            <th>Subject</th>
+            <th>Email</th>
+            <th>Regulation</th>
+            <th>Purpose</th>
+            <th>Consented</th>
+            <th>Recorded by</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="records-tbody">
+          <tr><td colspan="7" class="empty-state">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div data-site-footer></div>
+  </main>
+
+  <script type="module">
+    import { requireCompany, canEdit, canAdmin } from '/js/session.js?v=24';
+    import { renderHeader, renderFooter, toast, openModal, confirmDialog, serializeForm, setFormValues, escapeHTML, formatDate, formatDateTime } from '/js/ui.js?v=24';
+    import { listDocs, createRecord, deleteRecord, logEvent } from '/js/data.js?v=24';
+
+    const { user, memberships, company, member } = await requireCompany();
+    renderHeader({ user, company, memberships });
+    renderFooter();
+
+    const editorOK = canEdit(member);
+    const adminOK  = canAdmin(member);
+    if (!editorOK) document.querySelectorAll('[data-editor-only]').forEach(el => el.setAttribute('disabled', 'disabled'));
+
+    // ---------- templates ----------
+
+    const TEMPLATES = {
+      hipaa: {
+        label: 'HIPAA Authorization (§164.508)',
+        description: 'Required when using PHI for purposes beyond Treatment, Payment, or Operations — including research, marketing, or AI model training.',
+        fields: [
+          { name: 'subjectName',  label: 'Patient / Subject name *', type: 'text', required: true },
+          { name: 'subjectEmail', label: 'Email address', type: 'email' },
+          { name: 'subjectDOB',   label: 'Date of birth', type: 'date' },
+          { name: 'purpose',      label: 'Purpose of use or disclosure *', type: 'textarea', required: true, placeholder: 'e.g., AI-assisted clinical decision support using radiology images' },
+          { name: 'phiDescription', label: 'Description of PHI to be used/disclosed *', type: 'textarea', required: true, placeholder: 'e.g., Radiology images from 2020–2024, associated diagnostic codes' },
+          { name: 'recipient',    label: 'Recipient of disclosure (if applicable)', type: 'text', placeholder: 'e.g., AI vendor ABC Corp' },
+          { name: 'expiryDate',   label: 'Authorization expiry date (or "None")', type: 'text', placeholder: 'YYYY-MM-DD or None' },
+          { name: 'rightToRevoke', label: 'Right to revoke explained?', type: 'select', options: ['Yes', 'No'] },
+          { name: 'notes',        label: 'Notes', type: 'textarea' },
+        ],
+        notice: 'The subject has the right to revoke this authorization in writing at any time except where the covered entity has already relied on it. Authorization must reference §164.508(b) core elements.'
+      },
+      ferpa: {
+        label: 'FERPA Consent (20 U.S.C. §1232g)',
+        description: 'Required before disclosing education records (including AI-processed records) to third parties not covered by a school official or legitimate educational interest exception.',
+        fields: [
+          { name: 'subjectName',  label: 'Student name *', type: 'text', required: true },
+          { name: 'subjectEmail', label: 'Email address', type: 'email' },
+          { name: 'studentId',    label: 'Student ID / institutional ID', type: 'text' },
+          { name: 'records',      label: 'Records to be disclosed *', type: 'textarea', required: true, placeholder: 'e.g., Course grades, attendance data, learning management system logs' },
+          { name: 'purpose',      label: 'Purpose of disclosure *', type: 'textarea', required: true, placeholder: 'e.g., AI-driven early-alert system for at-risk students' },
+          { name: 'recipient',    label: 'Recipient institution or party *', type: 'text', required: true },
+          { name: 'expiryDate',   label: 'Consent expiry date', type: 'date' },
+          { name: 'notes',        label: 'Notes', type: 'textarea' },
+        ],
+        notice: 'Consent must be signed and dated, specify records to be disclosed, state purpose, and identify recipient. Students (or parents of minors) must receive a copy on request.'
+      },
+      gdpr: {
+        label: 'GDPR Consent (Art. 4(11), Art. 7, Art. 22)',
+        description: 'Required when processing personal data without a different legal basis, and mandatory for automated decision-making with significant effects (Art. 22).',
+        fields: [
+          { name: 'subjectName',  label: 'Data subject name *', type: 'text', required: true },
+          { name: 'subjectEmail', label: 'Email address *', type: 'email', required: true },
+          { name: 'dataCategories', label: 'Categories of personal data processed *', type: 'textarea', required: true, placeholder: 'e.g., Behavioural data, purchase history, location data' },
+          { name: 'purpose',      label: 'Processing purpose(s) *', type: 'textarea', required: true, placeholder: 'e.g., Personalised product recommendations via ML model' },
+          { name: 'legalBasis',   label: 'Legal basis', type: 'select', options: ['Consent (Art. 6(1)(a))', 'Legitimate interest (Art. 6(1)(f))', 'Contract (Art. 6(1)(b))', 'Legal obligation (Art. 6(1)(c))'] },
+          { name: 'automatedDecision', label: 'Involves solely automated decision-making?', type: 'select', options: ['Yes — significant effects (Art. 22 applies)', 'Yes — no significant effects', 'No'] },
+          { name: 'transferOutsideEEA', label: 'Transfer outside EEA?', type: 'select', options: ['No', 'Yes — adequacy decision', 'Yes — SCCs', 'Yes — other safeguard'] },
+          { name: 'retentionPeriod', label: 'Retention period', type: 'text', placeholder: 'e.g., 24 months from last interaction' },
+          { name: 'notes',        label: 'Notes', type: 'textarea' },
+        ],
+        notice: 'Consent must be freely given, specific, informed, and unambiguous. Withdraw must be as easy as giving consent. Record the timestamp of consent capture.'
+      },
+      glba: {
+        label: 'GLBA Privacy Notice / Opt-Out (15 U.S.C. §6803)',
+        description: 'Financial institutions must give consumers the right to opt out of sharing nonpublic personal information with non-affiliated third parties.',
+        fields: [
+          { name: 'subjectName',  label: 'Consumer name *', type: 'text', required: true },
+          { name: 'subjectEmail', label: 'Email address', type: 'email' },
+          { name: 'accountRef',   label: 'Account / customer reference', type: 'text' },
+          { name: 'optOut',       label: 'Opt-out election *', type: 'select', options: ['Opt-out: do NOT share with non-affiliates', 'No opt-out: sharing permitted'], required: true },
+          { name: 'npiCategories', label: 'Categories of NPI covered', type: 'textarea', placeholder: 'e.g., Transaction history, credit score inputs, AI-scored creditworthiness' },
+          { name: 'sharingParties', label: 'Non-affiliated third parties affected', type: 'textarea', placeholder: 'e.g., Marketing data brokers, model validation vendors' },
+          { name: 'notes',        label: 'Notes', type: 'textarea' },
+        ],
+        notice: 'Annual privacy notice required. Opt-out must be honored within a reasonable time (FTC Safe Harbor: 30 days). Safeguards Rule (16 CFR Part 314) requires written information security program.'
+      },
+      ccpa: {
+        label: 'CCPA / CPRA Rights Request (Cal. Civ. Code §1798.100)',
+        description: 'Document consumer rights requests: Right to Know, Right to Delete, Right to Opt-Out of Sale/Sharing, and Right to Correct.',
+        fields: [
+          { name: 'subjectName',  label: 'Consumer name *', type: 'text', required: true },
+          { name: 'subjectEmail', label: 'Email address *', type: 'email', required: true },
+          { name: 'requestType',  label: 'Request type *', type: 'select', required: true, options: ['Right to Know (categories)', 'Right to Know (specific pieces)', 'Right to Delete', 'Right to Opt-Out of Sale / Sharing', 'Right to Correct', 'Right to Limit Sensitive PI Use'] },
+          { name: 'verificationMethod', label: 'Identity verification method', type: 'select', options: ['Email verification', 'Account login', 'Two-factor', 'Manual review', 'Not verified'] },
+          { name: 'responseDeadline', label: 'Response deadline (45 days from request)', type: 'date' },
+          { name: 'resolution',   label: 'Resolution / response summary', type: 'textarea', placeholder: 'e.g., Data deleted from AI training dataset on YYYY-MM-DD; confirmation sent' },
+          { name: 'notes',        label: 'Notes', type: 'textarea' },
+        ],
+        notice: 'Response due within 45 days (extendable to 90 with notice). Opt-out of sale must be honored within 15 business days. AI training on consumer data may constitute "sale" under CPRA if shared with vendors.'
+      },
+      ecoa: {
+        label: 'ECOA / FCRA Adverse-Action Notice (15 U.S.C. §1691)',
+        description: 'When an AI model contributes to a credit, employment, or insurance denial, an adverse-action notice must be given explaining the principal reasons.',
+        fields: [
+          { name: 'subjectName',  label: 'Applicant / subject name *', type: 'text', required: true },
+          { name: 'subjectEmail', label: 'Email address', type: 'email' },
+          { name: 'decisionType', label: 'Decision type *', type: 'select', required: true, options: ['Credit denial', 'Credit terms less favorable', 'Employment denial', 'Insurance denial', 'Other adverse action'] },
+          { name: 'aiSystemName', label: 'AI system involved', type: 'text', placeholder: 'System name from inventory' },
+          { name: 'reasonCodes',  label: 'Principal reason codes / factors (up to 4) *', type: 'textarea', required: true, placeholder: 'e.g., 1. Insufficient credit history\n2. High debt-to-income ratio\n3. Recent delinquency\n4. Too many inquiries' },
+          { name: 'scoreName',    label: 'Credit score name (if FCRA disclosure applies)', type: 'text', placeholder: 'e.g., FICO Score 8' },
+          { name: 'scoreValue',   label: 'Score value', type: 'text' },
+          { name: 'noticeDate',   label: 'Notice date', type: 'date' },
+          { name: 'notes',        label: 'Notes', type: 'textarea' },
+        ],
+        notice: 'Notice required within 30 days of adverse action (ECOA) or promptly (FCRA). AI-derived reason codes must be translatable to human-readable explanations. CFPB guidance (2023) requires AI factors to be specific and accurate.'
+      },
+      naic: {
+        label: 'NAIC Model Bulletin — Insurance AI Governance Attestation',
+        description: 'Document per-consumer or per-decision AI governance attestations required by state insurance regulators adopting the NAIC AI Model Bulletin.',
+        fields: [
+          { name: 'subjectName',  label: 'Policyholder / applicant name *', type: 'text', required: true },
+          { name: 'subjectEmail', label: 'Email address', type: 'email' },
+          { name: 'policyRef',    label: 'Policy / application reference', type: 'text' },
+          { name: 'aiUseCase',    label: 'AI use case affecting this decision *', type: 'textarea', required: true, placeholder: 'e.g., Underwriting risk score generated by ML model v2.3' },
+          { name: 'discriminationRiskReviewed', label: 'Unfair discrimination risk reviewed?', type: 'select', options: ['Yes', 'No', 'Pending'] },
+          { name: 'humanOverride', label: 'Human review / override available?', type: 'select', options: ['Yes', 'No'] },
+          { name: 'stateJurisdiction', label: 'Applicable state(s)', type: 'text', placeholder: 'e.g., CO, CT, IL' },
+          { name: 'notes',        label: 'Notes', type: 'textarea' },
+        ],
+        notice: 'Insurers must be able to explain AI-driven decisions and demonstrate non-discrimination. State-level attestation filings may be required (e.g., CO Reg 10-1-1, NY DFS Circular Letter 7).'
+      },
+      euai: {
+        label: 'EU AI Act Transparency & Rights Notice (Art. 13, 14, 86)',
+        description: 'High-risk AI systems must provide meaningful information to affected persons. Limited-risk systems (chatbots, deepfakes) must disclose AI nature at point of interaction.',
+        fields: [
+          { name: 'subjectName',  label: 'Affected person name *', type: 'text', required: true },
+          { name: 'subjectEmail', label: 'Email address', type: 'email' },
+          { name: 'systemName',   label: 'AI system name *', type: 'text', required: true, placeholder: 'Match name in inventory' },
+          { name: 'riskClass',    label: 'EU AI Act risk class *', type: 'select', required: true, options: ['High-risk (Annex III)', 'Limited-risk (transparency obligations)', 'GPAI with systemic risk'] },
+          { name: 'decisionMade', label: 'Decision or output affecting this person', type: 'textarea', placeholder: 'e.g., Employment screening score generated; candidate ranked in bottom quartile' },
+          { name: 'humanOversight', label: 'Human oversight mechanism explained?', type: 'select', options: ['Yes', 'No'] },
+          { name: 'rightToExplanation', label: 'Right to explanation / redress provided? (Art. 86)', type: 'select', options: ['Yes', 'No', 'N/A — not high-risk'] },
+          { name: 'noticeDate',   label: 'Notice date', type: 'date' },
+          { name: 'notes',        label: 'Notes', type: 'textarea' },
+        ],
+        notice: 'Art. 86 (right to explanation) applies to decisions by high-risk AI systems affecting natural persons. Art. 13 requires transparency info to deployers. Chatbots/synthetic content must disclose AI nature per Art. 50 at time of interaction.'
+      }
+    };
+
+    // ---------- render template panel ----------
+
+    let activeReg = 'hipaa';
+
+    function renderTemplate(key) {
+      const t = TEMPLATES[key];
+      if (!t) return;
+      activeReg = key;
+      document.getElementById('template-body').innerHTML = `
+        <div style="background:var(--accent-soft);border-left:3px solid var(--accent);padding:10px 14px;border-radius:4px;margin-bottom:12px;font-size:.88rem">
+          <strong>${escapeHTML(t.label)}</strong><br/>
+          <span class="text-muted">${escapeHTML(t.description)}</span>
+        </div>
+        <div style="background:var(--surface-alt);border:1px solid var(--border);border-radius:6px;padding:10px 14px;font-size:.82rem;margin-bottom:8px">
+          <strong>Compliance note:</strong> ${escapeHTML(t.notice)}
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">
+          ${t.fields.slice(0, 4).map(f => `
+            <div style="background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:6px 10px;font-size:.8rem">
+              <span class="text-muted">${escapeHTML(f.label.replace(' *',''))}</span>
+            </div>
+          `).join('')}
+          ${t.fields.length > 4 ? `<div style="font-size:.8rem;padding:6px 10px;color:var(--text-muted)">+${t.fields.length - 4} more fields</div>` : ''}
+        </div>
+        ${editorOK ? `<button class="btn btn-primary btn-sm" style="margin-top:10px" data-use-template="${escapeHTML(key)}">Use this template →</button>` : ''}
+      `;
+      if (editorOK) {
+        document.querySelector(`[data-use-template]`)?.addEventListener('click', () => openEditor(null, key));
+      }
+    }
+
+    document.getElementById('reg-tabs').addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-reg]');
+      if (!btn) return;
+      document.querySelectorAll('#reg-tabs [data-reg]').forEach(b => {
+        b.className = b === btn ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm';
+      });
+      renderTemplate(btn.dataset.reg);
+    });
+    renderTemplate('hipaa');
+
+    // ---------- record table ----------
+
+    let allRecords = [];
+
+    async function refresh() {
+      allRecords = await listDocs(company.id, 'consentRecords', { orderBy: [['consentedAt', 'desc']] });
+      renderRecords();
+    }
+
+    function renderRecords() {
+      const regFilter = document.getElementById('filter-reg').value;
+      const rows = regFilter ? allRecords.filter(r => r.regulation === regFilter) : allRecords;
+      const tbody = document.getElementById('records-tbody');
+      if (!rows.length) {
+        tbody.innerHTML = `<tr><td colspan="7" class="empty-state">No consent records yet. Use a template above to log one.</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = rows.map(r => `
+        <tr>
+          <td>${escapeHTML(r.subjectName || '—')}</td>
+          <td>${escapeHTML(r.subjectEmail || '—')}</td>
+          <td><span class="badge">${escapeHTML((r.regulation || '').toUpperCase())}</span></td>
+          <td style="font-size:.85rem;max-width:240px">${escapeHTML(r.purpose || r.requestType || r.decisionType || '—')}</td>
+          <td style="font-size:.82rem;white-space:nowrap">${escapeHTML(formatDate(r.consentedAt))}</td>
+          <td style="font-size:.82rem">${escapeHTML(r.recordedByName || '—')}</td>
+          <td>${adminOK ? `<button class="btn btn-ghost btn-sm" data-delete="${escapeHTML(r.id)}">Delete</button>` : ''}</td>
+        </tr>
+      `).join('');
+
+      tbody.querySelectorAll('[data-delete]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const ok = await confirmDialog({ title: 'Delete consent record?', message: 'This record will be permanently removed.', confirmLabel: 'Delete', variant: 'danger' });
+          if (!ok) return;
+          try {
+            await deleteRecord(company.id, 'consentRecords', btn.dataset.delete);
+            await logEvent(company.id, { actorUid: user.uid, actorName: user.displayName || user.email, action: 'consent.delete', target: btn.dataset.delete });
+            toast('Record deleted.', 'success');
+            refresh();
+          } catch (err) {
+            toast(err.message, 'error', 5000);
+          }
+        });
+      });
+    }
+
+    document.getElementById('filter-reg').addEventListener('change', renderRecords);
+    refresh();
+
+    // ---------- editor ----------
+
+    function fieldHTML(f, v = {}) {
+      const val = escapeHTML(v[f.name] || '');
+      if (f.type === 'textarea') {
+        return `<div class="field"><label>${escapeHTML(f.label)}</label><textarea name="${f.name}" rows="2" ${f.required ? 'required' : ''} placeholder="${escapeHTML(f.placeholder || '')}">${val}</textarea></div>`;
+      }
+      if (f.type === 'select') {
+        const opts = (f.options || []).map(o => `<option ${v[f.name] === o ? 'selected' : ''}>${escapeHTML(o)}</option>`).join('');
+        return `<div class="field"><label>${escapeHTML(f.label)}</label><select name="${f.name}" ${f.required ? 'required' : ''}><option value="">—</option>${opts}</select></div>`;
+      }
+      return `<div class="field"><label>${escapeHTML(f.label)}</label><input name="${f.name}" type="${f.type || 'text'}" value="${val}" ${f.required ? 'required' : ''} placeholder="${escapeHTML(f.placeholder || '')}" /></div>`;
+    }
+
+    function openEditor(rec, regKey) {
+      const key = regKey || activeReg;
+      const t = TEMPLATES[key];
+      const isNew = !rec;
+      const form = document.createElement('form');
+      form.className = 'stacked-form';
+      form.innerHTML = `
+        <div style="background:var(--accent-soft);border-left:3px solid var(--accent);padding:8px 12px;border-radius:4px;margin-bottom:12px;font-size:.85rem">
+          <strong>${escapeHTML(t.label)}</strong>
+        </div>
+        ${t.fields.map(f => fieldHTML(f, rec || {})).join('')}
+        <div class="field"><label>Date of consent *</label>
+          <input name="consentedAt" type="date" required value="${rec?.consentedAt ? (rec.consentedAt.toDate ? rec.consentedAt.toDate().toISOString().slice(0,10) : rec.consentedAt) : new Date().toISOString().slice(0,10)}" />
+        </div>
+      `;
+
+      const actions = [
+        { label: 'Cancel', variant: 'ghost', onClick: ({ close }) => close() },
+        { label: isNew ? 'Save record' : 'Save', variant: 'primary', onClick: async ({ close }) => {
+          if (!form.reportValidity()) return;
+          const data = serializeForm(form);
+          data.regulation = key;
+          data.consentedAt = data.consentedAt ? new Date(data.consentedAt) : new Date();
+          data.recordedBy = user.uid;
+          data.recordedByName = user.displayName || user.email;
+          try {
+            if (isNew) {
+              const id = await createRecord(company.id, 'consentRecords', data, user.uid);
+              await logEvent(company.id, { actorUid: user.uid, actorName: user.displayName || user.email, action: 'consent.create', target: id, details: { regulation: key, subject: data.subjectName } });
+              toast('Consent record saved.', 'success');
+            }
+            close();
+            refresh();
+          } catch (err) {
+            toast(err.message, 'error', 5000);
+          }
+        }}
+      ];
+
+      openModal({ title: `${t.label} — Log consent`, body: form, actions });
+    }
+
+    document.getElementById('new-btn').addEventListener('click', () => {
+      if (!editorOK) return;
+      openEditor(null, activeReg);
+    });
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GAIN — Public Disclosure Tracker</title>
+  <script>(function(){try{var p=localStorage.getItem('gain.theme.palette')||'classic';var m=localStorage.getItem('gain.theme.mode')||'light';document.documentElement.setAttribute('data-palette',p);document.documentElement.setAttribute('data-mode',m);}catch(e){}})();</script>
+  <link rel="stylesheet" href="/css/gain-theme.css?v=24" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+</head>
+<body>
+
+  <div data-site-header></div>
+
+  <main class="app-shell">
+
+    <div class="flex-between">
+      <div>
+        <h1 class="page-title">Public Disclosure Tracker</h1>
+        <p class="page-lead">
+          Track where and when your AI systems have been publicly disclosed —
+          including transparency notices, bias-audit postings, EU AI Act filings,
+          and voluntary public statements. Links here from checklist items that require public disclosure.
+        </p>
+      </div>
+      <button class="btn btn-primary" id="new-btn" data-editor-only>+ Add disclosure</button>
+    </div>
+
+    <!-- Summary cards -->
+    <div class="grid-3" style="margin-bottom:16px" id="summary-row"></div>
+
+    <div class="card">
+      <div class="flex-between" style="margin-bottom:12px;flex-wrap:wrap;gap:8px">
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <select id="filter-system" class="btn btn-ghost btn-sm" style="min-width:160px">
+            <option value="">All systems</option>
+          </select>
+          <select id="filter-type" class="btn btn-ghost btn-sm" style="min-width:160px">
+            <option value="">All types</option>
+            <option value="transparency-notice">Transparency notice</option>
+            <option value="bias-audit">Bias audit posting</option>
+            <option value="eu-ai-act">EU AI Act registration</option>
+            <option value="voluntary-statement">Voluntary statement</option>
+            <option value="regulatory-filing">Regulatory filing</option>
+            <option value="press-release">Press release / media</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <button class="btn btn-ghost btn-sm" id="export-btn">Export CSV</button>
+      </div>
+
+      <table class="data" id="disclosures-table">
+        <thead>
+          <tr>
+            <th>AI System</th>
+            <th>Type</th>
+            <th>Venue / location</th>
+            <th>Disclosed</th>
+            <th>URL</th>
+            <th>Framework refs</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="disclosures-tbody">
+          <tr><td colspan="7" class="empty-state">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div data-site-footer></div>
+  </main>
+
+  <script type="module">
+    import { requireCompany, canEdit, canAdmin } from '/js/session.js?v=24';
+    import { renderHeader, renderFooter, toast, openModal, confirmDialog, serializeForm, escapeHTML, formatDate } from '/js/ui.js?v=24';
+    import { listDocs, createRecord, updateRecord, deleteRecord, logEvent } from '/js/data.js?v=24';
+
+    const { user, memberships, company, member } = await requireCompany();
+    renderHeader({ user, company, memberships });
+    renderFooter();
+
+    const editorOK = canEdit(member);
+    const adminOK  = canAdmin(member);
+    if (!editorOK) document.querySelectorAll('[data-editor-only]').forEach(el => el.setAttribute('disabled', 'disabled'));
+
+    const TYPE_LABELS = {
+      'transparency-notice': 'Transparency notice',
+      'bias-audit':          'Bias audit posting',
+      'eu-ai-act':           'EU AI Act filing',
+      'voluntary-statement': 'Voluntary statement',
+      'regulatory-filing':   'Regulatory filing',
+      'press-release':       'Press release / media',
+      'other':               'Other'
+    };
+
+    const FRAMEWORK_REFS = [
+      { value: 'nist-ma-1-3',  label: 'NIST MANAGE 1.3 — residual risk communication' },
+      { value: 'nist-me-3-1',  label: 'NIST MEASURE 3.1 — external feedback channels' },
+      { value: 'eu-ai-art-13', label: 'EU AI Act Art. 13 — transparency to deployers' },
+      { value: 'eu-ai-art-50', label: 'EU AI Act Art. 50 — AI disclosure at interaction' },
+      { value: 'nyc-ll144',    label: 'NYC LL144 — public bias audit posting' },
+      { value: 'co-ai-act',    label: 'Colorado AI Act — consumer notice' },
+      { value: 'naic-bulletin', label: 'NAIC Model Bulletin — AI governance disclosure' },
+      { value: 'iso-42001',    label: 'ISO/IEC 42001 A.6.2 — AI system transparency' },
+    ];
+
+    let inventory = [];
+    let allRows   = [];
+
+    async function init() {
+      inventory = await listDocs(company.id, 'inventory');
+      const systemSel = document.getElementById('filter-system');
+      inventory.forEach(s => {
+        const o = document.createElement('option');
+        o.value = s.id;
+        o.textContent = s.name;
+        systemSel.appendChild(o);
+      });
+      await refresh();
+    }
+
+    async function refresh() {
+      allRows = await listDocs(company.id, 'disclosures', { orderBy: [['disclosedAt', 'desc']] });
+      renderSummary();
+      renderTable();
+    }
+
+    function renderSummary() {
+      const total   = allRows.length;
+      const systems = new Set(allRows.map(r => r.systemId || r.systemName)).size;
+      const biasAudits = allRows.filter(r => r.disclosureType === 'bias-audit').length;
+      document.getElementById('summary-row').innerHTML = `
+        <div class="card" style="text-align:center">
+          <div style="font-size:2rem;font-weight:700;color:var(--accent)">${total}</div>
+          <div class="text-muted" style="font-size:.85rem">Total disclosures</div>
+        </div>
+        <div class="card" style="text-align:center">
+          <div style="font-size:2rem;font-weight:700;color:var(--accent)">${systems}</div>
+          <div class="text-muted" style="font-size:.85rem">Systems disclosed</div>
+        </div>
+        <div class="card" style="text-align:center">
+          <div style="font-size:2rem;font-weight:700;color:var(--accent)">${biasAudits}</div>
+          <div class="text-muted" style="font-size:.85rem">Bias audit postings</div>
+        </div>
+      `;
+    }
+
+    function applyFilters() {
+      const sysFilter  = document.getElementById('filter-system').value;
+      const typeFilter = document.getElementById('filter-type').value;
+      return allRows.filter(r => {
+        if (sysFilter  && r.systemId !== sysFilter)          return false;
+        if (typeFilter && r.disclosureType !== typeFilter)   return false;
+        return true;
+      });
+    }
+
+    function renderTable() {
+      const rows  = applyFilters();
+      const tbody = document.getElementById('disclosures-tbody');
+      if (!rows.length) {
+        tbody.innerHTML = `<tr><td colspan="7" class="empty-state">No disclosures logged yet. Click "+ Add disclosure" to start.</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = rows.map(r => {
+        const sys = inventory.find(s => s.id === r.systemId);
+        const refs = (r.frameworkRefs || []).map(ref => {
+          const fr = FRAMEWORK_REFS.find(f => f.value === ref);
+          return fr ? `<span class="badge" style="font-size:.72rem">${escapeHTML(fr.label.split('—')[0].trim())}</span>` : '';
+        }).join(' ');
+        return `
+          <tr>
+            <td>${escapeHTML(sys?.name || r.systemName || '—')}</td>
+            <td><span class="status-pill status-${escapeHTML(r.disclosureType || 'other')}" style="font-size:.78rem">${escapeHTML(TYPE_LABELS[r.disclosureType] || r.disclosureType || '—')}</span></td>
+            <td style="font-size:.85rem">${escapeHTML(r.venue || '—')}</td>
+            <td style="font-size:.82rem;white-space:nowrap">${escapeHTML(formatDate(r.disclosedAt))}</td>
+            <td style="font-size:.82rem">${r.url ? `<a href="${escapeHTML(r.url)}" target="_blank" rel="noopener" style="word-break:break-all">${escapeHTML(r.url.length > 40 ? r.url.slice(0,40)+'…' : r.url)}</a>` : '—'}</td>
+            <td style="font-size:.78rem">${refs || '<span class="text-muted">—</span>'}</td>
+            <td style="display:flex;gap:4px">
+              ${editorOK ? `<button class="btn btn-ghost btn-sm" data-open="${escapeHTML(r.id)}">Edit</button>` : ''}
+              ${adminOK  ? `<button class="btn btn-ghost btn-sm" data-delete="${escapeHTML(r.id)}">Delete</button>` : ''}
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      tbody.querySelectorAll('[data-open]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const rec = allRows.find(r => r.id === btn.dataset.open);
+          if (rec) openEditor(rec);
+        });
+      });
+      tbody.querySelectorAll('[data-delete]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const ok = await confirmDialog({ title: 'Delete disclosure?', message: 'This record will be permanently removed.', confirmLabel: 'Delete', variant: 'danger' });
+          if (!ok) return;
+          try {
+            await deleteRecord(company.id, 'disclosures', btn.dataset.delete);
+            await logEvent(company.id, { actorUid: user.uid, actorName: user.displayName || user.email, action: 'disclosure.delete', target: btn.dataset.delete });
+            toast('Deleted.', 'success');
+            refresh();
+          } catch (err) {
+            toast(err.message, 'error', 5000);
+          }
+        });
+      });
+    }
+
+    document.getElementById('filter-system').addEventListener('change', renderTable);
+    document.getElementById('filter-type').addEventListener('change', renderTable);
+
+    // CSV export
+    document.getElementById('export-btn').addEventListener('click', () => {
+      const rows = applyFilters();
+      const header = ['System', 'Type', 'Venue', 'Disclosed', 'URL', 'Framework refs', 'Notes'];
+      const csvRows = rows.map(r => {
+        const sys = inventory.find(s => s.id === r.systemId);
+        return [
+          sys?.name || r.systemName || '',
+          TYPE_LABELS[r.disclosureType] || r.disclosureType || '',
+          r.venue || '',
+          formatDate(r.disclosedAt),
+          r.url || '',
+          (r.frameworkRefs || []).join('; '),
+          r.notes || ''
+        ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(',');
+      });
+      const csv  = [header.join(','), ...csvRows].join('\n');
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href = url; a.download = `disclosures-${company.id}-${new Date().toISOString().slice(0,10)}.csv`;
+      a.click(); URL.revokeObjectURL(url);
+    });
+
+    // ---------- editor ----------
+
+    function inventoryOpts(selectedId) {
+      return `<option value="">— pick from inventory —</option>` +
+        inventory.map(s => `<option value="${escapeHTML(s.id)}" ${selectedId===s.id?'selected':''}>${escapeHTML(s.name)}</option>`).join('');
+    }
+
+    function formHTML(v = {}) {
+      const selectedDate = v.disclosedAt
+        ? (v.disclosedAt.toDate ? v.disclosedAt.toDate().toISOString().slice(0,10) : String(v.disclosedAt).slice(0,10))
+        : new Date().toISOString().slice(0,10);
+      const refsHTML = FRAMEWORK_REFS.map(f => `
+        <label class="checkbox-label">
+          <input type="checkbox" name="frameworkRefs" value="${escapeHTML(f.value)}" data-multiple ${(v.frameworkRefs||[]).includes(f.value)?'checked':''} />
+          ${escapeHTML(f.label)}
+        </label>
+      `).join('');
+      return `
+        <div class="grid-2">
+          <div class="field"><label>AI system *</label>
+            <select name="systemId" required><option value="">— select —</option>${inventoryOpts(v.systemId)}</select>
+          </div>
+          <div class="field"><label>Disclosure type *</label>
+            <select name="disclosureType" required>
+              <option value="">—</option>
+              ${Object.entries(TYPE_LABELS).map(([k,l]) => `<option value="${k}" ${v.disclosureType===k?'selected':''}>${escapeHTML(l)}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+        <div class="field"><label>Venue / publication location *</label>
+          <input name="venue" required value="${escapeHTML(v.venue || '')}" placeholder="e.g., Company website, EU AI Act database, NYC Open Data, LinkedIn" />
+        </div>
+        <div class="field"><label>Public URL (if available)</label>
+          <input name="url" type="url" value="${escapeHTML(v.url || '')}" placeholder="https://…" />
+        </div>
+        <div class="grid-2">
+          <div class="field"><label>Date disclosed *</label>
+            <input name="disclosedAt" type="date" required value="${escapeHTML(selectedDate)}" />
+          </div>
+          <div class="field"><label>Disclosure version / ID</label>
+            <input name="version" value="${escapeHTML(v.version || '')}" placeholder="e.g., v1.2, filing-2024-Q3" />
+          </div>
+        </div>
+        <div class="field"><label>Framework references satisfied by this disclosure</label>
+          <div class="checkbox-grid">${refsHTML}</div>
+        </div>
+        <div class="field"><label>Notes</label>
+          <textarea name="notes" rows="2">${escapeHTML(v.notes || '')}</textarea>
+        </div>
+      `;
+    }
+
+    function openEditor(rec) {
+      const isNew = !rec;
+      const form  = document.createElement('form');
+      form.className = 'stacked-form';
+      form.innerHTML = formHTML(rec || {});
+
+      // Auto-fill system name when inventory selection changes
+      form.querySelector('[name="systemId"]').addEventListener('change', (e) => {
+        const sys = inventory.find(s => s.id === e.target.value);
+        if (sys) form._selectedSysName = sys.name;
+      });
+
+      const actions = [
+        { label: 'Cancel', variant: 'ghost', onClick: ({ close }) => close() },
+        { label: isNew ? 'Save disclosure' : 'Save', variant: 'primary', onClick: async ({ close }) => {
+          if (!form.reportValidity()) return;
+          const data = serializeForm(form);
+          const sys  = inventory.find(s => s.id === data.systemId);
+          data.systemName  = sys?.name || '';
+          data.disclosedAt = data.disclosedAt ? new Date(data.disclosedAt) : new Date();
+          try {
+            if (isNew) {
+              const id = await createRecord(company.id, 'disclosures', data, user.uid);
+              await logEvent(company.id, { actorUid: user.uid, actorName: user.displayName || user.email, action: 'disclosure.create', target: id, details: { system: data.systemName, type: data.disclosureType } });
+              toast('Disclosure logged.', 'success');
+            } else {
+              await updateRecord(company.id, 'disclosures', rec.id, data, user.uid);
+              await logEvent(company.id, { actorUid: user.uid, actorName: user.displayName || user.email, action: 'disclosure.update', target: rec.id, details: { type: data.disclosureType } });
+              toast('Saved.', 'success');
+            }
+            close();
+            refresh();
+          } catch (err) {
+            toast(err.message, 'error', 5000);
+          }
+        }}
+      ];
+
+      if (!isNew && adminOK) {
+        actions.unshift({ label: 'Delete', variant: 'danger', onClick: async ({ close }) => {
+          const ok = await confirmDialog({ title: 'Delete disclosure?', message: 'This record will be permanently removed.', confirmLabel: 'Delete', variant: 'danger' });
+          if (!ok) return;
+          try {
+            await deleteRecord(company.id, 'disclosures', rec.id);
+            await logEvent(company.id, { actorUid: user.uid, actorName: user.displayName || user.email, action: 'disclosure.delete', target: rec.id });
+            toast('Deleted.', 'success');
+            close();
+            refresh();
+          } catch (err) {
+            toast(err.message, 'error', 5000);
+          }
+        }});
+      }
+
+      openModal({ title: isNew ? 'Log public disclosure' : 'Edit disclosure', body: form, actions });
+    }
+
+    document.getElementById('new-btn').addEventListener('click', () => {
+      if (!editorOK) return;
+      openEditor(null);
+    });
+
+    init();
+  </script>
+
+</body>
+</html>
