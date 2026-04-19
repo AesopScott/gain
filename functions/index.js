@@ -83,7 +83,7 @@ exports.onInviteCreated = onDocumentCreated(
       : 'Member';
 
     await sendEmail({
-      apiKey: brevoKey.value(),
+      apiKey: brevoKey.value().replace(/\s/g, ''),
       to: invite.email,
       subject: `You've been invited to join ${companyName} on GAIN`,
       htmlContent: emailShell(`
@@ -126,7 +126,7 @@ exports.onJoinRequestCreated = onDocumentCreated(
 
     await Promise.all(admins.map(a =>
       sendEmail({
-        apiKey: brevoKey.value(),
+        apiKey: brevoKey.value().replace(/\s/g, ''),
         to: a.email,
         toName: a.displayName,
         subject: `New join request for ${companyName} on GAIN`,
@@ -165,7 +165,7 @@ exports.onJoinRequestUpdated = onDocumentUpdated(
     const approved = after.status === 'approved';
 
     await sendEmail({
-      apiKey: brevoKey.value(),
+      apiKey: brevoKey.value().replace(/\s/g, ''),
       to: after.email,
       toName: after.displayName || '',
       subject: approved
