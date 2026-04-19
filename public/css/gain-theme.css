@@ -2408,3 +2408,152 @@ button:focus-visible,
     scroll-behavior: auto !important;
   }
 }
+
+/* ============================================================
+   TWO-TIER HEADER (v46)
+   Upper utility strip (Settings / Pricing / Help + Admin + user)
+   over the main workflow nav (icon + label chips).
+   ============================================================ */
+
+/* ---------- Upper utility strip ---------- */
+.site-header-util {
+  background: color-mix(in srgb, var(--header-bg) 70%, #000);
+  color: var(--header-ink-soft);
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 6px 24px;
+  font-size: .78rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+.util-nav {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.util-link {
+  color: var(--header-ink-soft);
+  padding: 4px 10px;
+  border-radius: 3px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.util-link:hover {
+  background: rgba(255, 255, 255, .08);
+  color: var(--header-ink);
+  text-decoration: none;
+}
+.util-link.active {
+  background: rgba(255, 255, 255, .12);
+  color: var(--header-ink);
+}
+.util-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.util-right .company-switcher,
+.util-right .company-label {
+  font-size: .82rem;
+}
+.util-right .user-menu {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.util-right .user-name {
+  font-size: .78rem;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---------- Main workflow nav (icon + label chips) ---------- */
+.site-header .primary-nav {
+  display: flex;
+  gap: 2px;
+  flex-wrap: wrap;
+}
+.site-header .nav-link {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 6px 12px;
+  min-width: 64px;
+  border-radius: var(--radius-sm);
+  color: var(--header-ink-soft);
+  font-size: .72rem;
+  font-weight: 500;
+  line-height: 1.15;
+  text-decoration: none;
+  text-align: center;
+  white-space: nowrap;
+}
+.site-header .nav-link:hover {
+  background: var(--header-ink-hover-bg);
+  color: var(--header-ink);
+  text-decoration: none;
+}
+.site-header .nav-link.active {
+  background: var(--header-ink-active-bg);
+  color: var(--header-ink);
+}
+.site-header .nav-link .nav-ico {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+.site-header .nav-link .nav-label {
+  font-size: .72rem;
+  font-weight: 600;
+  letter-spacing: .01em;
+}
+
+/* The main workflow bar is now dedicated to the nav — no right-side
+   controls here, since they moved to the utility strip. */
+.site-header { padding: 8px 24px; }
+
+/* ---------- Mobile: keep the two tiers usable on narrow screens ---------- */
+@media (max-width: 720px) {
+  .site-header-util {
+    padding: 6px 14px;
+    gap: 10px;
+    font-size: .72rem;
+  }
+  .site-header-util .user-name,
+  .util-right .user-name { display: none; }
+  .site-header-util .company-label,
+  .util-right .company-label {
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .util-nav {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .util-nav::-webkit-scrollbar { display: none; }
+  .util-link { flex-shrink: 0; padding: 3px 8px; }
+
+  .site-header { padding: 6px 14px; }
+  .site-header .primary-nav {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    width: 100%;
+  }
+  .site-header .primary-nav::-webkit-scrollbar { display: none; }
+  .site-header .nav-link {
+    flex-shrink: 0;
+    min-width: 56px;
+    padding: 4px 8px;
+  }
+  .site-header .nav-link .nav-label { font-size: .66rem; }
+}

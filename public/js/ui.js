@@ -7,40 +7,54 @@
 // session.js (without isSuperadmin) break the named import and ui.js fails
 // to initialize, which blanks every page. Bump this whenever session.js's
 // exported surface changes.
-import { logOut, setActiveCompanyId, isSuperadmin } from './session.js?v=45';
+import { logOut, setActiveCompanyId, isSuperadmin } from './session.js?v=46';
 import { toggleMode } from './theme.js';
 
 // ---------- header ----------
 
-// pages: array of { href, label, match } where `match` is a substring matched
-// against location.pathname to set the "active" style.
-const DEFAULT_NAV = [
-  { href: '/dashboard.html', label: 'Dashboard', match: 'dashboard' },
-  { href: '/team.html',      label: 'Team',      match: 'team' },
-  { href: '/framework.html', label: 'Framework', match: 'framework' },
-  { href: '/intake.html',    label: 'Intake',    match: 'intake' },
-  { href: '/inventory.html', label: 'Inventory', match: 'inventory' },
-  { href: '/risks.html',     label: 'Risks',     match: 'risks' },
-  { href: '/aia.html',       label: 'AIAs',      match: 'aia' },
-  { href: '/checklists.html', label: 'Checklists', match: 'checklists' },
-  { href: '/policies.html',  label: 'Policies',  match: 'policies' },
-  { href: '/misc.html',      label: 'Miscellaneous', match: 'misc' },
-  { href: '/settings.html',  label: 'SETTINGS',  match: 'settings' },
-  { href: '/pricing.html',   label: 'PRICING',   match: 'pricing' },
-  { href: '/help.html',      label: 'HELP',      match: 'help' }
+// Two-tier nav:
+//   WORKFLOW_NAV  — main tier, rendered as icon + label chips
+//   UTILITY_NAV   — thin upper strip (Settings / Pricing / Help + Admin)
+const WORKFLOW_NAV = [
+  { href: '/dashboard.html', label: 'Dashboard',     match: 'dashboard',  icon: '⌂' },
+  { href: '/team.html',      label: 'Team',          match: 'team',       icon: '👥' },
+  { href: '/framework.html', label: 'Framework',     match: 'framework',  icon: '◐' },
+  { href: '/intake.html',    label: 'Intake',        match: 'intake',     icon: '↓' },
+  { href: '/inventory.html', label: 'Inventory',     match: 'inventory',  icon: '▤' },
+  { href: '/risks.html',     label: 'Risks',         match: 'risks',      icon: '⚠' },
+  { href: '/aia.html',       label: 'AIAs',          match: 'aia',        icon: '🛡' },
+  { href: '/checklists.html',label: 'Checklists',    match: 'checklists', icon: '☐' },
+  { href: '/policies.html',  label: 'Policies',      match: 'policies',   icon: '▦' },
+  { href: '/misc.html',      label: 'Miscellaneous', match: 'misc',       icon: '⋯' }
+];
+const UTILITY_NAV = [
+  { href: '/settings.html', label: 'SETTINGS', match: 'settings' },
+  { href: '/pricing.html',  label: 'PRICING',  match: 'pricing'  },
+  { href: '/help.html',     label: 'HELP',     match: 'help'     }
 ];
 
-export function renderHeader({ user, company, memberships = [], pages = DEFAULT_NAV }) {
+export function renderHeader({ user, company, memberships = [] }) {
   const mount = document.querySelector('[data-site-header]');
   if (!mount) return;
 
   const currentPath = window.location.pathname;
-  const effectivePages = isSuperadmin(user)
-    ? [...pages, { href: '/admin.html', label: 'Admin', match: 'admin' }]
-    : pages;
-  const navHTML = effectivePages.map(p => {
+
+  // Workflow nav (icon + label).
+  const workflowHTML = WORKFLOW_NAV.map(p => {
     const active = currentPath.includes(p.match) ? ' active' : '';
-    return `<a class="nav-link${active}" href="${p.href}">${escapeHTML(p.label)}</a>`;
+    return `<a class="nav-link${active}" href="${p.href}">
+      <span class="nav-ico" aria-hidden="true">${p.icon}</span>
+      <span class="nav-label">${escapeHTML(p.label)}</span>
+    </a>`;
+  }).join('');
+
+  // Utility strip (text-only, all caps). Admin link is appended for superadmin.
+  const utilPages = isSuperadmin(user)
+    ? [...UTILITY_NAV, { href: '/admin.html', label: 'ADMIN', match: 'admin' }]
+    : UTILITY_NAV;
+  const utilityHTML = utilPages.map(p => {
+    const active = currentPath.includes(p.match) ? ' active' : '';
+    return `<a class="util-link${active}" href="${p.href}">${escapeHTML(p.label)}</a>`;
   }).join('');
 
   const companyOptions = memberships.map(m => {
@@ -50,14 +64,12 @@ export function renderHeader({ user, company, memberships = [], pages = DEFAULT_
 
   mount.innerHTML = `
     <a href="#main-content" class="skip-link">Skip to main content</a>
-    <header class="site-header">
-      <a class="brand" href="/dashboard.html" aria-label="GAIN — Govern AI Now">
-        <img src="/logo-dark.svg" alt="GAIN" class="brand-logo" />
-      </a>
-      <nav class="primary-nav" aria-label="Primary">${navHTML}</nav>
-      <div class="header-right">
+
+    <div class="site-header-util">
+      <nav class="util-nav" aria-label="Utility">${utilityHTML}</nav>
+      <div class="util-right">
         ${memberships.length > 1 ? `
-          <select class="company-switcher" data-company-switcher>
+          <select class="company-switcher" data-company-switcher aria-label="Company">
             ${companyOptions}
           </select>
         ` : (company ? `<span class="company-label">${escapeHTML(company.name || '')}</span>` : '')}
@@ -69,6 +81,13 @@ export function renderHeader({ user, company, memberships = [], pages = DEFAULT_
           <button class="btn btn-ghost btn-sm" data-signout>Sign out</button>
         </div>
       </div>
+    </div>
+
+    <header class="site-header">
+      <a class="brand" href="/dashboard.html" aria-label="GAIN — Govern AI Now">
+        <img src="/logo-dark.svg" alt="GAIN" class="brand-logo" />
+      </a>
+      <nav class="primary-nav" aria-label="Primary">${workflowHTML}</nav>
     </header>
   `;
 
@@ -116,7 +135,7 @@ export function renderFooter() {
         <a href="/dpa.html" style="color:inherit">DPA</a>
         <a href="/sub-processors.html" style="color:inherit">Sub-processors</a>
       </span>
-      <span class="text-muted" style="font-size:.7rem;opacity:.6">v45</span>
+      <span class="text-muted" style="font-size:.7rem;opacity:.6">v46</span>
     </footer>
   `;
 }
