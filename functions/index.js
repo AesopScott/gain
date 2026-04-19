@@ -24,7 +24,7 @@ async function sendEmail({ apiKey, to, toName, subject, htmlContent }) {
     },
     body: JSON.stringify({
       sender: { name: SENDER_NAME, email: SENDER_EMAIL },
-      to: [{ email: to, name: toName || '' }],
+      to: [toName ? { email: to, name: toName } : { email: to }],
       subject,
       htmlContent
     })
