@@ -211,6 +211,8 @@ exports.dailyAlerts = onSchedule(
       const companyId   = companyDoc.id;
       const companyName = companyDoc.data().name || companyId;
 
+      if (companyDoc.data().dailyAlertsEnabled === false) continue;
+
       const membersSnap = await db.collection(`companies/${companyId}/members`).get();
       const admins = membersSnap.docs
         .filter(d => ['owner', 'admin'].includes(d.data().role) && d.data().email)

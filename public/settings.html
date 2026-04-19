@@ -120,12 +120,29 @@
       </form>
     </div>
 
+    <div class="card section-sep" id="notifications-card" style="display:none">
+      <h2 class="card-title">Notifications</h2>
+      <p class="text-muted" style="margin-bottom:14px">
+        Control automated email alerts sent to company admins.
+      </p>
+      <label style="display:flex;align-items:center;gap:12px;cursor:pointer">
+        <input type="checkbox" id="toggle-daily-alerts" style="width:18px;height:18px;cursor:pointer" />
+        <span>
+          <strong>Daily deadline digest</strong><br>
+          <span class="text-muted" style="font-size:.85rem">
+            Emails all admins each morning with items overdue or due within 7 days
+            (contracts, policies, risks, training, incidents).
+          </span>
+        </span>
+      </label>
+    </div>
+
     <div data-site-footer></div>
   </main>
 
   <script type="module">
     import { requireCompany, canAdmin, isOwner } from '/js/session.js?v=20';
-    import { renderHeader, renderFooter, toast, openModal, confirmDialog, serializeForm, setFormValues, escapeHTML, formatDate } from '/js/ui.js?v=20';
+    import { renderHeader, renderFooter, toast, openModal, confirmDialog, serializeForm, setFormValues, escapeHTML, formatDate } from '/js/ui.js?v=21';
     import { updateCompany, listMembers, updateMemberRole, removeMember, createInvite, listInvitesForCompany, deleteInvite, logEvent, getAISettings, saveAISettings } from '/js/data.js?v=20';
     import { PALETTES, getPalette, getMode, setPalette, setMode } from '/js/theme.js?v=16';
 
@@ -309,6 +326,22 @@
           aiForm.querySelector('[name=anthropicKey]').value = '';
           aiForm.querySelector('[name=anthropicKey]').placeholder = '••••••••••• (saved — paste to replace)';
         } catch (err) {
+          toast(err.message, 'error', 4000);
+        }
+      });
+    }
+
+    // ---------- notifications ----------
+    if (adminOK) {
+      document.getElementById('notifications-card').style.display = '';
+      const toggle = document.getElementById('toggle-daily-alerts');
+      toggle.checked = company.dailyAlertsEnabled !== false;
+      toggle.addEventListener('change', async () => {
+        try {
+          await updateCompany(company.id, { dailyAlertsEnabled: toggle.checked });
+          toast(`Daily alerts ${toggle.checked ? 'enabled' : 'disabled'}.`, 'success');
+        } catch (err) {
+          toggle.checked = !toggle.checked;
           toast(err.message, 'error', 4000);
         }
       });
