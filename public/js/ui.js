@@ -7,7 +7,7 @@
 // session.js (without isSuperadmin) break the named import and ui.js fails
 // to initialize, which blanks every page. Bump this whenever session.js's
 // exported surface changes.
-import { logOut, setActiveCompanyId, isSuperadmin } from './session.js?v=47';
+import { logOut, setActiveCompanyId, isSuperadmin } from './session.js?v=49';
 import { toggleMode } from './theme.js';
 
 // ---------- header ----------
@@ -121,21 +121,26 @@ export function renderFooter() {
   // aren't white-labelable because they're compliance-required.
   let hideBrand = false;
   try { hideBrand = sessionStorage.getItem('gain.hideBrandFooter') === '1'; } catch (_) {}
-  const brandSpans = hideBrand ? '' : `
-      <span>GAIN · Govern AI Now</span>
-      <span class="text-muted">Your data · Your company · Your framework</span>`;
+  const brandBlock = hideBrand ? '' : `
+      <div class="site-footer-brand" style="display:flex;flex-direction:column;gap:2px;text-align:right;font-size:.85rem;line-height:1.4">
+        <span>GAIN · Govern AI Now</span>
+        <span class="text-muted">Your data · Your company · Your framework</span>
+      </div>`;
   mount.innerHTML = `
-    <footer class="site-footer">${brandSpans}
-      <span class="site-footer-links" style="display:flex;gap:14px;font-size:.8rem;opacity:.7;flex-wrap:wrap">
-        <a href="/help.html" style="color:inherit">Help</a>
-        <a href="/support.html" style="color:inherit">Support</a>
-        <a href="/terms.html" style="color:inherit">Terms</a>
-        <a href="/privacy.html" style="color:inherit">Privacy</a>
-        <a href="/accessibility.html" style="color:inherit">Accessibility</a>
-        <a href="/dpa.html" style="color:inherit">DPA</a>
-        <a href="/sub-processors.html" style="color:inherit">Sub-processors</a>
-      </span>
-      <span class="text-muted" style="font-size:.7rem;opacity:.6">v48</span>
+    <footer class="site-footer" style="display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap">
+      <div style="display:flex;flex-direction:column;gap:6px;min-width:0;flex:1 1 auto">
+        <span class="site-footer-links" style="display:flex;gap:14px;font-size:.8rem;opacity:.7;flex-wrap:wrap">
+          <a href="/help.html" style="color:inherit">Help</a>
+          <a href="/support.html" style="color:inherit">Support</a>
+          <a href="/terms.html" style="color:inherit">Terms</a>
+          <a href="/privacy.html" style="color:inherit">Privacy</a>
+          <a href="/accessibility.html" style="color:inherit">Accessibility</a>
+          <a href="/dpa.html" style="color:inherit">DPA</a>
+          <a href="/sub-processors.html" style="color:inherit">Sub-processors</a>
+        </span>
+        <span class="text-muted" style="font-size:.7rem;opacity:.6">v49</span>
+      </div>
+      ${brandBlock}
     </footer>
   `;
 }
