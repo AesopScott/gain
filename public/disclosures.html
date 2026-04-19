@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>GAIN — Public Disclosure Tracker</title>
   <script>(function(){try{var p=localStorage.getItem('gain.theme.palette')||'classic';var m=localStorage.getItem('gain.theme.mode')||'light';document.documentElement.setAttribute('data-palette',p);document.documentElement.setAttribute('data-mode',m);}catch(e){}})();</script>
-  <link rel="stylesheet" href="/css/gain-theme.css?v=37" />
+  <link rel="stylesheet" href="/css/gain-theme.css?v=38" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 </head>
 <body>
@@ -49,6 +49,7 @@
         <button class="btn btn-ghost btn-sm" id="export-btn">Export CSV</button>
       </div>
 
+      <div data-sample-banner></div>
       <table class="data" id="disclosures-table">
         <thead>
           <tr>
@@ -71,9 +72,10 @@
   </main>
 
   <script type="module">
-    import { requireCompany, canEdit, canAdmin } from '/js/session.js?v=37';
-    import { renderHeader, renderFooter, toast, openModal, confirmDialog, serializeForm, escapeHTML, formatDate } from '/js/ui.js?v=37';
-    import { listDocs, createRecord, updateRecord, deleteRecord, logEvent } from '/js/data.js?v=37';
+    import { requireCompany, canEdit, canAdmin } from '/js/session.js?v=38';
+    import { renderHeader, renderFooter, toast, openModal, confirmDialog, serializeForm, escapeHTML, formatDate } from '/js/ui.js?v=38';
+    import { listDocs, createRecord, updateRecord, deleteRecord, logEvent } from '/js/data.js?v=38';
+    import { DISCLOSURES_SAMPLES, sampleBannerHTML } from '/js/samples.js?v=38';
 
     const { user, memberships, company, member } = await requireCompany();
     renderHeader({ user, company, memberships });
@@ -158,18 +160,33 @@
     function renderTable() {
       const rows  = applyFilters();
       const tbody = document.getElementById('disclosures-tbody');
-      if (!rows.length) {
+      const bannerMount = document.querySelector('[data-sample-banner]');
+      if (bannerMount) bannerMount.innerHTML = '';
+
+      let display = rows;
+      let showingSamples = false;
+      if (allRows.length === 0) {
+        display = DISCLOSURES_SAMPLES;
+        showingSamples = true;
+        if (bannerMount) bannerMount.innerHTML = sampleBannerHTML('public disclosures');
+      }
+
+      if (!display.length) {
         tbody.innerHTML = `<tr><td colspan="7" class="empty-state">No disclosures logged yet. Click "+ Add disclosure" to start.</td></tr>`;
         return;
       }
-      tbody.innerHTML = rows.map(r => {
-        const sys = inventory.find(s => s.id === r.systemId);
-        const refs = (r.frameworkRefs || []).map(ref => {
+      tbody.innerHTML = display.map(r => {
+        const sys = !r.isSample ? inventory.find(s => s.id === r.systemId) : null;
+        const refsList = Array.isArray(r.frameworkRefs)
+          ? r.frameworkRefs
+          : (r.frameworkRefs ? [r.frameworkRefs] : []);
+        const refs = refsList.map(ref => {
           const fr = FRAMEWORK_REFS.find(f => f.value === ref);
-          return fr ? `<span class="badge" style="font-size:.72rem">${escapeHTML(fr.label.split('—')[0].trim())}</span>` : '';
+          const label = fr ? fr.label.split('—')[0].trim() : ref;
+          return `<span class="badge" style="font-size:.72rem">${escapeHTML(label)}</span>`;
         }).join(' ');
         return `
-          <tr>
+          <tr${r.isSample ? ' data-sample="1"' : ''}>
             <td>${escapeHTML(sys?.name || r.systemName || '—')}</td>
             <td><span class="status-pill status-${escapeHTML(r.disclosureType || 'other')}" style="font-size:.78rem">${escapeHTML(TYPE_LABELS[r.disclosureType] || r.disclosureType || '—')}</span></td>
             <td style="font-size:.85rem">${escapeHTML(r.venue || '—')}</td>
@@ -177,12 +194,14 @@
             <td style="font-size:.82rem">${r.url ? `<a href="${escapeHTML(r.url)}" target="_blank" rel="noopener" style="word-break:break-all">${escapeHTML(r.url.length > 40 ? r.url.slice(0,40)+'…' : r.url)}</a>` : '—'}</td>
             <td style="font-size:.78rem">${refs || '<span class="text-muted">—</span>'}</td>
             <td style="display:flex;gap:4px">
-              ${editorOK ? `<button class="btn btn-ghost btn-sm" data-open="${escapeHTML(r.id)}">Edit</button>` : ''}
-              ${adminOK  ? `<button class="btn btn-ghost btn-sm" data-delete="${escapeHTML(r.id)}">Delete</button>` : ''}
+              ${editorOK && !r.isSample ? `<button class="btn btn-ghost btn-sm" data-open="${escapeHTML(r.id)}">Edit</button>` : ''}
+              ${adminOK  && !r.isSample ? `<button class="btn btn-ghost btn-sm" data-delete="${escapeHTML(r.id)}">Delete</button>` : ''}
             </td>
           </tr>
         `;
       }).join('');
+
+      if (showingSamples) return;
 
       tbody.querySelectorAll('[data-open]').forEach(btn => {
         btn.addEventListener('click', async () => {

@@ -973,6 +973,67 @@ table.data .actions {
 }
 .empty-state h3 { color: var(--ink-soft); }
 
+/* ---- sample data (empty-state fixtures) ---- */
+/* Sample banner + SAMPLE pill + muted rows so fixture data is visually
+   distinct from real data. Samples disappear as soon as a user adds a
+   real entry. */
+.sample-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  margin: 0 0 12px;
+  background: var(--accent-soft);
+  border: 1px dashed var(--accent);
+  border-radius: var(--radius);
+  font-size: .88rem;
+}
+.sample-banner-text { color: var(--ink-soft); line-height: 1.5; }
+.sample-pill {
+  flex-shrink: 0;
+  padding: 3px 10px;
+  background: var(--accent);
+  color: #fff;
+  border-radius: 999px;
+  font-size: .66rem;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+tr[data-sample="1"],
+li[data-sample="1"],
+div[data-sample-card="1"] {
+  background-image: linear-gradient(
+    135deg,
+    transparent 0,
+    transparent 8px,
+    rgba(127, 127, 127, .04) 8px,
+    rgba(127, 127, 127, .04) 16px
+  );
+}
+tr[data-sample="1"] td { opacity: .78; }
+tr[data-sample="1"] td:first-child::before,
+div[data-sample-card="1"]::before {
+  content: "SAMPLE";
+  display: inline-block;
+  margin-right: 8px;
+  padding: 1px 6px;
+  background: var(--accent);
+  color: #fff;
+  font-size: .58rem;
+  font-weight: 700;
+  letter-spacing: .08em;
+  border-radius: 3px;
+  vertical-align: 2px;
+}
+/* Sample rows can still be read but action buttons get neutralized so
+   they can't fail trying to save to a sample ID. */
+[data-sample="1"] .btn,
+[data-sample="1"] .row-action {
+  pointer-events: none;
+  opacity: .4;
+}
+
 .loading-row {
   padding: 20px;
   text-align: center;

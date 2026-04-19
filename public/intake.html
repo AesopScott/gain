@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>GAIN — AI Use Case Intake</title>
   <script>(function(){try{var p=localStorage.getItem('gain.theme.palette')||'classic';var m=localStorage.getItem('gain.theme.mode')||'light';document.documentElement.setAttribute('data-palette',p);document.documentElement.setAttribute('data-mode',m);}catch(e){}})();</script>
-  <link rel="stylesheet" href="/css/gain-theme.css?v=37" />
+  <link rel="stylesheet" href="/css/gain-theme.css?v=38" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <meta name="description" content="AI governance — from intake to audit. NIST AI RMF · ISO 42001 · EU AI Act." />
   <meta property="og:type" content="website" />
@@ -51,6 +51,7 @@
           <option value="withdrawn">Withdrawn</option>
         </select>
       </div>
+      <div data-sample-banner></div>
       <table class="data">
         <thead>
           <tr>
@@ -70,10 +71,11 @@
   </main>
 
   <script type="module">
-    import { requireCompany, canEdit, canAdmin } from '/js/session.js?v=37';
-    import { renderHeader, renderFooter, toast, openModal, confirmDialog, serializeForm, setFormValues, escapeHTML, formatDate } from '/js/ui.js?v=37';
-    import { listDocs, createRecord, updateRecord, deleteRecord, getRecord, logEvent, getPosture } from '/js/data.js?v=37';
-    import { derivedIntakeExtras, derivedApplicableRegs, driftBannerHTML } from '/js/posture.js?v=37';
+    import { requireCompany, canEdit, canAdmin } from '/js/session.js?v=38';
+    import { renderHeader, renderFooter, toast, openModal, confirmDialog, serializeForm, setFormValues, escapeHTML, formatDate } from '/js/ui.js?v=38';
+    import { listDocs, createRecord, updateRecord, deleteRecord, getRecord, logEvent, getPosture } from '/js/data.js?v=38';
+    import { derivedIntakeExtras, derivedApplicableRegs, driftBannerHTML } from '/js/posture.js?v=38';
+    import { INTAKE_SAMPLES, sampleBannerHTML } from '/js/samples.js?v=38';
 
     const { user, memberships, company, member } = await requireCompany();
     renderHeader({ user, company, memberships });
@@ -98,32 +100,50 @@
       const filtered = filterVal ? rows.filter(r => r.status === filterVal) : rows;
 
       const tbody = document.querySelector('[data-intake-rows]');
-      if (filtered.length === 0) {
+      const bannerMount = document.querySelector('[data-sample-banner]');
+      if (bannerMount) bannerMount.innerHTML = '';
+
+      let display = filtered;
+      let showingSamples = false;
+      if (rows.length === 0 && !filterVal) {
+        display = INTAKE_SAMPLES;
+        showingSamples = true;
+        if (bannerMount) bannerMount.innerHTML = sampleBannerHTML('intake requests');
+      }
+
+      if (display.length === 0) {
         tbody.innerHTML = `<tr><td colspan="6" class="empty-state">No intake requests${filterVal ? ' with that status' : ' yet'}.</td></tr>`;
         return;
       }
 
-      tbody.innerHTML = filtered.map(r => `
-        <tr>
-          <td><a href="#" data-open="${escapeHTML(r.id)}">${escapeHTML(r.title || '(untitled)')}</a></td>
-          <td>${escapeHTML(r.requesterName || '')}</td>
-          <td>${escapeHTML(r.department || '')}</td>
-          <td>${formatDate(r.createdAt)}</td>
-          <td><span class="status-pill status-${escapeHTML((r.status || 'submitted'))}">${escapeHTML(r.status || 'submitted')}</span></td>
-          <td>
-            ${editorOK ? `<button class="btn btn-ghost btn-sm" data-open="${escapeHTML(r.id)}">Open</button>` : ''}
-          </td>
-        </tr>
-      `).join('');
+      tbody.innerHTML = display.map(r => {
+        const titleCell = r.isSample
+          ? escapeHTML(r.title || '(untitled)')
+          : `<a href="#" data-open="${escapeHTML(r.id)}">${escapeHTML(r.title || '(untitled)')}</a>`;
+        return `
+          <tr${r.isSample ? ' data-sample="1"' : ''}>
+            <td>${titleCell}</td>
+            <td>${escapeHTML(r.requesterName || '')}</td>
+            <td>${escapeHTML(r.department || '')}</td>
+            <td>${formatDate(r.createdAt)}</td>
+            <td><span class="status-pill status-${escapeHTML((r.status || 'submitted'))}">${escapeHTML(r.status || 'submitted')}</span></td>
+            <td>
+              ${editorOK && !r.isSample ? `<button class="btn btn-ghost btn-sm" data-open="${escapeHTML(r.id)}">Open</button>` : ''}
+            </td>
+          </tr>
+        `;
+      }).join('');
 
-      tbody.querySelectorAll('[data-open]').forEach(el => {
-        el.addEventListener('click', async (e) => {
-          e.preventDefault();
-          const id = e.currentTarget.dataset.open;
-          const rec = await getRecord(company.id, 'intake', id);
-          openIntakeEditor(rec);
+      if (!showingSamples) {
+        tbody.querySelectorAll('[data-open]').forEach(el => {
+          el.addEventListener('click', async (e) => {
+            e.preventDefault();
+            const id = e.currentTarget.dataset.open;
+            const rec = await getRecord(company.id, 'intake', id);
+            openIntakeEditor(rec);
+          });
         });
-      });
+      }
     }
     refresh();
 

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>GAIN — Training Tracker</title>
   <script>(function(){try{var p=localStorage.getItem('gain.theme.palette')||'classic';var m=localStorage.getItem('gain.theme.mode')||'light';document.documentElement.setAttribute('data-palette',p);document.documentElement.setAttribute('data-mode',m);}catch(e){}})();</script>
-  <link rel="stylesheet" href="/css/gain-theme.css?v=37" />
+  <link rel="stylesheet" href="/css/gain-theme.css?v=38" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <!-- SheetJS for Excel/CSV parsing -->
   <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.mini.min.js"></script>
@@ -70,6 +70,7 @@
         <p class="text-muted" style="margin:0 0 12px;font-size:.85rem">
           Import from CSV, Excel, or paste a list. Used to pre-populate enrollment in classes.
         </p>
+        <div data-sample-banner-roster></div>
         <table class="data">
           <thead>
             <tr>
@@ -92,6 +93,7 @@
           <h2 class="card-title" style="margin:0">Course Catalog</h2>
           <button class="btn btn-primary" id="btn-new-course" data-editor-only>+ New course</button>
         </div>
+        <div data-sample-banner-courses></div>
         <table class="data">
           <thead>
             <tr>
@@ -129,6 +131,7 @@
           </div>
           <button class="btn btn-primary" id="btn-new-class" data-editor-only style="flex-shrink:0;margin-left:16px">+ New class</button>
         </div>
+        <div data-sample-banner-classes></div>
         <table class="data">
           <thead>
             <tr>
@@ -151,11 +154,12 @@
   </main>
 
   <script type="module">
-    import { requireCompany, canEdit, canAdmin } from '/js/session.js?v=37';
-    import { renderHeader, renderFooter, toast, openModal, confirmDialog, serializeForm, escapeHTML, formatDate } from '/js/ui.js?v=37';
-    import { listDocs, createRecord, updateRecord, deleteRecord, logEvent } from '/js/data.js?v=37';
-    import { db } from '/js/config.js?v=37';
+    import { requireCompany, canEdit, canAdmin } from '/js/session.js?v=38';
+    import { renderHeader, renderFooter, toast, openModal, confirmDialog, serializeForm, escapeHTML, formatDate } from '/js/ui.js?v=38';
+    import { listDocs, createRecord, updateRecord, deleteRecord, logEvent } from '/js/data.js?v=38';
+    import { db } from '/js/config.js?v=38';
     import { doc, setDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+    import { TRAINING_ROSTER_SAMPLES, TRAINING_COURSES_SAMPLES, TRAINING_CLASSES_SAMPLES, sampleBannerHTML } from '/js/samples.js?v=38';
 
     const { user, memberships, company, member } = await requireCompany();
     renderHeader({ user, company, memberships });
@@ -216,22 +220,34 @@
     function renderRoster() {
       document.getElementById('roster-count').textContent = roster.length;
       const tbody = document.getElementById('roster-rows');
-      if (!roster.length) {
+      const bannerMount = document.querySelector('[data-sample-banner-roster]');
+      if (bannerMount) bannerMount.innerHTML = '';
+
+      let display = roster;
+      let showingSamples = false;
+      if (roster.length === 0) {
+        display = TRAINING_ROSTER_SAMPLES;
+        showingSamples = true;
+        if (bannerMount) bannerMount.innerHTML = sampleBannerHTML('training roster');
+      }
+
+      if (!display.length) {
         tbody.innerHTML = `<tr><td colspan="5" class="empty-state">No people in the roster yet — import a list or add individually.</td></tr>`;
         return;
       }
-      tbody.innerHTML = roster.map(r => `
-        <tr>
+      tbody.innerHTML = display.map(r => `
+        <tr${r.isSample ? ' data-sample="1"' : ''}>
           <td><strong>${escapeHTML(r.name || '(no name)')}</strong></td>
           <td>${escapeHTML(r.email || '—')}</td>
           <td>${escapeHTML(r.department || '—')}</td>
           <td>${escapeHTML(r.jobTitle || '—')}</td>
           <td style="white-space:nowrap">
-            ${editorOK ? `<button class="btn btn-ghost btn-sm" data-edit-person="${escapeHTML(r.id)}">Edit</button>` : ''}
-            ${adminOK  ? `<button class="btn btn-ghost btn-sm" data-del-person="${escapeHTML(r.id)}" style="color:var(--danger)">Delete</button>` : ''}
+            ${editorOK && !r.isSample ? `<button class="btn btn-ghost btn-sm" data-edit-person="${escapeHTML(r.id)}">Edit</button>` : ''}
+            ${adminOK  && !r.isSample ? `<button class="btn btn-ghost btn-sm" data-del-person="${escapeHTML(r.id)}" style="color:var(--danger)">Delete</button>` : ''}
           </td>
         </tr>
       `).join('');
+      if (showingSamples) return;
       tbody.querySelectorAll('[data-edit-person]').forEach(btn =>
         btn.addEventListener('click', () => openPersonEditor(roster.find(r => r.id === btn.dataset.editPerson))));
       tbody.querySelectorAll('[data-del-person]').forEach(btn =>
@@ -247,14 +263,25 @@
     function renderCourses() {
       document.getElementById('courses-count').textContent = courses.length;
       const tbody = document.getElementById('courses-rows');
-      if (!courses.length) {
+      const bannerMount = document.querySelector('[data-sample-banner-courses]');
+      if (bannerMount) bannerMount.innerHTML = '';
+
+      let display = courses;
+      let showingSamples = false;
+      if (courses.length === 0) {
+        display = TRAINING_COURSES_SAMPLES;
+        showingSamples = true;
+        if (bannerMount) bannerMount.innerHTML = sampleBannerHTML('training courses');
+      }
+
+      if (!display.length) {
         tbody.innerHTML = `<tr><td colspan="7" class="empty-state">No courses yet — create one to get started.</td></tr>`;
         return;
       }
-      tbody.innerHTML = courses.map(c => {
-        const classCount = classes.filter(cl => cl.courseId === c.id).length;
+      tbody.innerHTML = display.map(c => {
+        const classCount = c.isSample ? 1 : classes.filter(cl => cl.courseId === c.id).length;
         return `
-          <tr>
+          <tr${c.isSample ? ' data-sample="1"' : ''}>
             <td><strong>${escapeHTML(c.title || '(untitled)')}</strong>${c.description ? `<div class="text-muted" style="font-size:.8rem">${escapeHTML(c.description)}</div>` : ''}</td>
             <td>${escapeHTML(c.category || '—')}</td>
             <td>${escapeHTML(c.format || '—')}</td>
@@ -262,12 +289,13 @@
             <td>${escapeHTML(c.requiredFor || '—')}</td>
             <td>${classCount}</td>
             <td style="white-space:nowrap">
-              ${editorOK ? `<button class="btn btn-ghost btn-sm" data-edit-course="${escapeHTML(c.id)}">Edit</button>` : ''}
-              ${adminOK  ? `<button class="btn btn-ghost btn-sm" data-del-course="${escapeHTML(c.id)}" style="color:var(--danger)">Delete</button>` : ''}
+              ${editorOK && !c.isSample ? `<button class="btn btn-ghost btn-sm" data-edit-course="${escapeHTML(c.id)}">Edit</button>` : ''}
+              ${adminOK  && !c.isSample ? `<button class="btn btn-ghost btn-sm" data-del-course="${escapeHTML(c.id)}" style="color:var(--danger)">Delete</button>` : ''}
             </td>
           </tr>
         `;
       }).join('');
+      if (showingSamples) return;
       tbody.querySelectorAll('[data-edit-course]').forEach(btn =>
         btn.addEventListener('click', () => openCourseEditor(courses.find(c => c.id === btn.dataset.editCourse))));
       tbody.querySelectorAll('[data-del-course]').forEach(btn =>
@@ -289,19 +317,32 @@
         (!sf || cl.status === sf)
       );
       const tbody = document.getElementById('classes-rows');
-      if (!filtered.length) {
+      const bannerMount = document.querySelector('[data-sample-banner-classes]');
+      if (bannerMount) bannerMount.innerHTML = '';
+
+      let display = filtered;
+      let showingSamples = false;
+      if (classes.length === 0 && !pf && !sf) {
+        display = TRAINING_CLASSES_SAMPLES;
+        showingSamples = true;
+        if (bannerMount) bannerMount.innerHTML = sampleBannerHTML('training classes');
+      }
+
+      if (!display.length) {
         tbody.innerHTML = `<tr><td colspan="8" class="empty-state">No classes${pf||sf?' match those filters':' yet — create one'}.</td></tr>`;
         return;
       }
-      tbody.innerHTML = filtered.map(cl => {
-        const enrolled = (cl.enrolled || []).length;
-        const completed = Object.keys(cl.completions || {}).filter(k => (cl.completions[k] && cl.completions[k].at)).length;
+      tbody.innerHTML = display.map(cl => {
+        const enrolled = cl.isSample ? (cl.enrolled || 0) : (cl.enrolled || []).length;
+        const completed = cl.isSample ? (cl.completions || 0) : Object.keys(cl.completions || {}).filter(k => (cl.completions[k] && cl.completions[k].at)).length;
         const pct = enrolled ? Math.round(completed / enrolled * 100) : 0;
-        const stCls = cl.status === 'completed' ? 'status-approved' : cl.status === 'cancelled' ? 'status-withdrawn' : cl.status === 'in-progress' ? 'status-triage' : 'status-submitted';
+        const status = (cl.status || 'scheduled').toLowerCase();
+        const stCls = status === 'completed' ? 'status-approved' : status === 'cancelled' ? 'status-withdrawn' : status === 'in-progress' ? 'status-triage' : 'status-submitted';
+        const dateLabel = cl.date ? formatDate(cl.date) : '—';
         return `
-          <tr>
+          <tr${cl.isSample ? ' data-sample="1"' : ''}>
             <td><strong>${escapeHTML(cl.courseName || '—')}</strong></td>
-            <td>${escapeHTML(cl.date || '—')}</td>
+            <td>${escapeHTML(dateLabel)}</td>
             <td>${escapeHTML(cl.period || '—')}</td>
             <td style="text-align:center">${enrolled}</td>
             <td style="text-align:center">${completed}</td>
@@ -310,10 +351,11 @@
               <span style="font-size:.8rem;margin-left:6px;color:var(--ink-soft)">${pct}%</span>
             </td>
             <td><span class="status-pill ${stCls}">${escapeHTML(cl.status || 'scheduled')}</span></td>
-            <td><button class="btn btn-ghost btn-sm" data-open-class="${escapeHTML(cl.id)}">Open</button></td>
+            <td>${cl.isSample ? '' : `<button class="btn btn-ghost btn-sm" data-open-class="${escapeHTML(cl.id)}">Open</button>`}</td>
           </tr>
         `;
       }).join('');
+      if (showingSamples) return;
       tbody.querySelectorAll('[data-open-class]').forEach(btn =>
         btn.addEventListener('click', () => openClassEditor(classes.find(cl => cl.id === btn.dataset.openClass))));
     }
