@@ -149,9 +149,20 @@ service cloud.firestore {
         allow delete: if isAdmin(companyId);
       }
 
-      // --- AI settings (Anthropic key — admin-only read) ---
+      // --- AI settings (legacy BYO-key, admin-only) ---
+      // New AI flows use the shared platform key via the generatePolicy
+      // Cloud Function. This collection stays for backward compat only.
       match /aiSettings/{docId} {
         allow read, write: if isAdmin(companyId);
+      }
+
+      // --- AI usage counters (written by Cloud Functions only) ---
+      // Per-day policy-gen counters at companies/{id}/aiUsage/YYYY-MM-DD.
+      // admin.firestore() in Cloud Functions bypasses these rules; clients
+      // can read (admin-only) but never write.
+      match /aiUsage/{docId} {
+        allow read:  if isAdmin(companyId) || isSuperadmin();
+        allow write: if false;
       }
 
       // --- governance policies ---

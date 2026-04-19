@@ -1,5 +1,6 @@
 const { onDocumentCreated, onDocumentUpdated } = require('firebase-functions/v2/firestore');
 const { onSchedule } = require('firebase-functions/v2/scheduler');
+const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { defineSecret } = require('firebase-functions/params');
 const admin = require('firebase-admin');
 
@@ -7,6 +8,7 @@ admin.initializeApp();
 const db = admin.firestore();
 
 const brevoKey = defineSecret('BREVO_API_KEY');
+const anthropicKey = defineSecret('ANTHROPIC_API_KEY');
 
 const APP_URL = 'https://governainow.com';
 const SENDER_EMAIL = 'noreply@governainow.com';
@@ -335,5 +337,115 @@ exports.dailyAlerts = onSchedule(
         })
       ));
     }
+  }
+);
+
+// ---------------------------------------------------------------------------
+// AI Policy Generation — callable (server-side Anthropic integration)
+// ---------------------------------------------------------------------------
+// Replaces the client-side BYO-key flow. GAIN's shared Anthropic key is
+// stored as a Firebase secret; clients call this function which proxies
+// the request. Rate-limited per company per day.
+
+const DAILY_POLICY_GEN_LIMIT = 20;
+const POLICY_GEN_MODEL = 'claude-sonnet-4-5-20250929';
+
+exports.generatePolicy = onCall(
+  { secrets: [anthropicKey], timeoutSeconds: 120, memory: '512MiB' },
+  async (request) => {
+    const auth = request.auth;
+    if (!auth?.uid) {
+      throw new HttpsError('unauthenticated', 'Sign in required.');
+    }
+
+    const data = request.data || {};
+    const { companyId, policyName, framework, description, companyName, industry } = data;
+    if (!companyId || !policyName) {
+      throw new HttpsError('invalid-argument', 'companyId and policyName are required.');
+    }
+
+    // Verify caller is editor+ of the target company.
+    const memberRef = db.doc(`companies/${companyId}/members/${auth.uid}`);
+    const memberSnap = await memberRef.get();
+    if (!memberSnap.exists) {
+      throw new HttpsError('permission-denied', 'You are not a member of this company.');
+    }
+    const role = memberSnap.data().role;
+    if (!['owner', 'admin', 'editor'].includes(role)) {
+      throw new HttpsError('permission-denied', 'Editor role or higher required to generate policies.');
+    }
+
+    // Daily rate limit per company.
+    const today = new Date().toISOString().slice(0, 10);
+    const usageRef = db.doc(`companies/${companyId}/aiUsage/${today}`);
+    const usageSnap = await usageRef.get();
+    const used = usageSnap.exists ? (usageSnap.data().policyGenerations || 0) : 0;
+    if (used >= DAILY_POLICY_GEN_LIMIT) {
+      throw new HttpsError(
+        'resource-exhausted',
+        `Daily AI policy generation limit reached (${DAILY_POLICY_GEN_LIMIT} per company per day). Resets at midnight UTC.`
+      );
+    }
+
+    const prompt = [
+      `Write a complete, professional AI governance policy document for a company.`,
+      `Policy name: ${policyName}`,
+      framework ? `Governance framework: ${framework}` : '',
+      description ? `Purpose summary: ${description}` : '',
+      companyName ? `Company: ${companyName}` : '',
+      industry ? `Industry: ${industry}` : '',
+      ``,
+      `Format the document in Markdown with clear sections: Purpose, Scope, Policy Statements, Roles & Responsibilities, Compliance & Enforcement, Review & Revision History.`,
+      `Be specific, actionable, and thorough. Use professional governance language.`,
+    ].filter(Boolean).join('\n');
+
+    let result;
+    try {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'x-api-key': anthropicKey.value(),
+          'anthropic-version': '2023-06-01',
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: POLICY_GEN_MODEL,
+          max_tokens: 4096,
+          messages: [{ role: 'user', content: prompt }],
+        }),
+      });
+      if (!res.ok) {
+        const errText = await res.text();
+        console.error('Anthropic API error', res.status, errText);
+        throw new HttpsError('internal', `Policy generation failed (upstream ${res.status}).`);
+      }
+      result = await res.json();
+    } catch (err) {
+      if (err instanceof HttpsError) throw err;
+      console.error('generatePolicy call failed', err);
+      throw new HttpsError('internal', 'Policy generation failed. Please try again.');
+    }
+
+    const text = result.content?.[0]?.text || '';
+    const outputTokens = result.usage?.output_tokens || 0;
+    const inputTokens = result.usage?.input_tokens || 0;
+
+    // Bump daily counter.
+    await usageRef.set({
+      policyGenerations: used + 1,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    }, { merge: true });
+
+    // Audit log.
+    await db.collection(`companies/${companyId}/audit`).add({
+      actorUid: auth.uid,
+      actorName: auth.token?.name || auth.token?.email || '',
+      action: 'policy.aiGenerate',
+      target: policyName,
+      details: { model: POLICY_GEN_MODEL, inputTokens, outputTokens },
+      at: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    return { text, model: POLICY_GEN_MODEL, inputTokens, outputTokens };
   }
 );
