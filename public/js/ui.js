@@ -7,12 +7,8 @@
 // session.js (without isSuperadmin) break the named import and ui.js fails
 // to initialize, which blanks every page. Bump this whenever session.js's
 // exported surface changes.
-import { logOut, setActiveCompanyId, isSuperadmin } from './session.js?v=39';
+import { logOut, setActiveCompanyId, isSuperadmin } from './session.js?v=37';
 import { toggleMode } from './theme.js';
-// Side-effect import: the tour module auto-checks for ?tour= in the URL
-// and renders the walkthrough panel on pages that are part of the tour.
-// Runs no-op on every other page load.
-import './tour.js?v=39';
 
 // ---------- header ----------
 
@@ -116,7 +112,7 @@ export function renderFooter() {
         <a href="/dpa.html" style="color:inherit">DPA</a>
         <a href="/sub-processors.html" style="color:inherit">Sub-processors</a>
       </span>
-      <span class="text-muted" style="font-size:.7rem;opacity:.6">v39</span>
+      <span class="text-muted" style="font-size:.7rem;opacity:.6">v38</span>
     </footer>
   `;
 }
