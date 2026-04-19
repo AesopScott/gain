@@ -7,7 +7,7 @@
 // session.js (without isSuperadmin) break the named import and ui.js fails
 // to initialize, which blanks every page. Bump this whenever session.js's
 // exported surface changes.
-import { logOut, setActiveCompanyId, isSuperadmin } from './session.js?v=49';
+import { logOut, setActiveCompanyId, isSuperadmin } from './session.js?v=50';
 import { toggleMode } from './theme.js';
 
 // ---------- header ----------
@@ -126,20 +126,23 @@ export function renderFooter() {
         <span>GAIN · Govern AI Now</span>
         <span class="text-muted">Your data · Your company · Your framework</span>
       </div>`;
+  // Build version is kept as an HTML comment + a data-version attribute so
+  // View-Source / DevTools still show it (useful for confirming the FTP
+  // deploy is live) without cluttering the visible UI. To check the live
+  // build: inspect <footer data-version="…"> or search source for
+  // "gain-build".
   mount.innerHTML = `
-    <footer class="site-footer" style="display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap">
-      <div style="display:flex;flex-direction:column;gap:6px;min-width:0;flex:1 1 auto">
-        <span class="site-footer-links" style="display:flex;gap:14px;font-size:.8rem;opacity:.7;flex-wrap:wrap">
-          <a href="/help.html" style="color:inherit">Help</a>
-          <a href="/support.html" style="color:inherit">Support</a>
-          <a href="/terms.html" style="color:inherit">Terms</a>
-          <a href="/privacy.html" style="color:inherit">Privacy</a>
-          <a href="/accessibility.html" style="color:inherit">Accessibility</a>
-          <a href="/dpa.html" style="color:inherit">DPA</a>
-          <a href="/sub-processors.html" style="color:inherit">Sub-processors</a>
-        </span>
-        <span class="text-muted" style="font-size:.7rem;opacity:.6">v49</span>
-      </div>
+    <!-- gain-build: v50 -->
+    <footer class="site-footer" data-version="50" style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap">
+      <span class="site-footer-links" style="display:flex;gap:14px;font-size:.8rem;opacity:.7;flex-wrap:wrap">
+        <a href="/help.html" style="color:inherit">Help</a>
+        <a href="/support.html" style="color:inherit">Support</a>
+        <a href="/terms.html" style="color:inherit">Terms</a>
+        <a href="/privacy.html" style="color:inherit">Privacy</a>
+        <a href="/accessibility.html" style="color:inherit">Accessibility</a>
+        <a href="/dpa.html" style="color:inherit">DPA</a>
+        <a href="/sub-processors.html" style="color:inherit">Sub-processors</a>
+      </span>
       ${brandBlock}
     </footer>
   `;
