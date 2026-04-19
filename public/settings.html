@@ -8,7 +8,7 @@
   <meta http-equiv="Expires" content="0" />
   <title>GAIN — Settings</title>
   <script>(function(){try{var p=localStorage.getItem('gain.theme.palette')||'classic';var m=localStorage.getItem('gain.theme.mode')||'light';document.documentElement.setAttribute('data-palette',p);document.documentElement.setAttribute('data-mode',m);}catch(e){}})();</script>
-  <link rel="stylesheet" href="/css/gain-theme.css?v=34" />
+  <link rel="stylesheet" href="/css/gain-theme.css?v=36" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <meta name="description" content="AI governance — from intake to audit. NIST AI RMF · ISO 42001 · EU AI Act." />
   <meta property="og:type" content="website" />
@@ -32,14 +32,28 @@
 
     <h1 class="page-title">Company settings</h1>
 
+    <nav class="settings-toc" aria-label="Settings sections">
+      <div class="settings-toc-title">Jump to</div>
+      <ul>
+        <li><a href="#plan">Plan &amp; Billing</a></li>
+        <li><a href="#appearance">Appearance</a></li>
+        <li><a href="#profile">Profile</a></li>
+        <li><a href="#security">Security</a></li>
+        <li><a href="#members">Members</a></li>
+        <li><a href="#ai-settings-card">AI Policy Generation</a></li>
+        <li><a href="#notifications-card">Notifications</a></li>
+        <li><a href="#data-rights">Data &amp; deletion rights</a></li>
+      </ul>
+    </nav>
+
     <!-- Plan & Billing -->
-    <div class="card" id="plan-card">
-      <h2 class="card-title">Plan &amp; Billing</h2>
+    <div class="card settings-card" id="plan">
+      <h2 class="card-title"><a href="#plan" class="section-anchor">Plan &amp; Billing</a></h2>
       <div id="plan-body"><!-- rendered by JS --></div>
     </div>
 
-    <div class="card">
-      <h2 class="card-title">Appearance</h2>
+    <div class="card settings-card" id="appearance">
+      <h2 class="card-title"><a href="#appearance" class="section-anchor">Appearance</a></h2>
       <p class="text-muted">Pick a color palette for the app. The light/dark toggle lives in the top-right of the nav — use it to switch modes. Your choice is saved to this browser.</p>
 
       <div class="mode-toggle-row" role="group" aria-label="Light or dark mode">
@@ -51,8 +65,8 @@
       <div class="palette-grid" data-palette-grid></div>
     </div>
 
-    <div class="card">
-      <h2 class="card-title">Profile</h2>
+    <div class="card settings-card" id="profile">
+      <h2 class="card-title"><a href="#profile" class="section-anchor">Profile</a></h2>
       <form id="form-company" class="stacked-form">
         <div class="field">
           <label>Company name</label>
@@ -81,8 +95,8 @@
       </form>
     </div>
 
-    <div class="card section-sep">
-      <h2 class="card-title">Security</h2>
+    <div class="card settings-card section-sep" id="security">
+      <h2 class="card-title"><a href="#security" class="section-anchor">Security</a></h2>
       <p class="text-muted" style="margin-bottom:12px">
         Change the password for your GAIN account. You'll need to enter your current password to confirm.
       </p>
@@ -108,9 +122,9 @@
       </form>
     </div>
 
-    <div class="card section-sep">
+    <div class="card settings-card section-sep" id="members">
       <div class="flex-between">
-        <h2 class="card-title">Members</h2>
+        <h2 class="card-title"><a href="#members" class="section-anchor">Members</a></h2>
         <button class="btn btn-primary" data-invite data-admin-only>+ Invite member</button>
       </div>
       <table class="data">
@@ -129,8 +143,8 @@
       </table>
     </div>
 
-    <div class="card section-sep" id="ai-settings-card" style="display:none">
-      <h2 class="card-title">AI Policy Generation</h2>
+    <div class="card settings-card section-sep" id="ai-settings-card" style="display:none">
+      <h2 class="card-title"><a href="#ai-settings-card" class="section-anchor">AI Policy Generation</a></h2>
       <p style="margin-bottom:10px">
         <span class="badge badge-medium" style="font-size:.72rem;letter-spacing:.04em">INCLUDED</span>
       </p>
@@ -146,8 +160,8 @@
       </p>
     </div>
 
-    <div class="card section-sep" id="notifications-card" style="display:none">
-      <h2 class="card-title">Notifications</h2>
+    <div class="card settings-card section-sep" id="notifications-card" style="display:none">
+      <h2 class="card-title"><a href="#notifications-card" class="section-anchor">Notifications</a></h2>
       <p class="text-muted" style="margin-bottom:14px">
         Control automated email alerts sent to company admins.
       </p>
@@ -164,8 +178,8 @@
     </div>
 
     <!-- Data Rights -->
-    <div class="card section-sep" id="data-rights-card">
-      <h2 class="card-title">Data &amp; deletion rights</h2>
+    <div class="card settings-card section-sep" id="data-rights">
+      <h2 class="card-title"><a href="#data-rights" class="section-anchor">Data &amp; deletion rights</a></h2>
       <p class="text-muted" style="margin-bottom:14px">
         Export a full copy of your workspace data at any time, or request
         permanent deletion of your workspace or account. All deletions are
