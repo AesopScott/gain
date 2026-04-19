@@ -502,3 +502,500 @@ exports.generatePolicy = onCall(
     return { text, model: POLICY_GEN_MODEL, inputTokens, outputTokens };
   }
 );
+
+// ---------------------------------------------------------------------------
+// Data rights — workspace export + deletion with certification
+// ---------------------------------------------------------------------------
+// Implements GDPR Article 20 (portability) and Article 17 (erasure) plus
+// CCPA § 1798.105 / § 1798.130 equivalents. Deletion is soft-delete-first:
+// a workspace or account is marked scheduled, inaccessible to the user, and
+// then hard-deleted by a daily sweep after the soft-delete window. A
+// Deletion Certificate is issued on request and finalized on hard-delete so
+// customers have a verifiable record.
+
+// Collections kept under /companies/{id}. Kept in one place so export and
+// delete agree on what's covered.
+const COMPANY_SUBCOLLECTIONS = [
+  'inventory', 'risks', 'aias', 'intake', 'policies', 'contracts',
+  'incidents', 'consent', 'disclosures', 'trainingClasses', 'checklists',
+  'members', 'audit', 'aiUsage', 'joinRequests',
+];
+
+const DELETION_SOFT_DELETE_DAYS = 30;
+const DELETION_BACKUP_RETENTION_DAYS = 90;
+
+// Short alphanumeric code for quick eyeball verification in emails.
+// Omits easily-confused characters (0/O, 1/I/L).
+function shortVerificationCode(len = 8) {
+  const alphabet = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+  let s = '';
+  for (let i = 0; i < len; i++) s += alphabet[Math.floor(Math.random() * alphabet.length)];
+  return s;
+}
+
+function addDaysMs(ms, days) {
+  return ms + days * 24 * 3600 * 1000;
+}
+
+// Recursively convert Firestore Timestamp fields to ISO strings so the JSON
+// export is portable. Other field types pass through.
+function stripTimestamps(obj) {
+  if (obj === null || obj === undefined) return obj;
+  if (obj && typeof obj.toDate === 'function') return obj.toDate().toISOString();
+  if (Array.isArray(obj)) return obj.map(stripTimestamps);
+  if (typeof obj === 'object') {
+    const out = {};
+    for (const k of Object.keys(obj)) out[k] = stripTimestamps(obj[k]);
+    return out;
+  }
+  return obj;
+}
+
+function snapshotToJSON(snap) {
+  return snap.docs.map(d => ({ id: d.id, ...stripTimestamps(d.data()) }));
+}
+
+// ---- exportWorkspace ------------------------------------------------------
+// Any member can export. Generates a ZIP containing one JSON file per
+// collection plus a manifest.json and README.txt, uploads to Cloud Storage,
+// and returns a 24-hour signed URL.
+exports.exportWorkspace = onCall(
+  { timeoutSeconds: 540, memory: '1GiB' },
+  async (request) => {
+    const auth = request.auth;
+    if (!auth?.uid) throw new HttpsError('unauthenticated', 'Sign in required.');
+
+    const { companyId } = request.data || {};
+    if (!companyId) throw new HttpsError('invalid-argument', 'companyId is required.');
+
+    const memberSnap = await db.doc(`companies/${companyId}/members/${auth.uid}`).get();
+    if (!memberSnap.exists) throw new HttpsError('permission-denied', 'Not a member.');
+
+    const companySnap = await db.doc(`companies/${companyId}`).get();
+    if (!companySnap.exists) throw new HttpsError('not-found', 'Workspace not found.');
+
+    const JSZip = require('jszip');
+    const zip = new JSZip();
+
+    zip.file('company.json', JSON.stringify({
+      id: companyId,
+      ...stripTimestamps(companySnap.data()),
+    }, null, 2));
+
+    const manifest = {
+      schemaVersion: 1,
+      companyId,
+      companyName: companySnap.data().name || null,
+      exportedAt: new Date().toISOString(),
+      exportedByUid: auth.uid,
+      exportedByEmail: auth.token?.email || '',
+      collections: {},
+    };
+
+    for (const coll of COMPANY_SUBCOLLECTIONS) {
+      const snap = await db.collection(`companies/${companyId}/${coll}`).get();
+      const docs = snapshotToJSON(snap);
+      zip.file(`${coll}.json`, JSON.stringify(docs, null, 2));
+      manifest.collections[coll] = { count: docs.length };
+    }
+
+    zip.file('manifest.json', JSON.stringify(manifest, null, 2));
+    zip.file('README.txt',
+`GAIN workspace export
+=====================
+Company: ${companySnap.data().name || companyId}
+Company ID: ${companyId}
+Exported: ${manifest.exportedAt}
+Exported by: ${manifest.exportedByEmail}
+
+Each JSON file contains one Firestore collection from your workspace.
+Timestamps are ISO 8601 strings. See manifest.json for collection item
+counts and the schema version.
+
+This export is provided to satisfy the data-portability obligations of
+GDPR Article 20 and CCPA § 1798.130. It is not a legal certification;
+your use of the data is subject to the GAIN Terms of Service.
+`);
+
+    const buf = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
+    const ts = Date.now();
+    const fileName = `exports/${companyId}/${ts}.zip`;
+    const bucket = admin.storage().bucket();
+    const file = bucket.file(fileName);
+    await file.save(buf, {
+      contentType: 'application/zip',
+      metadata: { metadata: { companyId, exportedByUid: auth.uid } },
+    });
+
+    const expiresAt = ts + 24 * 3600 * 1000;
+    const [downloadUrl] = await file.getSignedUrl({
+      action: 'read',
+      expires: expiresAt,
+    });
+
+    await db.collection(`companies/${companyId}/audit`).add({
+      actorUid: auth.uid,
+      actorName: auth.token?.name || auth.token?.email || '',
+      action: 'workspace.export',
+      target: companyId,
+      details: {
+        fileName,
+        sizeBytes: buf.length,
+        collections: manifest.collections,
+      },
+      at: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    return {
+      downloadUrl,
+      expiresAt,
+      sizeBytes: buf.length,
+      collections: manifest.collections,
+    };
+  }
+);
+
+// ---- shared email helper for certificates ---------------------------------
+async function emailCertificate({ apiKey, to, toName, entityType, entityDisplayName, cert }) {
+  if (!to) return;
+  const certUrl = `${APP_URL}/deletion-certificate.html?id=${cert.id}`;
+  const hardDeleteLabel = new Date(cert.scheduledHardDeleteAt).toISOString().slice(0, 10);
+  const entityLabel = entityType === 'user' ? 'account' : entityType;
+  await sendEmail({
+    apiKey,
+    to,
+    toName,
+    subject: `Your GAIN ${entityLabel} deletion has been scheduled`,
+    htmlContent: emailShell(`
+      <p>Hi${toName ? ` ${toName}` : ''},</p>
+      <p>We've scheduled deletion of your GAIN ${entityLabel}
+      <strong>${entityDisplayName}</strong>.</p>
+      <table style="width:100%;border-collapse:collapse;margin:12px 0;background:#f9f9f9;border-radius:6px">
+        <tr><td style="padding:8px 12px;color:#888;width:200px">Certificate ID</td><td style="padding:8px 12px;font-family:monospace">${cert.id}</td></tr>
+        <tr><td style="padding:8px 12px;color:#888">Verification code</td><td style="padding:8px 12px;font-family:monospace;letter-spacing:.1em">${cert.verificationCode}</td></tr>
+        <tr><td style="padding:8px 12px;color:#888">Hard-delete on</td><td style="padding:8px 12px">${hardDeleteLabel}</td></tr>
+      </table>
+      <p>Your data is now soft-deleted and inaccessible. It will be
+      permanently removed on <strong>${hardDeleteLabel}</strong>. If you
+      didn't request this, contact
+      <a href="mailto:support@governainow.com">support@governainow.com</a>
+      immediately — we can cancel the deletion before that date.</p>
+      <p><a class="btn" href="${certUrl}">View Certificate</a></p>
+      <p style="font-size:.85em;color:#888">Encrypted backups containing this
+      data may persist for up to ${DELETION_BACKUP_RETENTION_DAYS} days after
+      the hard-delete date, after which they are rotated out of storage.</p>
+    `)
+  });
+}
+
+async function snapshotCounts(companyId) {
+  const out = {};
+  for (const coll of COMPANY_SUBCOLLECTIONS) {
+    try {
+      const snap = await db.collection(`companies/${companyId}/${coll}`).count().get();
+      out[coll] = snap.data().count;
+    } catch (err) {
+      out[coll] = null;
+    }
+  }
+  return out;
+}
+
+// ---- deleteWorkspace ------------------------------------------------------
+// Owner-only. Requires typing the workspace name verbatim to prevent misfire.
+// Soft-deletes (deletionStatus='scheduled') and schedules a hard-delete 30
+// days out. Creates a Deletion Certificate and emails the owner.
+exports.deleteWorkspace = onCall(
+  { secrets: [brevoKey], timeoutSeconds: 120 },
+  async (request) => {
+    const auth = request.auth;
+    if (!auth?.uid) throw new HttpsError('unauthenticated', 'Sign in required.');
+
+    const { companyId, confirmationText } = request.data || {};
+    if (!companyId) throw new HttpsError('invalid-argument', 'companyId is required.');
+
+    const memberSnap = await db.doc(`companies/${companyId}/members/${auth.uid}`).get();
+    if (!memberSnap.exists || memberSnap.data().role !== 'owner') {
+      throw new HttpsError('permission-denied', 'Only the workspace owner can delete.');
+    }
+
+    const companySnap = await db.doc(`companies/${companyId}`).get();
+    if (!companySnap.exists) throw new HttpsError('not-found', 'Workspace not found.');
+    const company = companySnap.data();
+
+    if (company.deletionStatus === 'scheduled') {
+      throw new HttpsError('failed-precondition', 'Workspace is already scheduled for deletion.');
+    }
+
+    const expectedConfirm = (company.name || '').trim();
+    if ((confirmationText || '').trim() !== expectedConfirm) {
+      throw new HttpsError(
+        'failed-precondition',
+        `Confirmation text must match the workspace name exactly: "${expectedConfirm}"`,
+      );
+    }
+
+    const nowMs = Date.now();
+    const scheduledHardDeleteAt = addDaysMs(nowMs, DELETION_SOFT_DELETE_DAYS);
+    const itemCounts = await snapshotCounts(companyId);
+    const certRef = db.collection('deletionCertificates').doc();
+    const verificationCode = shortVerificationCode(8);
+
+    await certRef.set({
+      id: certRef.id,
+      entityType: 'workspace',
+      entityId: companyId,
+      entityDisplayName: company.name || companyId,
+      requestedByUid: auth.uid,
+      requestedByEmail: auth.token?.email || memberSnap.data().email || '',
+      requestedByName: auth.token?.name || memberSnap.data().displayName || '',
+      requestedAt: admin.firestore.FieldValue.serverTimestamp(),
+      scheduledHardDeleteAt: admin.firestore.Timestamp.fromMillis(scheduledHardDeleteAt),
+      completedHardDeleteAt: null,
+      backupRetentionUntilAt: null,
+      itemCounts,
+      subProcessors: ['Google Cloud / Firebase', 'Brevo', 'Anthropic', 'Stripe'],
+      status: 'scheduled',
+      verificationCode,
+    });
+
+    await db.doc(`companies/${companyId}`).update({
+      deletionStatus: 'scheduled',
+      deletionRequestedAt: admin.firestore.FieldValue.serverTimestamp(),
+      deletionRequestedByUid: auth.uid,
+      scheduledHardDeleteAt: admin.firestore.Timestamp.fromMillis(scheduledHardDeleteAt),
+      deletionCertificateId: certRef.id,
+    });
+
+    await db.collection(`companies/${companyId}/audit`).add({
+      actorUid: auth.uid,
+      actorName: auth.token?.name || auth.token?.email || '',
+      action: 'workspace.deleteScheduled',
+      target: companyId,
+      details: { certificateId: certRef.id, scheduledHardDeleteAt, itemCounts },
+      at: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    try {
+      await emailCertificate({
+        apiKey: brevoKey.value().replace(/\s/g, ''),
+        to: auth.token?.email || memberSnap.data().email,
+        toName: auth.token?.name || memberSnap.data().displayName || '',
+        entityType: 'workspace',
+        entityDisplayName: company.name || companyId,
+        cert: { id: certRef.id, verificationCode, scheduledHardDeleteAt },
+      });
+    } catch (err) {
+      console.error('[deleteWorkspace] email failed', err.message);
+    }
+
+    return {
+      certificateId: certRef.id,
+      verificationCode,
+      scheduledHardDeleteAt,
+      itemCounts,
+    };
+  }
+);
+
+// ---- deleteAccount --------------------------------------------------------
+// User-scope delete. Blocks if the caller owns any active workspaces (they
+// must delete or transfer ownership first). Soft-deletes the user doc,
+// disables the Firebase Auth user for the soft-delete window, creates a
+// Deletion Certificate and emails the user.
+exports.deleteAccount = onCall(
+  { secrets: [brevoKey], timeoutSeconds: 120 },
+  async (request) => {
+    const auth = request.auth;
+    if (!auth?.uid) throw new HttpsError('unauthenticated', 'Sign in required.');
+
+    const { confirmationText } = request.data || {};
+    if ((confirmationText || '').trim().toLowerCase() !== 'delete my account') {
+      throw new HttpsError(
+        'failed-precondition',
+        'Confirmation text must be exactly: delete my account',
+      );
+    }
+
+    const userSnap = await db.doc(`users/${auth.uid}`).get();
+    const profile = userSnap.exists ? userSnap.data() : {};
+    const companyIds = Array.isArray(profile.companyIds) ? profile.companyIds : [];
+
+    const blockingWorkspaces = [];
+    for (const cid of companyIds) {
+      try {
+        const [cSnap, mSnap] = await Promise.all([
+          db.doc(`companies/${cid}`).get(),
+          db.doc(`companies/${cid}/members/${auth.uid}`).get(),
+        ]);
+        if (!cSnap.exists || !mSnap.exists) continue;
+        if (cSnap.data().deletionStatus === 'scheduled') continue;
+        if (mSnap.data().role === 'owner') {
+          blockingWorkspaces.push({ id: cid, name: cSnap.data().name || cid });
+        }
+      } catch (err) {
+        console.warn('[deleteAccount] membership check failed', cid, err.message);
+      }
+    }
+    if (blockingWorkspaces.length) {
+      throw new HttpsError(
+        'failed-precondition',
+        `You own ${blockingWorkspaces.length} workspace(s) that must be transferred or deleted first: ${blockingWorkspaces.map(w => w.name).join(', ')}`,
+      );
+    }
+
+    const userDisplay = profile.displayName || profile.email || auth.token?.email || auth.uid;
+    const nowMs = Date.now();
+    const scheduledHardDeleteAt = addDaysMs(nowMs, DELETION_SOFT_DELETE_DAYS);
+    const certRef = db.collection('deletionCertificates').doc();
+    const verificationCode = shortVerificationCode(8);
+
+    await certRef.set({
+      id: certRef.id,
+      entityType: 'user',
+      entityId: auth.uid,
+      entityDisplayName: userDisplay,
+      requestedByUid: auth.uid,
+      requestedByEmail: auth.token?.email || profile.email || '',
+      requestedByName: auth.token?.name || profile.displayName || '',
+      requestedAt: admin.firestore.FieldValue.serverTimestamp(),
+      scheduledHardDeleteAt: admin.firestore.Timestamp.fromMillis(scheduledHardDeleteAt),
+      completedHardDeleteAt: null,
+      backupRetentionUntilAt: null,
+      subProcessors: ['Google Cloud / Firebase', 'Brevo'],
+      status: 'scheduled',
+      verificationCode,
+    });
+
+    await db.doc(`users/${auth.uid}`).set({
+      deletionStatus: 'scheduled',
+      deletionRequestedAt: admin.firestore.FieldValue.serverTimestamp(),
+      scheduledHardDeleteAt: admin.firestore.Timestamp.fromMillis(scheduledHardDeleteAt),
+      deletionCertificateId: certRef.id,
+    }, { merge: true });
+
+    await db.collection('platformAudit').add({
+      actorUid: auth.uid,
+      action: 'user.deleteScheduled',
+      target: auth.uid,
+      details: { certificateId: certRef.id, scheduledHardDeleteAt },
+      at: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    // Disable Auth so the user can't sign in during the soft-delete window.
+    try {
+      await admin.auth().updateUser(auth.uid, { disabled: true });
+    } catch (err) {
+      console.warn('[deleteAccount] disable failed', err.message);
+    }
+
+    try {
+      await emailCertificate({
+        apiKey: brevoKey.value().replace(/\s/g, ''),
+        to: auth.token?.email || profile.email || '',
+        toName: auth.token?.name || profile.displayName || '',
+        entityType: 'user',
+        entityDisplayName: userDisplay,
+        cert: { id: certRef.id, verificationCode, scheduledHardDeleteAt },
+      });
+    } catch (err) {
+      console.error('[deleteAccount] email failed', err.message);
+    }
+
+    return {
+      certificateId: certRef.id,
+      verificationCode,
+      scheduledHardDeleteAt,
+    };
+  }
+);
+
+// ---- purgeScheduledDeletions ----------------------------------------------
+// Daily sweep. Hard-deletes workspaces and users whose
+// scheduledHardDeleteAt is in the past and finalizes their certificates.
+exports.purgeScheduledDeletions = onSchedule(
+  { schedule: '30 3 * * *', timeZone: 'America/New_York', secrets: [brevoKey], timeoutSeconds: 540, memory: '512MiB' },
+  async () => {
+    const now = admin.firestore.Timestamp.now();
+    const apiKey = brevoKey.value().replace(/\s/g, '');
+
+    // Workspaces
+    const wSnap = await db.collection('companies')
+      .where('deletionStatus', '==', 'scheduled')
+      .where('scheduledHardDeleteAt', '<=', now)
+      .get();
+
+    for (const companyDoc of wSnap.docs) {
+      const companyId = companyDoc.id;
+      const certId = companyDoc.data().deletionCertificateId;
+      try {
+        await db.recursiveDelete(companyDoc.ref);
+        if (certId) await finalizeCertificate(certId, apiKey);
+      } catch (err) {
+        console.error('[purge] workspace failed', companyId, err.message);
+      }
+    }
+
+    // Users
+    const uSnap = await db.collection('users')
+      .where('deletionStatus', '==', 'scheduled')
+      .where('scheduledHardDeleteAt', '<=', now)
+      .get();
+
+    for (const userDoc of uSnap.docs) {
+      const uid = userDoc.id;
+      const certId = userDoc.data().deletionCertificateId;
+      try {
+        try { await admin.auth().deleteUser(uid); } catch (err) {
+          console.warn('[purge] deleteUser failed', uid, err.message);
+        }
+        await db.recursiveDelete(userDoc.ref);
+        if (certId) await finalizeCertificate(certId, apiKey);
+      } catch (err) {
+        console.error('[purge] user failed', uid, err.message);
+      }
+    }
+  }
+);
+
+async function finalizeCertificate(certId, apiKey) {
+  const completedAt = admin.firestore.Timestamp.now();
+  const retentionUntilMs = addDaysMs(completedAt.toMillis(), DELETION_BACKUP_RETENTION_DAYS);
+  await db.doc(`deletionCertificates/${certId}`).update({
+    status: 'completed',
+    completedHardDeleteAt: completedAt,
+    backupRetentionUntilAt: admin.firestore.Timestamp.fromMillis(retentionUntilMs),
+  });
+
+  const snap = await db.doc(`deletionCertificates/${certId}`).get();
+  if (!snap.exists) return;
+  const cert = snap.data();
+  if (!cert.requestedByEmail) return;
+
+  const retentionLabel = new Date(retentionUntilMs).toISOString().slice(0, 10);
+  const entityLabel = cert.entityType === 'user' ? 'account' : cert.entityType;
+
+  try {
+    await sendEmail({
+      apiKey,
+      to: cert.requestedByEmail,
+      toName: cert.requestedByName || '',
+      subject: `Your GAIN ${entityLabel} has been permanently deleted`,
+      htmlContent: emailShell(`
+        <p>Your GAIN ${entityLabel} <strong>${cert.entityDisplayName}</strong>
+        has been permanently deleted from our active systems as of today.</p>
+        <table style="width:100%;border-collapse:collapse;margin:12px 0;background:#f9f9f9;border-radius:6px">
+          <tr><td style="padding:8px 12px;color:#888;width:220px">Certificate ID</td><td style="padding:8px 12px;font-family:monospace">${cert.id}</td></tr>
+          <tr><td style="padding:8px 12px;color:#888">Verification code</td><td style="padding:8px 12px;font-family:monospace;letter-spacing:.1em">${cert.verificationCode}</td></tr>
+          <tr><td style="padding:8px 12px;color:#888">Backup retention until</td><td style="padding:8px 12px">${retentionLabel}</td></tr>
+        </table>
+        <p><a class="btn" href="${APP_URL}/deletion-certificate.html?id=${cert.id}">View Certificate</a></p>
+        <p style="font-size:.85em;color:#888">Encrypted backups may persist
+        until ${retentionLabel}, after which rotation completes the erasure.
+        This certificate is your record of the deletion.</p>
+      `)
+    });
+  } catch (err) {
+    console.error('[finalizeCertificate] email failed', err.message);
+  }
+}

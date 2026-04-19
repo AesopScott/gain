@@ -8,7 +8,7 @@
   <meta http-equiv="Expires" content="0" />
   <title>GAIN — Settings</title>
   <script>(function(){try{var p=localStorage.getItem('gain.theme.palette')||'classic';var m=localStorage.getItem('gain.theme.mode')||'light';document.documentElement.setAttribute('data-palette',p);document.documentElement.setAttribute('data-mode',m);}catch(e){}})();</script>
-  <link rel="stylesheet" href="/css/gain-theme.css?v=33" />
+  <link rel="stylesheet" href="/css/gain-theme.css?v=34" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <meta name="description" content="AI governance — from intake to audit. NIST AI RMF · ISO 42001 · EU AI Act." />
   <meta property="og:type" content="website" />
@@ -136,14 +136,70 @@
       </label>
     </div>
 
+    <!-- Data Rights -->
+    <div class="card section-sep" id="data-rights-card">
+      <h2 class="card-title">Data &amp; deletion rights</h2>
+      <p class="text-muted" style="margin-bottom:14px">
+        Export a full copy of your workspace data at any time, or request
+        permanent deletion of your workspace or account. All deletions are
+        recorded against a verifiable <a href="/deletion-certificate.html">Deletion Certificate</a>.
+      </p>
+
+      <div class="stacked-form" style="max-width:720px">
+
+        <div style="border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:14px">
+          <h3 class="subsection" style="margin:0 0 6px">Export workspace data</h3>
+          <p class="text-muted" style="font-size:.9rem;margin-bottom:12px">
+            Downloads a ZIP containing one JSON file per collection in your
+            workspace (inventory, risks, AIAs, policies, contracts, audit log,
+            etc.) plus a manifest. Available to all members.
+          </p>
+          <button type="button" class="btn btn-primary" id="btn-export">Export workspace data</button>
+          <div id="export-status" style="margin-top:10px;font-size:.88rem"></div>
+        </div>
+
+        <div id="delete-workspace-box" style="display:none;border:1px solid var(--risk-high);border-radius:var(--radius);padding:18px;margin-bottom:14px;background:var(--accent-soft)">
+          <h3 class="subsection" style="margin:0 0 6px;color:var(--risk-high)">Delete workspace</h3>
+          <p class="text-muted" style="font-size:.9rem;margin-bottom:12px">
+            Permanently delete this workspace and all its data. The workspace
+            is soft-deleted immediately and hard-deleted after a <strong>30-day
+            recovery window</strong>. Encrypted backups may persist up to
+            90 days after hard-delete before rotation. You'll receive a
+            Deletion Certificate with a verification code by email.
+            <em>Only the workspace owner can perform this action.</em>
+          </p>
+          <button type="button" class="btn btn-danger" id="btn-delete-workspace">Delete workspace…</button>
+          <div id="delete-workspace-status" style="margin-top:10px;font-size:.88rem"></div>
+        </div>
+
+        <div style="border:1px solid var(--risk-high);border-radius:var(--radius);padding:18px;background:var(--accent-soft)">
+          <h3 class="subsection" style="margin:0 0 6px;color:var(--risk-high)">Delete my account</h3>
+          <p class="text-muted" style="font-size:.9rem;margin-bottom:12px">
+            Permanently delete your GAIN account. Your account is soft-deleted
+            and sign-in is disabled immediately; hard-delete occurs after the
+            <strong>30-day recovery window</strong>. If you own any workspaces,
+            you must transfer or delete them first. You'll receive a Deletion
+            Certificate by email.
+          </p>
+          <button type="button" class="btn btn-danger" id="btn-delete-account">Delete my account…</button>
+          <div id="delete-account-status" style="margin-top:10px;font-size:.88rem"></div>
+        </div>
+
+      </div>
+    </div>
+
     <div data-site-footer></div>
   </main>
 
   <script type="module">
-    import { requireCompany, canAdmin, isOwner, resolvePlan } from '/js/session.js?v=33';
-    import { renderHeader, renderFooter, toast, openModal, confirmDialog, serializeForm, setFormValues, escapeHTML, formatDate } from '/js/ui.js?v=33';
-    import { updateCompany, listMembers, updateMemberRole, removeMember, createInvite, listInvitesForCompany, deleteInvite, logEvent } from '/js/data.js?v=33';
-    import { PALETTES, getPalette, getMode, setPalette, setMode } from '/js/theme.js?v=33';
+    import { requireCompany, canAdmin, isOwner, resolvePlan } from '/js/session.js?v=34';
+    import { renderHeader, renderFooter, toast, openModal, confirmDialog, serializeForm, setFormValues, escapeHTML, formatDate } from '/js/ui.js?v=34';
+    import { updateCompany, listMembers, updateMemberRole, removeMember, createInvite, listInvitesForCompany, deleteInvite, logEvent } from '/js/data.js?v=34';
+    import { PALETTES, getPalette, getMode, setPalette, setMode } from '/js/theme.js?v=34';
+    import { app } from '/js/config.js?v=34';
+    import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js';
+    import { signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+    import { auth } from '/js/config.js?v=34';
 
     const { user, memberships, company, member } = await requireCompany();
     renderHeader({ user, company, memberships });
@@ -436,6 +492,155 @@
                 refreshMembers();
               } catch (err) {
                 toast(err.message, 'error', 4000);
+              }
+            }
+          }
+        ]
+      });
+    });
+
+    // ---------- data rights (export + deletion) ----------
+    const functions = getFunctions(app);
+    const exportWorkspaceFn    = httpsCallable(functions, 'exportWorkspace');
+    const deleteWorkspaceFn    = httpsCallable(functions, 'deleteWorkspace');
+    const deleteAccountFn      = httpsCallable(functions, 'deleteAccount');
+
+    const exportBtn    = document.getElementById('btn-export');
+    const exportStatus = document.getElementById('export-status');
+
+    exportBtn.addEventListener('click', async () => {
+      exportBtn.disabled = true;
+      exportStatus.innerHTML = '<span class="text-muted">Building export — this can take up to a minute for large workspaces…</span>';
+      try {
+        const { data } = await exportWorkspaceFn({ companyId: company.id });
+        const sizeKB = Math.round(data.sizeBytes / 1024);
+        const expiresAt = new Date(data.expiresAt).toLocaleString();
+        exportStatus.innerHTML = `
+          <div style="padding:12px;border:1px solid var(--accent);border-radius:var(--radius);background:var(--accent-soft)">
+            <p style="margin:0 0 8px"><strong>Your export is ready</strong> · ${sizeKB} KB</p>
+            <p style="margin:0 0 8px;font-size:.85rem" class="text-muted">Download link expires ${expiresAt}.</p>
+            <a class="btn btn-primary btn-sm" href="${data.downloadUrl}" download="gain-${company.id}-export.zip">Download ZIP</a>
+          </div>
+        `;
+        toast('Export ready', 'success');
+      } catch (err) {
+        console.error(err);
+        exportStatus.innerHTML = `<span style="color:var(--risk-high)">${escapeHTML(err.message || 'Export failed')}</span>`;
+        toast(err.message || 'Export failed', 'error', 5000);
+      } finally {
+        exportBtn.disabled = false;
+      }
+    });
+
+    // Delete workspace — owner only
+    if (isOwner(member)) {
+      document.getElementById('delete-workspace-box').style.display = '';
+    }
+    const delWsBtn    = document.getElementById('btn-delete-workspace');
+    const delWsStatus = document.getElementById('delete-workspace-status');
+
+    delWsBtn.addEventListener('click', () => {
+      const body = document.createElement('div');
+      body.innerHTML = `
+        <p style="margin-top:0">This will <strong>permanently delete the workspace</strong>
+        <em>${escapeHTML(company.name || company.id)}</em> and all its data after a 30-day
+        recovery window. Members will lose access immediately.</p>
+        <p>To confirm, type the workspace name exactly below:</p>
+        <p style="font-family:monospace;background:var(--accent-soft);padding:8px 12px;border-radius:6px;user-select:none">
+          ${escapeHTML(company.name || company.id)}
+        </p>
+        <input type="text" id="confirm-ws-name" class="input" placeholder="Type the workspace name" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:6px;margin-top:8px" />
+      `;
+      openModal({
+        title: `Delete workspace: ${company.name || company.id}`,
+        body,
+        actions: [
+          { label: 'Cancel', variant: 'ghost', onClick: ({ close }) => close() },
+          {
+            label: 'Delete workspace',
+            variant: 'danger',
+            onClick: async ({ close }) => {
+              const typed = body.querySelector('#confirm-ws-name').value || '';
+              if (typed.trim() !== (company.name || '').trim()) {
+                toast('Confirmation text does not match.', 'error');
+                return;
+              }
+              delWsBtn.disabled = true;
+              delWsStatus.innerHTML = '<span class="text-muted">Scheduling deletion…</span>';
+              try {
+                const { data } = await deleteWorkspaceFn({ companyId: company.id, confirmationText: typed });
+                close();
+                const hardDate = new Date(data.scheduledHardDeleteAt).toISOString().slice(0, 10);
+                delWsStatus.innerHTML = `
+                  <div style="padding:12px;border:1px solid var(--risk-high);border-radius:var(--radius);background:var(--accent-soft)">
+                    <p style="margin:0 0 6px"><strong>Workspace scheduled for deletion.</strong></p>
+                    <p style="margin:0 0 6px;font-size:.85rem">Hard-delete on <strong>${hardDate}</strong>.</p>
+                    <p style="margin:0 0 8px;font-size:.85rem">Verification code: <code style="letter-spacing:.1em">${escapeHTML(data.verificationCode)}</code></p>
+                    <a class="btn btn-primary btn-sm" href="/deletion-certificate.html?id=${encodeURIComponent(data.certificateId)}">View Certificate</a>
+                  </div>
+                `;
+                toast('Workspace deletion scheduled', 'success');
+                setTimeout(() => { window.location.href = `/deletion-certificate.html?id=${encodeURIComponent(data.certificateId)}`; }, 2500);
+              } catch (err) {
+                console.error(err);
+                delWsStatus.innerHTML = `<span style="color:var(--risk-high)">${escapeHTML(err.message || 'Deletion failed')}</span>`;
+                toast(err.message || 'Deletion failed', 'error', 5000);
+              } finally {
+                delWsBtn.disabled = false;
+              }
+            }
+          }
+        ]
+      });
+    });
+
+    // Delete account
+    const delAcctBtn    = document.getElementById('btn-delete-account');
+    const delAcctStatus = document.getElementById('delete-account-status');
+
+    delAcctBtn.addEventListener('click', () => {
+      const body = document.createElement('div');
+      body.innerHTML = `
+        <p style="margin-top:0">This will <strong>permanently delete your GAIN account</strong>
+        after a 30-day recovery window. You'll be signed out immediately and unable to sign
+        back in.</p>
+        <p class="text-muted" style="font-size:.9rem">If you own any active workspaces, this
+        will be rejected — transfer ownership or delete those workspaces first.</p>
+        <p>To confirm, type exactly:</p>
+        <p style="font-family:monospace;background:var(--accent-soft);padding:8px 12px;border-radius:6px;user-select:none">delete my account</p>
+        <input type="text" id="confirm-acct" class="input" placeholder="Type: delete my account" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:6px;margin-top:8px" />
+      `;
+      openModal({
+        title: 'Delete my account',
+        body,
+        actions: [
+          { label: 'Cancel', variant: 'ghost', onClick: ({ close }) => close() },
+          {
+            label: 'Delete account',
+            variant: 'danger',
+            onClick: async ({ close }) => {
+              const typed = (body.querySelector('#confirm-acct').value || '').trim().toLowerCase();
+              if (typed !== 'delete my account') {
+                toast('Confirmation text does not match.', 'error');
+                return;
+              }
+              delAcctBtn.disabled = true;
+              delAcctStatus.innerHTML = '<span class="text-muted">Scheduling deletion…</span>';
+              try {
+                const { data } = await deleteAccountFn({ confirmationText: typed });
+                close();
+                toast('Account deletion scheduled — signing out…', 'success');
+                const certUrl = `/deletion-certificate.html?id=${encodeURIComponent(data.certificateId)}`;
+                setTimeout(async () => {
+                  try { await signOut(auth); } catch (_) {}
+                  window.location.href = certUrl;
+                }, 1200);
+              } catch (err) {
+                console.error(err);
+                delAcctStatus.innerHTML = `<span style="color:var(--risk-high)">${escapeHTML(err.message || 'Deletion failed')}</span>`;
+                toast(err.message || 'Deletion failed', 'error', 6000);
+              } finally {
+                delAcctBtn.disabled = false;
               }
             }
           }

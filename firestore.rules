@@ -42,7 +42,14 @@ service cloud.firestore {
     match /users/{userId} {
       allow read: if isSignedIn() && uid() == userId;
       allow create: if isSignedIn() && uid() == userId;
-      allow update: if isSignedIn() && uid() == userId;
+      // Users can update their own profile, but deletion-control fields
+      // (deletionStatus, deletionRequestedAt, scheduledHardDeleteAt,
+      // deletionCertificateId) may only be written by Cloud Functions via
+      // the Admin SDK — never by a client. Prevents a user from cancelling
+      // or re-scheduling their own deletion sweep.
+      allow update: if isSignedIn() && uid() == userId &&
+        !request.resource.data.diff(resource.data).affectedKeys()
+          .hasAny(['deletionStatus', 'deletionRequestedAt', 'scheduledHardDeleteAt', 'deletionCertificateId']);
       allow delete: if false;
     }
 
@@ -62,11 +69,17 @@ service cloud.firestore {
 
       // Only owners/admins can update top-level company fields — but billing
       // fields (planOverride, stripePlan, stripeCustomerId, stripeSubscriptionId)
-      // may only be changed by the platform super admin. This prevents a company
-      // admin from self-granting a paid plan.
+      // may only be changed by the platform super admin. Deletion-control
+      // fields (deletionStatus, deletionRequestedAt, deletionRequestedByUid,
+      // scheduledHardDeleteAt, deletionCertificateId) are written by Cloud
+      // Functions via the Admin SDK and must not be client-writable. This
+      // prevents a company admin from self-granting a paid plan or
+      // un-cancelling a scheduled deletion.
       allow update: if isAdmin(companyId) &&
         !request.resource.data.diff(resource.data).affectedKeys()
-          .hasAny(['planOverride', 'stripePlan', 'stripeCustomerId', 'stripeSubscriptionId']);
+          .hasAny(['planOverride', 'stripePlan', 'stripeCustomerId', 'stripeSubscriptionId',
+                   'deletionStatus', 'deletionRequestedAt', 'deletionRequestedByUid',
+                   'scheduledHardDeleteAt', 'deletionCertificateId']);
       allow update: if isSuperadmin();
 
       // Only owner can delete (rarely used; usually soft-delete via archived flag)
@@ -255,6 +268,30 @@ service cloud.firestore {
         (request.auth.token.email == resource.data.email ||
          isAdmin(resource.data.companyId));
       allow update: if false;
+    }
+
+    // ---------- deletion certificates ----------
+    // Issued by Cloud Functions when a workspace or account is scheduled for
+    // deletion, and finalized when the hard-delete sweep runs. Readable by
+    // the requester, by members of the workspace (for workspace certs), and
+    // by superadmin. Never writable from the client — only Cloud Functions
+    // via the Admin SDK write these docs.
+    match /deletionCertificates/{certId} {
+      allow read: if isSignedIn() && (
+        resource.data.requestedByUid == uid() ||
+        (resource.data.entityType == 'workspace' && isMember(resource.data.entityId)) ||
+        isSuperadmin()
+      );
+      allow write: if false;
+    }
+
+    // ---------- platform audit ----------
+    // Platform-level audit log for account-scoped events (user deletions,
+    // platform-wide admin actions). Written only by Cloud Functions; readable
+    // by superadmin.
+    match /platformAudit/{entryId} {
+      allow read: if isSuperadmin();
+      allow write: if false;
     }
   }
 }
