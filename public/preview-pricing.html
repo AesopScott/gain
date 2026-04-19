@@ -1,0 +1,730 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Pricing Layout Options — Pick One</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --navy: #1F3864;
+      --blue: #2E75B6;
+      --accent: #4FB3D9;
+      --green: #06D6A0;
+      --amber: #FFD166;
+      --coral: #FF6B6B;
+      --ink: #1A2434;
+      --ink-soft: #4A5468;
+      --muted: #7A8599;
+      --border: #D8DEE8;
+      --border-soft: #EAEEF4;
+      --bg: #F7F8FA;
+      --surface: #FFFFFF;
+      --surface-alt: #F2F4F8;
+    }
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.5;
+    }
+    .preview-wrap { max-width: 1400px; margin: 0 auto; padding: 32px 24px; }
+    .preview-nav {
+      position: sticky; top: 0;
+      background: #0d1b4b;
+      color: #fff;
+      padding: 14px 24px;
+      z-index: 100;
+      font-weight: 700;
+      font-size: .92rem;
+      border-bottom: 1px solid rgba(255,255,255,.1);
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+    }
+    .preview-nav span {
+      opacity: .6;
+      margin-right: 14px;
+      white-space: nowrap;
+    }
+    .preview-nav a {
+      color: #fff;
+      text-decoration: none;
+      opacity: .75;
+      padding: 4px 10px;
+      border-radius: 4px;
+      white-space: nowrap;
+      font-size: .82rem;
+    }
+    .preview-nav a:hover { background: rgba(255,255,255,.12); opacity: 1; }
+
+    .opt-section {
+      margin-top: 56px;
+      padding-top: 56px;
+      border-top: 3px dashed var(--border);
+      scroll-margin-top: 70px;
+    }
+    .opt-section:first-child { border-top: 0; padding-top: 0; margin-top: 0; }
+    .opt-label {
+      display: inline-block;
+      background: #0d1b4b;
+      color: #fff;
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-size: .8rem;
+      font-weight: 700;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+      margin-bottom: 20px;
+    }
+
+    /* Shared base for all options */
+    .tier-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+    @media (max-width: 900px) { .tier-grid { grid-template-columns: repeat(2, 1fr); } }
+    .tier { padding: 22px; border-radius: 10px; display: flex; flex-direction: column; gap: 12px; }
+    .tier h3 { font-size: 1.15rem; font-weight: 700; }
+    .tier .price { font-size: 2.2rem; font-weight: 800; line-height: 1; }
+    .tier .price small { font-size: .85rem; font-weight: 400; opacity: .6; display: block; margin-top: 4px; }
+    .tier ul { list-style: none; display: flex; flex-direction: column; gap: 5px; font-size: .85rem; }
+    .tier ul li::before { content: "✓ "; color: var(--green); font-weight: 700; }
+    .tier .cta {
+      display: inline-block;
+      padding: 10px 16px;
+      border-radius: 6px;
+      text-align: center;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: .9rem;
+      cursor: pointer;
+      border: 0;
+      font-family: inherit;
+    }
+
+    /* ============================================================
+       OPT 1 — Stripe Minimal (white cards, subtle shadow, blue accent)
+       ============================================================ */
+    .opt1 .tier-grid { gap: 20px; }
+    .opt1 .tier {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      box-shadow: 0 1px 2px rgba(0,0,0,.02);
+      transition: box-shadow .2s, transform .15s;
+    }
+    .opt1 .tier:hover { box-shadow: 0 8px 24px rgba(20,35,71,.08); transform: translateY(-2px); }
+    .opt1 .tier.featured { border-color: var(--blue); box-shadow: 0 4px 16px rgba(46,117,182,.18); }
+    .opt1 .cta.primary { background: #0d1b4b; color: #fff; }
+    .opt1 .cta.secondary { background: transparent; color: #0d1b4b; border: 1px solid var(--border); }
+    .opt1 h3 { color: var(--navy); }
+
+    /* ============================================================
+       OPT 2 — Linear Dark Hero (dark top, white cards below)
+       ============================================================ */
+    .opt2 .hero {
+      background: radial-gradient(circle at 30% 20%, #4FB3D9 0%, #1F3864 40%, #0A1020 100%);
+      color: #fff;
+      padding: 40px;
+      border-radius: 16px;
+      margin-bottom: -60px;
+      padding-bottom: 100px;
+    }
+    .opt2 .hero h1 { font-size: 2.2rem; color: #fff; margin-bottom: 8px; }
+    .opt2 .hero p { opacity: .8; max-width: 500px; }
+    .opt2 .tier-grid { position: relative; z-index: 2; }
+    .opt2 .tier {
+      background: #fff;
+      border: 1px solid var(--border-soft);
+      box-shadow: 0 16px 32px rgba(10,16,32,.08);
+    }
+    .opt2 .tier.featured { background: #0d1b4b; color: #fff; border-color: transparent; }
+    .opt2 .tier.featured h3, .opt2 .tier.featured .price { color: #fff; }
+    .opt2 .cta.primary { background: #06D6A0; color: #0d1b4b; }
+    .opt2 .cta.secondary { background: transparent; color: inherit; border: 1px solid currentColor; opacity: .7; }
+
+    /* ============================================================
+       OPT 3 — Vercel / Geist Monochrome (black+white, stark)
+       ============================================================ */
+    .opt3 { font-family: 'Inter', sans-serif; }
+    .opt3 .tier {
+      background: #fff;
+      border: 1px solid #000;
+      border-radius: 0;
+    }
+    .opt3 .tier h3 { font-weight: 800; text-transform: uppercase; letter-spacing: .06em; font-size: .9rem; }
+    .opt3 .tier .price { font-weight: 800; color: #000; }
+    .opt3 .tier.featured { background: #000; color: #fff; }
+    .opt3 .tier.featured h3, .opt3 .tier.featured .price { color: #fff; }
+    .opt3 .cta { border-radius: 0; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; font-size: .8rem; }
+    .opt3 .cta.primary { background: #000; color: #fff; }
+    .opt3 .cta.secondary { background: #fff; color: #000; border: 1px solid #000; }
+    .opt3 .tier.featured .cta.primary { background: #fff; color: #000; }
+
+    /* ============================================================
+       OPT 4 — GitHub Style (soft cards, green recommended)
+       ============================================================ */
+    .opt4 .tier {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+    .opt4 .tier h3 { color: var(--navy); font-size: 1rem; font-weight: 700; margin-bottom: 4px; }
+    .opt4 .tier .tagline { font-size: .8rem; color: var(--muted); }
+    .opt4 .tier.featured { border: 2px solid var(--green); position: relative; }
+    .opt4 .tier.featured::before {
+      content: "Recommended";
+      position: absolute;
+      top: -10px; left: 20px;
+      background: var(--green);
+      color: #0d1b4b;
+      font-size: .68rem;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+    }
+    .opt4 .cta.primary { background: var(--green); color: #0d1b4b; }
+    .opt4 .cta.secondary { background: #f6f8fa; color: var(--navy); border: 1px solid var(--border); }
+
+    /* ============================================================
+       OPT 5 — Apple-Style Ultra Clean (no cards, huge type)
+       ============================================================ */
+    .opt5 .tier-grid { gap: 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+    .opt5 .tier {
+      border-right: 1px solid var(--border);
+      border-radius: 0;
+      padding: 32px 20px;
+      background: transparent;
+    }
+    .opt5 .tier:last-child { border-right: 0; }
+    .opt5 .tier h3 { font-size: 1.5rem; font-weight: 800; color: #000; font-family: 'Space Grotesk', sans-serif; }
+    .opt5 .tier .price { font-size: 3rem; font-weight: 800; color: #000; margin: 12px 0; font-family: 'Space Grotesk', sans-serif; }
+    .opt5 .cta { border-radius: 999px; background: #0d1b4b; color: #fff; padding: 12px 24px; font-weight: 600; }
+    .opt5 .cta.secondary { background: transparent; color: #0d1b4b; border: 1px solid #0d1b4b; }
+    .opt5 .tier.featured { background: linear-gradient(180deg, #FFFFFF 0%, #D5E8F0 100%); }
+
+    /* ============================================================
+       OPT 6 — Notion Airy (pastel accents per tier)
+       ============================================================ */
+    .opt6 .tier {
+      background: var(--surface);
+      border: 1px solid var(--border-soft);
+      border-radius: 14px;
+      position: relative;
+      overflow: hidden;
+    }
+    .opt6 .tier::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 4px;
+    }
+    .opt6 .t-starter::before  { background: var(--amber); }
+    .opt6 .t-pro::before      { background: var(--green); }
+    .opt6 .t-business::before { background: var(--blue); }
+    .opt6 .t-enterprise::before { background: var(--navy); }
+    .opt6 .tier-icon {
+      font-size: 1.8rem;
+      margin-bottom: 4px;
+    }
+    .opt6 .cta.primary { background: var(--navy); color: #fff; }
+    .opt6 .cta.secondary { background: var(--surface-alt); color: var(--navy); }
+
+    /* ============================================================
+       OPT 7 — Gradient Featured (center card has bold gradient)
+       ============================================================ */
+    .opt7 .tier {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+    .opt7 .tier.featured {
+      background: linear-gradient(135deg, #1F3864 0%, #4FB3D9 100%);
+      color: #fff;
+      border-color: transparent;
+      box-shadow: 0 12px 32px rgba(31,56,100,.25);
+      transform: scale(1.03);
+    }
+    .opt7 .tier.featured h3, .opt7 .tier.featured .price { color: #fff; }
+    .opt7 .tier.featured ul li::before { color: #06D6A0; }
+    .opt7 .cta.primary { background: #0d1b4b; color: #fff; }
+    .opt7 .tier.featured .cta.primary { background: #fff; color: #1F3864; }
+    .opt7 .cta.secondary { background: transparent; color: #0d1b4b; border: 1px solid var(--border); }
+
+    /* ============================================================
+       OPT 8 — Elevated Center (featured card lifted with shadow)
+       ============================================================ */
+    .opt8 .tier {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      box-shadow: 0 1px 2px rgba(0,0,0,.03);
+    }
+    .opt8 .tier.featured {
+      transform: translateY(-16px);
+      box-shadow: 0 20px 40px rgba(31,56,100,.18), 0 4px 12px rgba(31,56,100,.1);
+      border: 2px solid var(--blue);
+      background: linear-gradient(180deg, #FFFFFF 0%, #F0F7FC 100%);
+    }
+    .opt8 .cta.primary { background: var(--blue); color: #fff; }
+    .opt8 .cta.secondary { background: transparent; color: var(--navy); border: 1px solid var(--border); }
+    .opt8 .tier.featured h3 { color: var(--blue); }
+
+    /* ============================================================
+       OPT 9 — Aurora / Glassmorphism (gradient bg, blurred cards)
+       ============================================================ */
+    .opt9 {
+      background:
+        radial-gradient(ellipse at 10% 0%, rgba(79,179,217,.35) 0%, transparent 40%),
+        radial-gradient(ellipse at 90% 100%, rgba(255,209,102,.25) 0%, transparent 40%),
+        radial-gradient(ellipse at 50% 50%, rgba(255,107,107,.2) 0%, transparent 50%),
+        #0d1b4b;
+      padding: 48px 32px;
+      border-radius: 20px;
+      color: #fff;
+    }
+    .opt9 h1 { color: #fff; }
+    .opt9 .tier {
+      background: rgba(255,255,255,.08);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255,255,255,.18);
+      color: #fff;
+    }
+    .opt9 .tier h3 { color: #fff; }
+    .opt9 .tier .price { color: #fff; }
+    .opt9 .tier.featured { background: rgba(255,255,255,.18); border-color: rgba(255,255,255,.4); }
+    .opt9 .tier ul li::before { color: #06D6A0; }
+    .opt9 .cta.primary { background: #06D6A0; color: #0d1b4b; }
+    .opt9 .cta.secondary { background: transparent; color: #fff; border: 1px solid rgba(255,255,255,.35); }
+
+    /* ============================================================
+       OPT 10 — Compact Horizontal Rows (not cards — stacked)
+       ============================================================ */
+    .opt10 .tier-grid { grid-template-columns: 1fr; gap: 0; }
+    .opt10 .tier {
+      display: grid;
+      grid-template-columns: 200px 140px 1fr 160px;
+      gap: 24px;
+      align-items: center;
+      padding: 20px 24px;
+      border-radius: 0;
+      border: 0;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .opt10 .tier:first-child { border-top: 1px solid var(--border); }
+    .opt10 .tier.featured {
+      background: linear-gradient(90deg, rgba(46,117,182,.08) 0%, transparent 40%);
+      border-left: 4px solid var(--blue);
+    }
+    .opt10 .tier h3 { font-size: 1.05rem; color: var(--navy); margin: 0; }
+    .opt10 .tier .tagline { font-size: .78rem; color: var(--muted); }
+    .opt10 .tier .price { font-size: 1.6rem; color: var(--navy); }
+    .opt10 .tier ul { display: flex; flex-direction: row; flex-wrap: wrap; gap: 14px; margin: 0; }
+    .opt10 .tier ul li::before { margin-right: 4px; }
+    .opt10 .cta.primary { background: var(--navy); color: #fff; }
+    .opt10 .cta.secondary { background: transparent; color: var(--navy); border: 1px solid var(--border); }
+    @media (max-width: 900px) { .opt10 .tier { grid-template-columns: 1fr; } }
+
+    .info-box {
+      background: #FFF8DD;
+      border: 1px solid #FFD166;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: .9rem;
+      margin-bottom: 24px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="preview-nav">
+  <span>Pricing layouts — pick one:</span>
+  <a href="#opt1">1 · Stripe Minimal</a>
+  <a href="#opt2">2 · Linear Dark Hero</a>
+  <a href="#opt3">3 · Vercel Mono</a>
+  <a href="#opt4">4 · GitHub Style</a>
+  <a href="#opt5">5 · Apple Clean</a>
+  <a href="#opt6">6 · Notion Airy</a>
+  <a href="#opt7">7 · Gradient Featured</a>
+  <a href="#opt8">8 · Elevated Center</a>
+  <a href="#opt9">9 · Aurora Glass</a>
+  <a href="#opt10">10 · Compact Rows</a>
+</div>
+
+<div class="preview-wrap">
+
+<div class="info-box">
+  Each option below uses the real GAIN tier data (Starter / Pro / Business / Enterprise). The feature-compare table and FAQ stay the same from the current page — these previews only show the tier-cards section. Scroll through, note the number you like, and I'll convert that one into the real pricing page.
+</div>
+
+<!-- ========================== OPT 1 ========================== -->
+<section id="opt1" class="opt-section opt1">
+  <span class="opt-label">Option 1 · Stripe Minimal</span>
+  <h2 style="font-size:1.8rem;margin-bottom:4px">Simple, transparent pricing</h2>
+  <p style="color:var(--muted);margin-bottom:24px">Start free. Upgrade when your governance program scales.</p>
+  <div class="tier-grid">
+    <div class="tier">
+      <h3>Starter</h3>
+      <div class="price">$0<small>forever</small></div>
+      <a class="cta secondary">Get started free</a>
+      <ul><li>3 AI systems</li><li>3 team members</li><li>NIST AI RMF checklist</li></ul>
+    </div>
+    <div class="tier">
+      <h3>Pro</h3>
+      <div class="price">$100<small>/ month</small></div>
+      <a class="cta primary">Start 14-day trial</a>
+      <ul><li>15 AI systems</li><li>10 team members</li><li>All sector checklists</li><li>AIA workflow</li><li>AI-gen drafting</li></ul>
+    </div>
+    <div class="tier featured">
+      <h3>Business</h3>
+      <div class="price">$250<small>/ month</small></div>
+      <a class="cta primary">Start 14-day trial</a>
+      <ul><li>35 AI systems</li><li>25 team members</li><li>3 workspaces</li><li>SSO</li><li>BAA available</li></ul>
+    </div>
+    <div class="tier">
+      <h3>Enterprise</h3>
+      <div class="price">$500<small>/ month</small></div>
+      <a class="cta secondary">Contact sales</a>
+      <ul><li>Unlimited everything</li><li>SAML/Okta SSO</li><li>API access</li><li>Discord support</li></ul>
+    </div>
+  </div>
+</section>
+
+<!-- ========================== OPT 2 ========================== -->
+<section id="opt2" class="opt-section opt2">
+  <span class="opt-label">Option 2 · Linear Dark Hero</span>
+  <div class="hero">
+    <h1>Govern AI. Prove it.</h1>
+    <p>One platform for every governance workflow — intake, AIAs, risk register, checklists, and policy generation.</p>
+  </div>
+  <div class="tier-grid">
+    <div class="tier">
+      <h3>Starter</h3>
+      <div class="price">$0<small>forever</small></div>
+      <a class="cta secondary">Get started free</a>
+      <ul><li>3 systems · 3 users</li><li>NIST checklist</li><li>Basic intake</li></ul>
+    </div>
+    <div class="tier">
+      <h3>Pro</h3>
+      <div class="price">$100<small>/ month</small></div>
+      <a class="cta primary">Start free trial</a>
+      <ul><li>15 systems · 10 users</li><li>Sector checklists</li><li>AIA workflow</li></ul>
+    </div>
+    <div class="tier featured">
+      <h3>Business</h3>
+      <div class="price">$250<small>/ month</small></div>
+      <a class="cta primary">Start free trial</a>
+      <ul><li>35 systems · 25 users</li><li>SSO · BAA</li><li>3 workspaces</li></ul>
+    </div>
+    <div class="tier">
+      <h3>Enterprise</h3>
+      <div class="price">$500<small>/ month</small></div>
+      <a class="cta secondary">Contact sales</a>
+      <ul><li>Unlimited</li><li>SAML · API</li><li>Dedicated support</li></ul>
+    </div>
+  </div>
+</section>
+
+<!-- ========================== OPT 3 ========================== -->
+<section id="opt3" class="opt-section opt3">
+  <span class="opt-label">Option 3 · Vercel Monochrome</span>
+  <h2 style="font-size:2rem;margin-bottom:4px;font-weight:800">Pricing.</h2>
+  <p style="color:#666;margin-bottom:24px;font-size:.95rem">No hidden fees. Cancel anytime.</p>
+  <div class="tier-grid">
+    <div class="tier">
+      <h3>Starter</h3>
+      <div class="price">$0<small>FOREVER</small></div>
+      <a class="cta secondary">GET STARTED</a>
+      <ul><li>3 AI systems</li><li>3 members</li><li>NIST checklist</li></ul>
+    </div>
+    <div class="tier">
+      <h3>Pro</h3>
+      <div class="price">$100<small>PER MONTH</small></div>
+      <a class="cta primary">START TRIAL</a>
+      <ul><li>15 systems</li><li>10 members</li><li>Sector checklists</li></ul>
+    </div>
+    <div class="tier featured">
+      <h3>Business</h3>
+      <div class="price">$250<small>PER MONTH</small></div>
+      <a class="cta primary">START TRIAL</a>
+      <ul><li>35 systems</li><li>25 members</li><li>SSO · BAA</li></ul>
+    </div>
+    <div class="tier">
+      <h3>Enterprise</h3>
+      <div class="price">$500<small>PER MONTH</small></div>
+      <a class="cta secondary">CONTACT</a>
+      <ul><li>Unlimited</li><li>SAML · API</li><li>Discord</li></ul>
+    </div>
+  </div>
+</section>
+
+<!-- ========================== OPT 4 ========================== -->
+<section id="opt4" class="opt-section opt4">
+  <span class="opt-label">Option 4 · GitHub Style</span>
+  <h2 style="font-size:1.8rem;margin-bottom:4px">Plans for every stage</h2>
+  <p style="color:var(--muted);margin-bottom:24px">Pay only for what you need — upgrade anytime.</p>
+  <div class="tier-grid">
+    <div class="tier">
+      <h3>Starter</h3>
+      <p class="tagline">Trying it out</p>
+      <div class="price">$0<small>forever</small></div>
+      <a class="cta secondary">Get started</a>
+      <ul><li>3 systems · 3 members</li><li>NIST AI RMF checklist</li><li>Community support</li></ul>
+    </div>
+    <div class="tier">
+      <h3>Pro</h3>
+      <p class="tagline">Startups</p>
+      <div class="price">$100<small>/ month</small></div>
+      <a class="cta primary">Start trial</a>
+      <ul><li>15 systems · 10 members</li><li>Sector checklists</li><li>AIA · AI-gen drafting</li></ul>
+    </div>
+    <div class="tier featured">
+      <h3>Business</h3>
+      <p class="tagline">Regulated industries</p>
+      <div class="price">$250<small>/ month</small></div>
+      <a class="cta primary">Start trial</a>
+      <ul><li>35 systems · 25 members</li><li>SSO · BAA ready</li><li>3 workspaces</li></ul>
+    </div>
+    <div class="tier">
+      <h3>Enterprise</h3>
+      <p class="tagline">Large orgs</p>
+      <div class="price">$500<small>/ month</small></div>
+      <a class="cta secondary">Contact sales</a>
+      <ul><li>Unlimited</li><li>SAML · API</li><li>Discord · 8h SLA</li></ul>
+    </div>
+  </div>
+</section>
+
+<!-- ========================== OPT 5 ========================== -->
+<section id="opt5" class="opt-section opt5">
+  <span class="opt-label">Option 5 · Apple Ultra Clean</span>
+  <h2 style="font-size:2.6rem;font-weight:800;margin-bottom:8px;font-family:'Space Grotesk',sans-serif">Find your plan.</h2>
+  <p style="color:var(--muted);font-size:1.05rem;margin-bottom:36px">Every plan includes the NIST AI RMF foundation.</p>
+  <div class="tier-grid">
+    <div class="tier">
+      <h3>Starter</h3>
+      <div class="price">$0</div>
+      <p style="color:var(--muted);font-size:.88rem">forever</p>
+      <a class="cta secondary">Get started</a>
+      <ul><li>3 systems</li><li>3 members</li><li>NIST checklist</li></ul>
+    </div>
+    <div class="tier">
+      <h3>Pro</h3>
+      <div class="price">$100</div>
+      <p style="color:var(--muted);font-size:.88rem">per month</p>
+      <a class="cta">Start trial</a>
+      <ul><li>15 systems</li><li>Sector checklists</li><li>AIA · AI-gen</li></ul>
+    </div>
+    <div class="tier featured">
+      <h3>Business</h3>
+      <div class="price">$250</div>
+      <p style="color:var(--muted);font-size:.88rem">per month</p>
+      <a class="cta">Start trial</a>
+      <ul><li>35 systems</li><li>SSO · BAA</li><li>3 workspaces</li></ul>
+    </div>
+    <div class="tier">
+      <h3>Enterprise</h3>
+      <div class="price">$500</div>
+      <p style="color:var(--muted);font-size:.88rem">per month</p>
+      <a class="cta secondary">Contact us</a>
+      <ul><li>Unlimited</li><li>SAML · API</li><li>Discord</li></ul>
+    </div>
+  </div>
+</section>
+
+<!-- ========================== OPT 6 ========================== -->
+<section id="opt6" class="opt-section opt6">
+  <span class="opt-label">Option 6 · Notion Airy (color-coded)</span>
+  <h2 style="font-size:1.8rem;margin-bottom:4px">Pick a plan that fits</h2>
+  <p style="color:var(--muted);margin-bottom:24px">Each tier color-codes to the level of rigor your program needs.</p>
+  <div class="tier-grid">
+    <div class="tier t-starter">
+      <div class="tier-icon">🌱</div>
+      <h3>Starter</h3>
+      <div class="price">$0<small>forever</small></div>
+      <a class="cta secondary">Get started</a>
+      <ul><li>3 AI systems</li><li>3 members</li><li>NIST checklist</li></ul>
+    </div>
+    <div class="tier t-pro">
+      <div class="tier-icon">🚀</div>
+      <h3>Pro</h3>
+      <div class="price">$100<small>/ month</small></div>
+      <a class="cta primary">Start trial</a>
+      <ul><li>15 systems · 10 members</li><li>Sector checklists</li><li>AIA · AI-gen</li></ul>
+    </div>
+    <div class="tier t-business featured">
+      <div class="tier-icon">🏢</div>
+      <h3>Business</h3>
+      <div class="price">$250<small>/ month</small></div>
+      <a class="cta primary">Start trial</a>
+      <ul><li>35 systems · 25 members</li><li>SSO · BAA</li><li>3 workspaces</li></ul>
+    </div>
+    <div class="tier t-enterprise">
+      <div class="tier-icon">🏛</div>
+      <h3>Enterprise</h3>
+      <div class="price">$500<small>/ month</small></div>
+      <a class="cta secondary">Contact sales</a>
+      <ul><li>Unlimited</li><li>SAML · API</li><li>Discord</li></ul>
+    </div>
+  </div>
+</section>
+
+<!-- ========================== OPT 7 ========================== -->
+<section id="opt7" class="opt-section opt7">
+  <span class="opt-label">Option 7 · Gradient Featured</span>
+  <h2 style="font-size:1.8rem;margin-bottom:4px">Choose your governance tier</h2>
+  <p style="color:var(--muted);margin-bottom:24px">Most teams start on Business — it covers every regulated-industry need.</p>
+  <div class="tier-grid">
+    <div class="tier">
+      <h3>Starter</h3>
+      <div class="price">$0<small>forever</small></div>
+      <a class="cta secondary">Get started</a>
+      <ul><li>3 systems · 3 members</li><li>NIST checklist</li></ul>
+    </div>
+    <div class="tier">
+      <h3>Pro</h3>
+      <div class="price">$100<small>/ month</small></div>
+      <a class="cta primary">Start trial</a>
+      <ul><li>15 systems · 10 members</li><li>Sector checklists</li><li>AIA</li></ul>
+    </div>
+    <div class="tier featured">
+      <h3>Business</h3>
+      <div class="price">$250<small>/ month</small></div>
+      <a class="cta primary">Start 14-day trial</a>
+      <ul><li>35 systems · 25 members</li><li>SSO · BAA · 3 workspaces</li><li>Custom branding</li></ul>
+    </div>
+    <div class="tier">
+      <h3>Enterprise</h3>
+      <div class="price">$500<small>/ month</small></div>
+      <a class="cta secondary">Contact sales</a>
+      <ul><li>Unlimited</li><li>SAML · API</li></ul>
+    </div>
+  </div>
+</section>
+
+<!-- ========================== OPT 8 ========================== -->
+<section id="opt8" class="opt-section opt8">
+  <span class="opt-label">Option 8 · Elevated Center</span>
+  <h2 style="font-size:1.8rem;margin-bottom:4px">Pricing that scales with your program</h2>
+  <p style="color:var(--muted);margin-bottom:32px">Lift-up design puts the most popular plan front and center.</p>
+  <div class="tier-grid">
+    <div class="tier">
+      <h3>Starter</h3>
+      <div class="price">$0<small>forever</small></div>
+      <a class="cta secondary">Get started</a>
+      <ul><li>3 systems · 3 members</li><li>NIST checklist</li></ul>
+    </div>
+    <div class="tier">
+      <h3>Pro</h3>
+      <div class="price">$100<small>/ month</small></div>
+      <a class="cta primary">Start trial</a>
+      <ul><li>15 systems · 10 members</li><li>Sector checklists · AIA</li></ul>
+    </div>
+    <div class="tier featured">
+      <h3>Business</h3>
+      <div class="price">$250<small>/ month</small></div>
+      <a class="cta primary">Start trial</a>
+      <ul><li>35 systems · 25 members</li><li>SSO · BAA · 3 workspaces</li></ul>
+    </div>
+    <div class="tier">
+      <h3>Enterprise</h3>
+      <div class="price">$500<small>/ month</small></div>
+      <a class="cta secondary">Contact sales</a>
+      <ul><li>Unlimited</li><li>SAML · API</li></ul>
+    </div>
+  </div>
+</section>
+
+<!-- ========================== OPT 9 ========================== -->
+<section id="opt9" class="opt-section">
+  <span class="opt-label">Option 9 · Aurora Glass (glassmorphism)</span>
+  <div class="opt9">
+    <h1 style="font-size:2rem;margin-bottom:8px">Govern AI. Prove it.</h1>
+    <p style="opacity:.8;margin-bottom:28px;max-width:540px">One platform for every governance workflow — from intake to audit. Start free.</p>
+    <div class="tier-grid">
+      <div class="tier">
+        <h3>Starter</h3>
+        <div class="price">$0<small>forever</small></div>
+        <a class="cta secondary">Get started</a>
+        <ul><li>3 systems</li><li>3 members</li><li>NIST checklist</li></ul>
+      </div>
+      <div class="tier">
+        <h3>Pro</h3>
+        <div class="price">$100<small>/ month</small></div>
+        <a class="cta primary">Start trial</a>
+        <ul><li>15 systems · 10 members</li><li>Sector checklists</li><li>AIA · AI-gen</li></ul>
+      </div>
+      <div class="tier featured">
+        <h3>Business</h3>
+        <div class="price">$250<small>/ month</small></div>
+        <a class="cta primary">Start trial</a>
+        <ul><li>35 systems · 25 members</li><li>SSO · BAA</li><li>3 workspaces</li></ul>
+      </div>
+      <div class="tier">
+        <h3>Enterprise</h3>
+        <div class="price">$500<small>/ month</small></div>
+        <a class="cta secondary">Contact sales</a>
+        <ul><li>Unlimited</li><li>SAML · API</li><li>Discord</li></ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========================== OPT 10 ========================== -->
+<section id="opt10" class="opt-section opt10">
+  <span class="opt-label">Option 10 · Compact Horizontal Rows</span>
+  <h2 style="font-size:1.8rem;margin-bottom:4px">All plans at a glance</h2>
+  <p style="color:var(--muted);margin-bottom:24px">Scan every tier in one line — no horizontal scrolling, no tab switching.</p>
+  <div class="tier-grid">
+    <div class="tier">
+      <div>
+        <h3>Starter</h3>
+        <div class="tagline">Trying it out</div>
+      </div>
+      <div class="price">$0</div>
+      <ul><li>3 systems</li><li>3 members</li><li>NIST checklist</li><li>Community</li></ul>
+      <a class="cta secondary">Get started</a>
+    </div>
+    <div class="tier">
+      <div>
+        <h3>Pro</h3>
+        <div class="tagline">Startups</div>
+      </div>
+      <div class="price">$100<small>/mo</small></div>
+      <ul><li>15 systems</li><li>10 members</li><li>Sector checklists</li><li>AIA · AI-gen</li><li>Email support</li></ul>
+      <a class="cta primary">Start trial</a>
+    </div>
+    <div class="tier featured">
+      <div>
+        <h3>Business</h3>
+        <div class="tagline">Mid-market</div>
+      </div>
+      <div class="price">$250<small>/mo</small></div>
+      <ul><li>35 systems</li><li>25 members</li><li>3 workspaces</li><li>SSO · BAA</li><li>Custom branding</li></ul>
+      <a class="cta primary">Start trial</a>
+    </div>
+    <div class="tier">
+      <div>
+        <h3>Enterprise</h3>
+        <div class="tagline">Large orgs</div>
+      </div>
+      <div class="price">$500<small>/mo</small></div>
+      <ul><li>Unlimited</li><li>SAML · API</li><li>Discord support</li></ul>
+      <a class="cta secondary">Contact sales</a>
+    </div>
+  </div>
+</section>
+
+<div style="height:60px"></div>
+<div style="text-align:center;padding:40px 20px;color:var(--muted)">
+  <strong style="color:var(--navy)">Pick your favorite</strong> — tell me the option number and I'll wire it into the real pricing page with the monthly/annual toggle, feature-compare table, and FAQ restored.
+</div>
+
+</div>
+
+</body>
+</html>
