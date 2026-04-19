@@ -7,7 +7,7 @@
 // session.js (without isSuperadmin) break the named import and ui.js fails
 // to initialize, which blanks every page. Bump this whenever session.js's
 // exported surface changes.
-import { logOut, setActiveCompanyId, isSuperadmin } from './session.js?v=42';
+import { logOut, setActiveCompanyId, isSuperadmin } from './session.js?v=43';
 import { toggleMode } from './theme.js';
 
 // ---------- header ----------
@@ -26,7 +26,8 @@ const DEFAULT_NAV = [
   { href: '/policies.html',  label: 'Policies',  match: 'policies' },
   { href: '/misc.html',      label: 'Miscellaneous', match: 'misc' },
   { href: '/settings.html',  label: 'SETTINGS',  match: 'settings' },
-  { href: '/pricing.html',   label: 'PRICING',   match: 'pricing' }
+  { href: '/pricing.html',   label: 'PRICING',   match: 'pricing' },
+  { href: '/help.html',      label: 'HELP',      match: 'help' }
 ];
 
 export function renderHeader({ user, company, memberships = [], pages = DEFAULT_NAV }) {
@@ -114,7 +115,7 @@ export function renderFooter() {
         <a href="/dpa.html" style="color:inherit">DPA</a>
         <a href="/sub-processors.html" style="color:inherit">Sub-processors</a>
       </span>
-      <span class="text-muted" style="font-size:.7rem;opacity:.6">v42</span>
+      <span class="text-muted" style="font-size:.7rem;opacity:.6">v43</span>
     </footer>
   `;
 }
