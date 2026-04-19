@@ -226,7 +226,7 @@
     // Try to render the authenticated header if the user is signed in.
     // Pricing is a public page — if they're not signed in, we render a
     // lightweight header instead.
-    import { renderHeader, renderFooter } from '/js/ui.js?v=21';
+    import { renderHeader, renderFooter } from '/js/ui.js?v=22';
     try {
       const { auth } = await import('/js/config.js?v=21');
       const { onAuthStateChanged } = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js');
