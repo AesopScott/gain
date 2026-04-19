@@ -95,29 +95,19 @@
 
     <div class="card section-sep" id="ai-settings-card" style="display:none">
       <h2 class="card-title">AI Policy Generation</h2>
-      <p class="text-muted" style="margin-bottom:14px">
-        GAIN uses the <a href="https://console.anthropic.com" target="_blank">Anthropic API</a> to write
-        complete policy documents. Enter your API key below — it is stored in Firestore and readable
-        only by company admins. Your key is never sent to any server other than Anthropic.
+      <p style="margin-bottom:10px">
+        <span class="badge badge-medium" style="font-size:.72rem;letter-spacing:.04em">INCLUDED</span>
       </p>
-      <form id="form-ai-settings" class="stacked-form">
-        <div class="field">
-          <label>Anthropic API key</label>
-          <input type="password" name="anthropicKey" placeholder="sk-ant-…" autocomplete="off" />
-          <span class="field-hint">Starts with <code>sk-ant-</code>. Get yours at console.anthropic.com.</span>
-        </div>
-        <div class="field">
-          <label>Model</label>
-          <select name="model">
-            <option value="claude-sonnet-4-6">Claude Sonnet 4.6 (recommended)</option>
-            <option value="claude-haiku-4-5-20251001">Claude Haiku 4.5 (faster / cheaper)</option>
-            <option value="claude-opus-4-7">Claude Opus 4.7 (most capable)</option>
-          </select>
-        </div>
-        <div class="btn-row">
-          <button type="submit" class="btn btn-primary">Save AI settings</button>
-        </div>
-      </form>
+      <p class="text-muted" style="margin-bottom:12px">
+        AI-drafted policy documents are included with your plan — no API key setup or per-token billing.
+        GAIN routes each drafting request through our managed Anthropic integration using
+        <strong>Claude Sonnet 4.6</strong>.
+      </p>
+      <p class="text-muted" style="margin-bottom:8px;font-size:.9rem">
+        Available on <strong>Pro</strong>, <strong>Business</strong>, and <strong>Enterprise</strong> plans —
+        <a href="/pricing.html">see plans</a>. Your policy context is sent to Anthropic for drafting only;
+        Anthropic does not retain prompts or outputs for model training.
+      </p>
     </div>
 
     <div class="card section-sep" id="notifications-card" style="display:none">
@@ -143,7 +133,7 @@
   <script type="module">
     import { requireCompany, canAdmin, isOwner } from '/js/session.js?v=20';
     import { renderHeader, renderFooter, toast, openModal, confirmDialog, serializeForm, setFormValues, escapeHTML, formatDate } from '/js/ui.js?v=22';
-    import { updateCompany, listMembers, updateMemberRole, removeMember, createInvite, listInvitesForCompany, deleteInvite, logEvent, getAISettings, saveAISettings } from '/js/data.js?v=20';
+    import { updateCompany, listMembers, updateMemberRole, removeMember, createInvite, listInvitesForCompany, deleteInvite, logEvent } from '/js/data.js?v=20';
     import { PALETTES, getPalette, getMode, setPalette, setMode } from '/js/theme.js?v=16';
 
     const { user, memberships, company, member } = await requireCompany();
@@ -306,29 +296,10 @@
     refreshMembers();
 
     // ---------- AI settings ----------
+    // AI policy generation is provided centrally (no per-company key).
+    // Card is shown to admins as informational only.
     if (adminOK) {
       document.getElementById('ai-settings-card').style.display = '';
-      const aiForm = document.getElementById('form-ai-settings');
-      const existing = await getAISettings(company.id);
-      if (existing) {
-        if (existing.anthropicKey) aiForm.querySelector('[name=anthropicKey]').placeholder = '••••••••••• (saved — paste to replace)';
-        if (existing.model) aiForm.querySelector('[name=model]').value = existing.model;
-      }
-      aiForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const data = serializeForm(aiForm);
-        const patch = { model: data.model };
-        if (data.anthropicKey && data.anthropicKey.trim()) patch.anthropicKey = data.anthropicKey.trim();
-        try {
-          await saveAISettings(company.id, patch);
-          await logEvent(company.id, { actorUid: user.uid, actorName: user.displayName || user.email, action: 'update.aiSettings', target: company.id });
-          toast('AI settings saved.', 'success');
-          aiForm.querySelector('[name=anthropicKey]').value = '';
-          aiForm.querySelector('[name=anthropicKey]').placeholder = '••••••••••• (saved — paste to replace)';
-        } catch (err) {
-          toast(err.message, 'error', 4000);
-        }
-      });
     }
 
     // ---------- notifications ----------
