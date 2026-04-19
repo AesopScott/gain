@@ -82,6 +82,33 @@
     </div>
 
     <div class="card section-sep">
+      <h2 class="card-title">Security</h2>
+      <p class="text-muted" style="margin-bottom:12px">
+        Change the password for your GAIN account. You'll need to enter your current password to confirm.
+      </p>
+      <form id="form-password" class="stacked-form">
+        <div class="field">
+          <label>Current password</label>
+          <input type="password" name="currentPassword" required autocomplete="current-password" />
+        </div>
+        <div class="grid-2">
+          <div class="field">
+            <label>New password</label>
+            <input type="password" name="newPassword" required minlength="8" autocomplete="new-password" />
+            <span class="field-hint">At least 8 characters.</span>
+          </div>
+          <div class="field">
+            <label>Confirm new password</label>
+            <input type="password" name="confirmPassword" required minlength="8" autocomplete="new-password" />
+          </div>
+        </div>
+        <div class="btn-row">
+          <button type="submit" class="btn btn-primary">Update password</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="card section-sep">
       <div class="flex-between">
         <h2 class="card-title">Members</h2>
         <button class="btn btn-primary" data-invite data-admin-only>+ Invite member</button>
@@ -192,14 +219,14 @@
   </main>
 
   <script type="module">
-    import { requireCompany, canAdmin, isOwner, resolvePlan } from '/js/session.js?v=34';
-    import { renderHeader, renderFooter, toast, openModal, confirmDialog, serializeForm, setFormValues, escapeHTML, formatDate } from '/js/ui.js?v=34';
-    import { updateCompany, listMembers, updateMemberRole, removeMember, createInvite, listInvitesForCompany, deleteInvite, logEvent } from '/js/data.js?v=34';
-    import { PALETTES, getPalette, getMode, setPalette, setMode } from '/js/theme.js?v=34';
-    import { app } from '/js/config.js?v=34';
+    import { requireCompany, canAdmin, isOwner, resolvePlan, changePassword } from '/js/session.js?v=35';
+    import { renderHeader, renderFooter, toast, openModal, confirmDialog, serializeForm, setFormValues, escapeHTML, formatDate } from '/js/ui.js?v=35';
+    import { updateCompany, listMembers, updateMemberRole, removeMember, createInvite, listInvitesForCompany, deleteInvite, logEvent } from '/js/data.js?v=35';
+    import { PALETTES, getPalette, getMode, setPalette, setMode } from '/js/theme.js?v=35';
+    import { app } from '/js/config.js?v=35';
     import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js';
     import { signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
-    import { auth } from '/js/config.js?v=34';
+    import { auth } from '/js/config.js?v=35';
 
     const { user, memberships, company, member } = await requireCompany();
     renderHeader({ user, company, memberships });
@@ -420,6 +447,53 @@
       }
     }
     refreshMembers();
+
+    // ---------- change password ----------
+    document.getElementById('form-password').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const form = e.currentTarget;
+      const currentPassword = form.currentPassword.value;
+      const newPassword = form.newPassword.value;
+      const confirmPassword = form.confirmPassword.value;
+
+      if (newPassword !== confirmPassword) {
+        toast('New password and confirmation do not match.', 'error', 4000);
+        return;
+      }
+      if (newPassword === currentPassword) {
+        toast('New password must be different from your current password.', 'error', 4000);
+        return;
+      }
+
+      const submitBtn = form.querySelector('button[type="submit"]');
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Updating…';
+
+      try {
+        await changePassword(currentPassword, newPassword);
+        await logEvent(company.id, {
+          actorUid: user.uid,
+          actorName: user.displayName || user.email,
+          action: 'user.passwordChange',
+          target: user.uid,
+        });
+        form.reset();
+        toast('Password updated.', 'success', 4000);
+      } catch (err) {
+        const code = err?.code || '';
+        const friendly = {
+          'auth/wrong-password': 'Current password is incorrect.',
+          'auth/invalid-credential': 'Current password is incorrect.',
+          'auth/weak-password': 'New password must be at least 8 characters.',
+          'auth/requires-recent-login': 'For security, please sign out and back in, then try again.',
+          'auth/too-many-requests': 'Too many attempts. Try again in a few minutes.',
+        }[code] || err?.message || 'Could not update password.';
+        toast(friendly, 'error', 5000);
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Update password';
+      }
+    });
 
     // ---------- AI settings ----------
     // AI policy generation is provided centrally (no per-company key).

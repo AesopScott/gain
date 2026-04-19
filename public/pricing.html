@@ -3,12 +3,9 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
-  <meta http-equiv="Pragma" content="no-cache" />
-  <meta http-equiv="Expires" content="0" />
   <title>GAIN — Pricing</title>
   <script>(function(){try{var p=localStorage.getItem('gain.theme.palette')||'classic';var m=localStorage.getItem('gain.theme.mode')||'light';document.documentElement.setAttribute('data-palette',p);document.documentElement.setAttribute('data-mode',m);}catch(e){}})();</script>
-  <link rel="stylesheet" href="/css/gain-theme.css?v=34" />
+  <link rel="stylesheet" href="/css/gain-theme.css?v=26" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <meta name="description" content="GAIN pricing — AI governance from $0 to Enterprise. Starter, Pro, Business, and Enterprise plans." />
   <meta property="og:type" content="website" />
@@ -108,7 +105,7 @@
             <li>Unlimited saved policies</li>
             <li>SSO (Google Workspace)</li>
             <li>Custom branding (remove GAIN footer)</li>
-            <li>Vendor BAA &amp; contract tracking</li>
+            <li>BAA available (HIPAA-ready)</li>
             <li class="muted">Email support · 24h SLA</li>
           </ul>
         </div>
@@ -123,7 +120,7 @@
             <span class="pricing-aurora-num" data-price-enterprise>$500</span>
             <span class="pricing-aurora-interval" data-interval-label-enterprise>/ month</span>
           </div>
-          <a href="/index.html?plan=enterprise" class="pricing-aurora-cta pricing-aurora-cta-primary">Start 14-day trial</a>
+          <a href="mailto:sales@governainow.com?subject=GAIN%20Enterprise" class="pricing-aurora-cta pricing-aurora-cta-secondary">Contact sales</a>
           <ul class="pricing-aurora-features">
             <li>Unlimited workspaces</li>
             <li>Unlimited team members</li>
@@ -177,13 +174,13 @@
           <tr><td>SSO — SAML / Okta / Azure AD</td><td class="center">—</td><td class="center">—</td><td class="center">—</td><td class="center">✓</td></tr>
           <tr><td>API access</td><td class="center">—</td><td class="center">—</td><td class="center">—</td><td class="center">✓</td></tr>
           <tr><td>Custom branding (remove GAIN footer)</td><td class="center">—</td><td class="center">—</td><td class="center">✓</td><td class="center">✓</td></tr>
-          <tr><td>Vendor BAA / contract tracking</td><td class="center">—</td><td class="center">—</td><td class="center">✓</td><td class="center">✓</td></tr>
+          <tr><td>BAA available (HIPAA)</td><td class="center">—</td><td class="center">—</td><td class="center">✓</td><td class="center">✓</td></tr>
           <tr><td>Data residency options</td><td class="center">—</td><td class="center">—</td><td class="center">—</td><td class="center">✓</td></tr>
 
           <tr class="pricing-matrix-group"><td colspan="5">Support</td></tr>
           <tr><td>Support channel</td><td class="center">Community</td><td class="center">Email</td><td class="center">Email</td><td class="center">Email + Discord</td></tr>
           <tr><td>Response SLA</td><td class="center">—</td><td class="center">48h</td><td class="center">24h</td><td class="center">8h</td></tr>
-          <tr><td>Free trial</td><td class="center">—</td><td class="center">14 days</td><td class="center">14 days</td><td class="center">14 days</td></tr>
+          <tr><td>Free trial</td><td class="center">—</td><td class="center">14 days</td><td class="center">14 days</td><td class="center">Custom</td></tr>
         </tbody>
       </table>
     </div>
@@ -197,15 +194,15 @@
         </details>
         <details>
           <summary>What's the difference between Pro and Business?</summary>
-          <p>Business adds higher limits (35 systems vs 15, 25 users vs 10, 3 workspaces vs 1), SSO, custom branding, vendor BAA and contract tracking, and a faster support SLA. If you're in a regulated industry (healthcare, finance, education) or have more than ~15 AI systems, Business is the right pick.</p>
+          <p>Business adds higher limits (35 systems vs 15, 25 users vs 10, 3 workspaces vs 1), SSO, custom branding, a BAA for HIPAA-covered use, and a faster support SLA. If you're in a regulated industry (healthcare, finance, education) or have more than ~15 AI systems, Business is the right pick.</p>
         </details>
         <details>
           <summary>Do you offer a discount for annual billing?</summary>
           <p>Yes — 8% off Pro, 10% off Business, 13% off Enterprise (about one free month on each tier). Toggle "Annual" above to see the annual prices.</p>
         </details>
         <details>
-          <summary>Does GAIN sign a Business Associate Agreement (BAA) with my organization?</summary>
-          <p>No. GAIN is not designed to store PHI — the product is a governance and documentation tool, and you should not upload patient data to it. We do not sign BAAs as a vendor. Instead, GAIN's Business and Enterprise plans include a <strong>BAA and vendor-contract tracking module</strong> where you upload and manage the BAAs you hold with <em>your</em> AI vendors (model providers, data processors, etc.), with renewal reminders and clause checklists aligned to HIPAA §164.308 and NIST AI RMF GOVERN 5.1.</p>
+          <summary>Can I get a Business Associate Agreement (BAA) for HIPAA?</summary>
+          <p>Yes, on the Business and Enterprise plans. Contact sales to execute.</p>
         </details>
         <details>
           <summary>Does AI-generated policy drafting use my data?</summary>
@@ -229,11 +226,11 @@
     // Try to render the authenticated header if the user is signed in.
     // Pricing is a public page — if they're not signed in, we render a
     // lightweight header instead.
-    import { renderHeader, renderFooter } from '/js/ui.js?v=34';
+    import { renderHeader, renderFooter } from '/js/ui.js?v=26';
     try {
-      const { auth } = await import('/js/config.js?v=34');
+      const { auth } = await import('/js/config.js?v=26');
       const { onAuthStateChanged } = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js');
-      const { loadMemberships } = await import('/js/session.js?v=34');
+      const { loadMemberships } = await import('/js/session.js?v=35');
       onAuthStateChanged(auth, async (user) => {
         if (user) {
           const memberships = await loadMemberships(user.uid);

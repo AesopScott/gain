@@ -16,7 +16,10 @@ import {
   createUserWithEmailAndPassword,
   sendPasswordResetEmail,
   signOut,
-  updateProfile
+  updateProfile,
+  updatePassword,
+  reauthenticateWithCredential,
+  EmailAuthProvider
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import {
   doc,
@@ -65,6 +68,19 @@ export async function signUp(email, password, displayName) {
 
 export async function resetPassword(email) {
   await sendPasswordResetEmail(auth, email);
+}
+
+// In-app password change for a signed-in user. Reauthenticates with the
+// current password first (Firebase requires a recent sign-in for password
+// updates), then sets the new one. Returns nothing on success; throws on
+// auth/wrong-password, auth/weak-password, etc.
+export async function changePassword(currentPassword, newPassword) {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Not signed in.');
+  if (!user.email) throw new Error('No email associated with this account.');
+  const cred = EmailAuthProvider.credential(user.email, currentPassword);
+  await reauthenticateWithCredential(user, cred);
+  await updatePassword(user, newPassword);
 }
 
 export async function logOut() {
