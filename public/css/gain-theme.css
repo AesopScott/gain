@@ -1188,8 +1188,222 @@ table.data .actions {
   font-size: 1rem;
 }
 
-/* ---------- pricing page ---------- */
+/* ---------- pricing page (Aurora Glass) ---------- */
 
+.pricing-aurora {
+  position: relative;
+  background:
+    radial-gradient(ellipse 60% 80% at 15% 10%, rgba(79, 179, 217, 0.38) 0%, transparent 55%),
+    radial-gradient(ellipse 55% 75% at 88% 85%, rgba(255, 209, 102, 0.28) 0%, transparent 55%),
+    radial-gradient(ellipse 70% 60% at 55% 55%, rgba(255, 107, 107, 0.22) 0%, transparent 55%),
+    radial-gradient(ellipse 45% 40% at 40% 90%, rgba(6, 214, 160, 0.18) 0%, transparent 55%),
+    linear-gradient(135deg, #0A1020 0%, #0d1b4b 50%, #1a2b6e 100%);
+  border-radius: 20px;
+  color: #fff;
+  padding: 56px 40px 48px;
+  margin: 24px 0 32px;
+  overflow: hidden;
+}
+.pricing-aurora::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, transparent 0%, rgba(10, 16, 32, 0.25) 100%);
+  pointer-events: none;
+}
+
+.pricing-aurora-head {
+  text-align: center;
+  position: relative;
+  z-index: 2;
+}
+.pricing-aurora-title {
+  color: #fff;
+  font-size: 2.6rem;
+  font-weight: 800;
+  margin: 0 0 14px;
+  letter-spacing: -0.02em;
+  text-shadow: 0 2px 20px rgba(0, 0, 0, 0.3);
+}
+.pricing-aurora-subtitle {
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 1.05rem;
+  max-width: 640px;
+  margin: 0 auto 26px;
+  line-height: 1.55;
+}
+
+.billing-toggle-aurora {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+.billing-toggle-aurora .billing-toggle-btn {
+  color: rgba(255, 255, 255, 0.7);
+}
+.billing-toggle-aurora .billing-toggle-btn.active {
+  background: rgba(255, 255, 255, 0.95);
+  color: #0d1b4b;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.pricing-cards-aurora {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-top: 36px;
+  position: relative;
+  z-index: 2;
+}
+@media (max-width: 1100px) { .pricing-cards-aurora { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 640px)  { .pricing-cards-aurora { grid-template-columns: 1fr; } }
+
+.pricing-card-aurora {
+  position: relative;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 14px;
+  padding: 28px 24px;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.pricing-card-aurora:hover {
+  border-color: rgba(255, 255, 255, 0.35);
+  transform: translateY(-3px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+}
+
+.pricing-card-aurora-featured {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.42);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.12) inset;
+  transform: translateY(-4px);
+}
+.pricing-card-aurora-featured:hover { transform: translateY(-7px); }
+
+.pricing-card-aurora-badge {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg, #06D6A0 0%, #4FB3D9 100%);
+  color: #0d1b4b;
+  padding: 5px 14px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(6, 214, 160, 0.3);
+}
+
+.pricing-card-aurora-head h2 {
+  color: #fff;
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin: 0 0 4px;
+}
+.pricing-card-aurora-tagline {
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 0.8rem;
+  margin: 0;
+  min-height: 2.4em;
+}
+
+.pricing-card-aurora-price {
+  margin: 4px 0 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.pricing-aurora-num {
+  font-size: 2.6rem;
+  font-weight: 800;
+  color: #fff;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+.pricing-aurora-interval {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.85rem;
+}
+
+.pricing-aurora-cta {
+  display: block;
+  text-align: center;
+  padding: 11px 16px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.92rem;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s, transform 0.08s;
+}
+.pricing-aurora-cta:active { transform: translateY(1px); }
+.pricing-aurora-cta-primary {
+  background: linear-gradient(135deg, #06D6A0 0%, #0EB88B 100%);
+  color: #0d1b4b;
+  box-shadow: 0 4px 14px rgba(6, 214, 160, 0.28);
+}
+.pricing-aurora-cta-primary:hover {
+  background: linear-gradient(135deg, #0EE5AC 0%, #06D6A0 100%);
+  color: #0d1b4b;
+}
+.pricing-aurora-cta-secondary {
+  background: transparent;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+}
+.pricing-aurora-cta-secondary:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.55);
+  color: #fff;
+}
+
+.pricing-aurora-features {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.pricing-aurora-features li {
+  font-size: 0.88rem;
+  position: relative;
+  padding-left: 22px;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.88);
+}
+.pricing-aurora-features li::before {
+  content: "✓";
+  position: absolute;
+  left: 0;
+  color: #06D6A0;
+  font-weight: 800;
+}
+.pricing-aurora-features li.muted {
+  color: rgba(255, 255, 255, 0.55);
+  font-style: italic;
+}
+.pricing-aurora-features li.muted::before {
+  content: "·";
+  color: rgba(255, 255, 255, 0.4);
+}
+
+/* Dark-mode tweak: aurora already dark; keep it consistent */
+[data-mode="dark"] .pricing-aurora {
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+/* Legacy classes kept for backward-compat with any other pages that might use them */
 .pricing-header {
   text-align: center;
   padding: 40px 0 24px;
