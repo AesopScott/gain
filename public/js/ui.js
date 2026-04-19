@@ -7,7 +7,7 @@
 // session.js (without isSuperadmin) break the named import and ui.js fails
 // to initialize, which blanks every page. Bump this whenever session.js's
 // exported surface changes.
-import { logOut, setActiveCompanyId, isSuperadmin } from './session.js?v=35';
+import { logOut, setActiveCompanyId, isSuperadmin } from './session.js?v=37';
 import { toggleMode } from './theme.js';
 
 // ---------- header ----------
@@ -95,10 +95,16 @@ export function renderHeader({ user, company, memberships = [], pages = DEFAULT_
 export function renderFooter() {
   const mount = document.querySelector('[data-site-footer]');
   if (!mount) return;
-  mount.innerHTML = `
-    <footer class="site-footer">
+  // Business and Enterprise customers can strip the GAIN brand tagline via
+  // settings → Branding. Legal/support/version links always remain — those
+  // aren't white-labelable because they're compliance-required.
+  let hideBrand = false;
+  try { hideBrand = sessionStorage.getItem('gain.hideBrandFooter') === '1'; } catch (_) {}
+  const brandSpans = hideBrand ? '' : `
       <span>GAIN · Govern AI Now</span>
-      <span class="text-muted">Your data · Your company · Your framework</span>
+      <span class="text-muted">Your data · Your company · Your framework</span>`;
+  mount.innerHTML = `
+    <footer class="site-footer">${brandSpans}
       <span class="site-footer-links" style="display:flex;gap:14px;font-size:.8rem;opacity:.7;flex-wrap:wrap">
         <a href="/support.html" style="color:inherit">Support</a>
         <a href="/terms.html" style="color:inherit">Terms</a>
@@ -106,7 +112,7 @@ export function renderFooter() {
         <a href="/dpa.html" style="color:inherit">DPA</a>
         <a href="/sub-processors.html" style="color:inherit">Sub-processors</a>
       </span>
-      <span class="text-muted" style="font-size:.7rem;opacity:.6">v36</span>
+      <span class="text-muted" style="font-size:.7rem;opacity:.6">v37</span>
     </footer>
   `;
 }

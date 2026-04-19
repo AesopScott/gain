@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>GAIN — Pricing</title>
   <script>(function(){try{var p=localStorage.getItem('gain.theme.palette')||'classic';var m=localStorage.getItem('gain.theme.mode')||'light';document.documentElement.setAttribute('data-palette',p);document.documentElement.setAttribute('data-mode',m);}catch(e){}})();</script>
-  <link rel="stylesheet" href="/css/gain-theme.css?v=26" />
+  <link rel="stylesheet" href="/css/gain-theme.css?v=37" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <meta name="description" content="GAIN pricing — AI governance from $0 to Enterprise. Starter, Pro, Business, and Enterprise plans." />
   <meta property="og:type" content="website" />
@@ -105,7 +105,7 @@
             <li>Unlimited saved policies</li>
             <li>SSO (Google Workspace)</li>
             <li>Custom branding (remove GAIN footer)</li>
-            <li>BAA available (HIPAA-ready)</li>
+            <li>Vendor BAA &amp; contract tracking</li>
             <li class="muted">Email support · 24h SLA</li>
           </ul>
         </div>
@@ -120,15 +120,15 @@
             <span class="pricing-aurora-num" data-price-enterprise>$500</span>
             <span class="pricing-aurora-interval" data-interval-label-enterprise>/ month</span>
           </div>
-          <a href="mailto:sales@governainow.com?subject=GAIN%20Enterprise" class="pricing-aurora-cta pricing-aurora-cta-secondary">Contact sales</a>
+          <a href="/index.html?plan=enterprise" class="pricing-aurora-cta pricing-aurora-cta-primary">Start 14-day trial</a>
           <ul class="pricing-aurora-features">
             <li>Unlimited workspaces</li>
             <li>Unlimited team members</li>
             <li>Unlimited AI systems tracked</li>
             <li>All Business features, plus:</li>
-            <li>SAML / Okta / Azure AD SSO</li>
-            <li>API access</li>
-            <li>Data residency options</li>
+            <li>SAML SSO (Okta / Azure AD / OneLogin) — by arrangement</li>
+            <li>API access — by arrangement</li>
+            <li>Data residency options — by arrangement</li>
             <li class="muted">Email + dedicated Discord · 8h SLA</li>
           </ul>
         </div>
@@ -164,23 +164,23 @@
           <tr><td>Posture-drift banners + snapshots</td><td class="center">—</td><td class="center">✓</td><td class="center">✓</td><td class="center">✓</td></tr>
 
           <tr class="pricing-matrix-group"><td colspan="5">Policies</td></tr>
-          <tr><td>Policy library (56 templates)</td><td class="center">✓</td><td class="center">✓</td><td class="center">✓</td><td class="center">✓</td></tr>
+          <tr><td>Policy library (40 templates)</td><td class="center">✓</td><td class="center">✓</td><td class="center">✓</td><td class="center">✓</td></tr>
           <tr><td>Saved policies per workspace</td><td class="center">3</td><td class="center">6</td><td class="center">Unlimited</td><td class="center">Unlimited</td></tr>
           <tr><td>AI-generated policy drafting</td><td class="center">—</td><td class="center">✓</td><td class="center">✓</td><td class="center">✓</td></tr>
 
           <tr class="pricing-matrix-group"><td colspan="5">Admin &amp; compliance</td></tr>
           <tr><td>Audit log export (CSV / JSON)</td><td class="center">—</td><td class="center">✓</td><td class="center">✓</td><td class="center">✓</td></tr>
           <tr><td>SSO — Google Workspace</td><td class="center">—</td><td class="center">—</td><td class="center">✓</td><td class="center">✓</td></tr>
-          <tr><td>SSO — SAML / Okta / Azure AD</td><td class="center">—</td><td class="center">—</td><td class="center">—</td><td class="center">✓</td></tr>
-          <tr><td>API access</td><td class="center">—</td><td class="center">—</td><td class="center">—</td><td class="center">✓</td></tr>
+          <tr><td>SSO — SAML / Okta / Azure AD</td><td class="center">—</td><td class="center">—</td><td class="center">—</td><td class="center">By arrangement</td></tr>
+          <tr><td>API access</td><td class="center">—</td><td class="center">—</td><td class="center">—</td><td class="center">By arrangement</td></tr>
           <tr><td>Custom branding (remove GAIN footer)</td><td class="center">—</td><td class="center">—</td><td class="center">✓</td><td class="center">✓</td></tr>
-          <tr><td>BAA available (HIPAA)</td><td class="center">—</td><td class="center">—</td><td class="center">✓</td><td class="center">✓</td></tr>
-          <tr><td>Data residency options</td><td class="center">—</td><td class="center">—</td><td class="center">—</td><td class="center">✓</td></tr>
+          <tr><td>Vendor BAA / contract tracking</td><td class="center">—</td><td class="center">—</td><td class="center">✓</td><td class="center">✓</td></tr>
+          <tr><td>Data residency options</td><td class="center">—</td><td class="center">—</td><td class="center">—</td><td class="center">By arrangement</td></tr>
 
           <tr class="pricing-matrix-group"><td colspan="5">Support</td></tr>
           <tr><td>Support channel</td><td class="center">Community</td><td class="center">Email</td><td class="center">Email</td><td class="center">Email + Discord</td></tr>
           <tr><td>Response SLA</td><td class="center">—</td><td class="center">48h</td><td class="center">24h</td><td class="center">8h</td></tr>
-          <tr><td>Free trial</td><td class="center">—</td><td class="center">14 days</td><td class="center">14 days</td><td class="center">Custom</td></tr>
+          <tr><td>Free trial</td><td class="center">—</td><td class="center">14 days</td><td class="center">14 days</td><td class="center">14 days</td></tr>
         </tbody>
       </table>
     </div>
@@ -194,15 +194,15 @@
         </details>
         <details>
           <summary>What's the difference between Pro and Business?</summary>
-          <p>Business adds higher limits (35 systems vs 15, 25 users vs 10, 3 workspaces vs 1), SSO, custom branding, a BAA for HIPAA-covered use, and a faster support SLA. If you're in a regulated industry (healthcare, finance, education) or have more than ~15 AI systems, Business is the right pick.</p>
+          <p>Business adds higher limits (35 systems vs 15, 25 users vs 10, 3 workspaces vs 1), SSO, custom branding, vendor BAA and contract tracking, and a faster support SLA. If you're in a regulated industry (healthcare, finance, education) or have more than ~15 AI systems, Business is the right pick.</p>
         </details>
         <details>
           <summary>Do you offer a discount for annual billing?</summary>
           <p>Yes — 8% off Pro, 10% off Business, 13% off Enterprise (about one free month on each tier). Toggle "Annual" above to see the annual prices.</p>
         </details>
         <details>
-          <summary>Can I get a Business Associate Agreement (BAA) for HIPAA?</summary>
-          <p>Yes, on the Business and Enterprise plans. Contact sales to execute.</p>
+          <summary>Does GAIN sign a Business Associate Agreement (BAA) with my organization?</summary>
+          <p>No. GAIN is not designed to store PHI — the product is a governance and documentation tool, and you should not upload patient data to it. We do not sign BAAs as a vendor. Instead, GAIN's Business and Enterprise plans include a <strong>BAA and vendor-contract tracking module</strong> where you upload and manage the BAAs you hold with <em>your</em> AI vendors (model providers, data processors, etc.), with renewal reminders and clause checklists aligned to HIPAA §164.308 and NIST AI RMF GOVERN 5.1.</p>
         </details>
         <details>
           <summary>Does AI-generated policy drafting use my data?</summary>
@@ -213,8 +213,8 @@
           <p>Your workspace downgrades to Starter at the end of the current billing period. All your data stays — just some features and higher limits are locked until you re-upgrade.</p>
         </details>
         <details>
-          <summary>How do I enable SAML SSO or API access?</summary>
-          <p>SAML / Okta / Azure AD SSO and API access are available on the Enterprise plan and must be provisioned by the GAIN team. <a href="/support.html">Submit a support ticket</a> and we'll get your configuration set up within one business day.</p>
+          <summary>How do I enable SAML SSO, API access, or custom data residency?</summary>
+          <p>SAML SSO (Okta / Azure AD / OneLogin), API access, and data residency options are Enterprise-tier features that we provision on a per-customer basis — there's no self-serve toggle. Google Workspace SSO is self-serve on Business and above. <a href="/support.html">Submit a ticket</a> or <a href="mailto:sales@governainow.com">contact sales</a> to scope the setup for your organization.</p>
         </details>
       </div>
     </div>
@@ -226,11 +226,11 @@
     // Try to render the authenticated header if the user is signed in.
     // Pricing is a public page — if they're not signed in, we render a
     // lightweight header instead.
-    import { renderHeader, renderFooter } from '/js/ui.js?v=26';
+    import { renderHeader, renderFooter } from '/js/ui.js?v=37';
     try {
-      const { auth } = await import('/js/config.js?v=26');
+      const { auth } = await import('/js/config.js?v=37');
       const { onAuthStateChanged } = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js');
-      const { loadMemberships } = await import('/js/session.js?v=35');
+      const { loadMemberships } = await import('/js/session.js?v=37');
       onAuthStateChanged(auth, async (user) => {
         if (user) {
           const memberships = await loadMemberships(user.uid);

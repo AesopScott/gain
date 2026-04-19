@@ -704,6 +704,51 @@ textarea { min-height: 90px; resize: vertical; }
 
 .btn-block { width: 100%; }
 
+/* Google Sign-In button — white background, subtle border, dark text. */
+.btn-google {
+  background: #fff;
+  color: #1f1f1f;
+  border: 1px solid #dadce0;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.btn-google:hover {
+  background: #f8f9fa;
+  border-color: #c8c9cc;
+  color: #1f1f1f;
+}
+[data-mode="dark"] .btn-google {
+  background: #1f1f1f;
+  color: #e8eaed;
+  border-color: #3c4043;
+}
+[data-mode="dark"] .btn-google:hover {
+  background: #2a2a2a;
+  border-color: #5f6368;
+  color: #e8eaed;
+}
+
+/* Divider with centered "or" for auth pages. */
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 14px 0;
+  color: var(--text-muted);
+  font-size: .78rem;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+.auth-divider::before,
+.auth-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
 .btn-row {
   display: flex;
   gap: 10px;

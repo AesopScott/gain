@@ -8,7 +8,7 @@
   <meta http-equiv="Expires" content="0" />
   <title>GAIN — Sign in</title>
   <script>(function(){try{var p=localStorage.getItem('gain.theme.palette')||'classic';var m=localStorage.getItem('gain.theme.mode')||'light';document.documentElement.setAttribute('data-palette',p);document.documentElement.setAttribute('data-mode',m);}catch(e){}})();</script>
-  <link rel="stylesheet" href="/css/gain-theme.css?v=34" />
+  <link rel="stylesheet" href="/css/gain-theme.css?v=37" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <meta name="description" content="AI governance — from intake to audit. NIST AI RMF · ISO 42001 · EU AI Act." />
   <meta property="og:type" content="website" />
@@ -55,6 +55,11 @@
     </div>
 
     <form id="form-signin" class="auth-form active" data-pane="signin" autocomplete="on">
+      <button type="button" class="btn btn-google btn-block" data-google-btn>
+        <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true" style="vertical-align:-3px;margin-right:8px"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.17-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.71v2.26h2.92c1.7-1.57 2.68-3.88 2.68-6.61z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.81 5.96-2.18l-2.92-2.26c-.81.54-1.84.86-3.04.86-2.34 0-4.33-1.58-5.04-3.71H.96v2.33A9 9 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.96 10.71A5.41 5.41 0 0 1 3.68 9c0-.59.1-1.17.28-1.71V4.96H.96A9 9 0 0 0 0 9c0 1.45.35 2.83.96 4.04l3-2.33z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58A9 9 0 0 0 9 0 9 9 0 0 0 .96 4.96l3 2.33C4.67 5.16 6.66 3.58 9 3.58z"/></svg>
+        Sign in with Google
+      </button>
+      <div class="auth-divider"><span>or</span></div>
       <div class="field">
         <label for="signin-email">Work email</label>
         <input id="signin-email" type="email" name="email" required autocomplete="email" />
@@ -68,6 +73,11 @@
     </form>
 
     <form id="form-signup" class="auth-form" data-pane="signup" autocomplete="on">
+      <button type="button" class="btn btn-google btn-block" data-google-btn>
+        <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true" style="vertical-align:-3px;margin-right:8px"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.17-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.71v2.26h2.92c1.7-1.57 2.68-3.88 2.68-6.61z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.81 5.96-2.18l-2.92-2.26c-.81.54-1.84.86-3.04.86-2.34 0-4.33-1.58-5.04-3.71H.96v2.33A9 9 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.96 10.71A5.41 5.41 0 0 1 3.68 9c0-.59.1-1.17.28-1.71V4.96H.96A9 9 0 0 0 0 9c0 1.45.35 2.83.96 4.04l3-2.33z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58A9 9 0 0 0 9 0 9 9 0 0 0 .96 4.96l3 2.33C4.67 5.16 6.66 3.58 9 3.58z"/></svg>
+        Sign up with Google
+      </button>
+      <div class="auth-divider"><span>or</span></div>
       <div class="field">
         <label for="signup-name">Your name</label>
         <input id="signup-name" type="text" name="displayName" required autocomplete="name" />
@@ -106,7 +116,7 @@
   <script type="module">
     import { auth } from '/js/config.js';
     import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
-    import { signIn, signUp, resetPassword } from '/js/session.js';
+    import { signIn, signUp, resetPassword, signInWithGoogle } from '/js/session.js';
     import { listInvitesForEmail, redeemInvite } from '/js/data.js';
 
     // If already signed in, skip straight to the dashboard.
@@ -175,6 +185,41 @@
       } catch (err) {
         setMsg(form, friendlyError(err), false);
       }
+    });
+
+    // Google sign-in (works for both the sign-in and sign-up tabs — the
+    // underlying call auto-creates a /users/{uid} doc on first login and
+    // redeems any pending invites for the Google email).
+    document.querySelectorAll('[data-google-btn]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const form = btn.closest('form');
+        setMsg(form, 'Opening Google sign-in…', true);
+        btn.disabled = true;
+        try {
+          const { user, isNewUser } = await signInWithGoogle();
+          if (isNewUser) {
+            try {
+              const invites = await listInvitesForEmail(user.email);
+              for (const inv of invites) {
+                await redeemInvite({
+                  inviteId: inv.id,
+                  companyId: inv.companyId,
+                  uid: user.uid,
+                  email: user.email,
+                  displayName: user.displayName || '',
+                  role: inv.role,
+                });
+              }
+            } catch (inviteErr) {
+              console.warn('Invite redemption issue:', inviteErr);
+            }
+          }
+          window.location.href = '/dashboard.html';
+        } catch (err) {
+          btn.disabled = false;
+          setMsg(form, friendlyError(err), false);
+        }
+      });
     });
 
     // Reset

@@ -19,7 +19,9 @@ import {
   updateProfile,
   updatePassword,
   reauthenticateWithCredential,
-  EmailAuthProvider
+  EmailAuthProvider,
+  GoogleAuthProvider,
+  signInWithPopup
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import {
   doc,
@@ -70,6 +72,32 @@ export async function resetPassword(email) {
   await sendPasswordResetEmail(auth, email);
 }
 
+// Sign in (or sign up) via Google. Works with any Google account, including
+// Google Workspace — SSO is automatic when the user is signed into their
+// Workspace tenant. Creates /users/{uid} on first login. Returns
+// { user, isNewUser }.
+export async function signInWithGoogle() {
+  const provider = new GoogleAuthProvider();
+  const cred = await signInWithPopup(auth, provider);
+  const user = cred.user;
+  const existingProfile = await getDoc(doc(db, 'users', user.uid));
+  const isNewUser = !existingProfile.exists();
+  if (isNewUser) {
+    await setDoc(doc(db, 'users', user.uid), {
+      displayName: user.displayName || '',
+      email: user.email,
+      createdAt: serverTimestamp(),
+      companyIds: [],
+    }, { merge: true });
+  } else {
+    await setDoc(doc(db, 'users', user.uid), {
+      displayName: user.displayName || existingProfile.data().displayName || '',
+      email: user.email,
+    }, { merge: true });
+  }
+  return { user, isNewUser };
+}
+
 // In-app password change for a signed-in user. Reauthenticates with the
 // current password first (Firebase requires a recent sign-in for password
 // updates), then sets the new one. Returns nothing on success; throws on
@@ -85,6 +113,7 @@ export async function changePassword(currentPassword, newPassword) {
 
 export async function logOut() {
   localStorage.removeItem(ACTIVE_COMPANY_KEY);
+  try { sessionStorage.removeItem('gain.hideBrandFooter'); } catch (_) {}
   await signOut(auth);
 }
 
@@ -172,6 +201,15 @@ export async function requireCompany() {
     window.location.href = '/dashboard.html';
     return new Promise(() => {}); // never resolves; page is redirecting
   }
+  // Cache branding flag for renderFooter() — only Business/Enterprise plans
+  // may hide the GAIN brand tagline, so we check plan eligibility here so
+  // renderFooter can be plan-unaware.
+  try {
+    const plan = resolvePlan(match.company);
+    const brandEligible = plan === 'business' || plan === 'enterprise';
+    const hide = !!(match.company.hideBrandFooter && brandEligible);
+    sessionStorage.setItem('gain.hideBrandFooter', hide ? '1' : '0');
+  } catch (_) {}
   return { user, memberships, company: match.company, member: match.member };
 }
 

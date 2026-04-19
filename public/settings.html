@@ -8,7 +8,7 @@
   <meta http-equiv="Expires" content="0" />
   <title>GAIN — Settings</title>
   <script>(function(){try{var p=localStorage.getItem('gain.theme.palette')||'classic';var m=localStorage.getItem('gain.theme.mode')||'light';document.documentElement.setAttribute('data-palette',p);document.documentElement.setAttribute('data-mode',m);}catch(e){}})();</script>
-  <link rel="stylesheet" href="/css/gain-theme.css?v=36" />
+  <link rel="stylesheet" href="/css/gain-theme.css?v=37" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <meta name="description" content="AI governance — from intake to audit. NIST AI RMF · ISO 42001 · EU AI Act." />
   <meta property="og:type" content="website" />
@@ -41,6 +41,7 @@
         <li><a href="#security">Security</a></li>
         <li><a href="#members">Members</a></li>
         <li><a href="#ai-settings-card">AI Policy Generation</a></li>
+        <li><a href="#branding-card">Branding</a></li>
         <li><a href="#notifications-card">Notifications</a></li>
         <li><a href="#data-rights">Data &amp; deletion rights</a></li>
       </ul>
@@ -160,6 +161,23 @@
       </p>
     </div>
 
+    <div class="card settings-card section-sep" id="branding-card" style="display:none">
+      <h2 class="card-title"><a href="#branding-card" class="section-anchor">Branding</a></h2>
+      <p class="text-muted" style="margin-bottom:14px">
+        On <strong>Business</strong> and <strong>Enterprise</strong> plans you can hide the
+        "GAIN · Govern AI Now" tagline in the footer. The required legal and support links
+        (Terms, Privacy, DPA, Sub-processors, Support, version stamp) always remain — they're
+        compliance-required and can't be removed.
+      </p>
+      <label id="branding-label-wrap" style="display:flex;align-items:center;gap:12px;cursor:pointer">
+        <input type="checkbox" id="toggle-hide-brand" style="width:18px;height:18px;cursor:pointer" />
+        <span>
+          <strong>Hide the GAIN tagline in the footer</strong><br>
+          <span class="text-muted" style="font-size:.85rem" id="brand-hint">Eligible on Business and Enterprise plans.</span>
+        </span>
+      </label>
+    </div>
+
     <div class="card settings-card section-sep" id="notifications-card" style="display:none">
       <h2 class="card-title"><a href="#notifications-card" class="section-anchor">Notifications</a></h2>
       <p class="text-muted" style="margin-bottom:14px">
@@ -199,6 +217,20 @@
           <div id="export-status" style="margin-top:10px;font-size:.88rem"></div>
         </div>
 
+        <div style="border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:14px">
+          <h3 class="subsection" style="margin:0 0 6px">Export audit log only</h3>
+          <p class="text-muted" style="font-size:.9rem;margin-bottom:12px">
+            Exports just the audit log — every governance action taken in this
+            workspace — in either CSV or JSON format. The full Audit Log page
+            has filters and search: <a href="/audit.html">open audit log →</a>
+          </p>
+          <div class="btn-row" style="margin:0;gap:8px">
+            <button type="button" class="btn btn-ghost btn-sm" id="btn-audit-csv">Download CSV</button>
+            <button type="button" class="btn btn-ghost btn-sm" id="btn-audit-json">Download JSON</button>
+          </div>
+          <div id="audit-export-status" style="margin-top:10px;font-size:.88rem"></div>
+        </div>
+
         <div id="delete-workspace-box" style="display:none;border:1px solid var(--risk-high);border-radius:var(--radius);padding:18px;margin-bottom:14px;background:var(--accent-soft)">
           <h3 class="subsection" style="margin:0 0 6px;color:var(--risk-high)">Delete workspace</h3>
           <p class="text-muted" style="font-size:.9rem;margin-bottom:12px">
@@ -233,14 +265,15 @@
   </main>
 
   <script type="module">
-    import { requireCompany, canAdmin, isOwner, resolvePlan, changePassword } from '/js/session.js?v=35';
-    import { renderHeader, renderFooter, toast, openModal, confirmDialog, serializeForm, setFormValues, escapeHTML, formatDate } from '/js/ui.js?v=35';
-    import { updateCompany, listMembers, updateMemberRole, removeMember, createInvite, listInvitesForCompany, deleteInvite, logEvent } from '/js/data.js?v=35';
-    import { PALETTES, getPalette, getMode, setPalette, setMode } from '/js/theme.js?v=35';
-    import { app } from '/js/config.js?v=35';
+    import { requireCompany, canAdmin, isOwner, resolvePlan, changePassword } from '/js/session.js?v=37';
+    import { renderHeader, renderFooter, toast, openModal, confirmDialog, serializeForm, setFormValues, escapeHTML, formatDate } from '/js/ui.js?v=37';
+    import { updateCompany, listMembers, updateMemberRole, removeMember, createInvite, listInvitesForCompany, deleteInvite, logEvent } from '/js/data.js?v=37';
+    import { PALETTES, getPalette, getMode, setPalette, setMode } from '/js/theme.js?v=37';
+    import { app, db } from '/js/config.js?v=37';
     import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js';
     import { signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
-    import { auth } from '/js/config.js?v=35';
+    import { auth } from '/js/config.js?v=37';
+    import { collection, query, orderBy, getDocs } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 
     const { user, memberships, company, member } = await requireCompany();
     renderHeader({ user, company, memberships });
@@ -532,6 +565,30 @@
       });
     }
 
+    // ---------- branding (Business+ only) ----------
+    if (adminOK) {
+      const brandEligible = planKey === 'business' || planKey === 'enterprise';
+      document.getElementById('branding-card').style.display = '';
+      const brandToggle = document.getElementById('toggle-hide-brand');
+      const brandHint   = document.getElementById('brand-hint');
+      brandToggle.checked = !!company.hideBrandFooter;
+      if (!brandEligible) {
+        brandToggle.disabled = true;
+        brandHint.innerHTML = `<span style="color:var(--risk-high)">Available on Business and Enterprise plans. <a href="/pricing.html">Upgrade to enable</a>.</span>`;
+      }
+      brandToggle.addEventListener('change', async () => {
+        try {
+          await updateCompany(company.id, { hideBrandFooter: brandToggle.checked });
+          sessionStorage.setItem('gain.hideBrandFooter', (brandToggle.checked && brandEligible) ? '1' : '0');
+          renderFooter();
+          toast(`Brand tagline ${brandToggle.checked ? 'hidden' : 'shown'}.`, 'success');
+        } catch (err) {
+          brandToggle.checked = !brandToggle.checked;
+          toast(err.message, 'error', 4000);
+        }
+      });
+    }
+
     // ---------- invite modal ----------
     document.querySelector('[data-invite]').addEventListener('click', () => {
       if (!adminOK) return;
@@ -734,6 +791,83 @@
           }
         ]
       });
+    });
+
+    // ---------- audit log export (CSV + JSON) ----------
+    const auditCsvBtn    = document.getElementById('btn-audit-csv');
+    const auditJsonBtn   = document.getElementById('btn-audit-json');
+    const auditExportStatus = document.getElementById('audit-export-status');
+
+    async function fetchAllAudit() {
+      const q = query(
+        collection(db, 'companies', company.id, 'audit'),
+        orderBy('at', 'desc'),
+      );
+      const snap = await getDocs(q);
+      return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    }
+
+    function tsToIso(ts) {
+      if (!ts) return '';
+      if (ts.toDate) return ts.toDate().toISOString();
+      const d = new Date(ts);
+      return isNaN(d) ? '' : d.toISOString();
+    }
+
+    function download(filename, contentType, content) {
+      const blob = new Blob([content], { type: contentType });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    auditCsvBtn.addEventListener('click', async () => {
+      auditCsvBtn.disabled = true;
+      auditExportStatus.innerHTML = '<span class="text-muted">Building CSV…</span>';
+      try {
+        const rows = await fetchAllAudit();
+        const header = ['Date/Time (UTC)', 'Actor', 'Actor UID', 'Action', 'Target', 'Details'];
+        const lines = rows.map(r => [
+          tsToIso(r.at),
+          r.actorName || '',
+          r.actorUid  || '',
+          r.action    || '',
+          r.target    || '',
+          r.details   ? JSON.stringify(r.details) : '',
+        ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(','));
+        const csv = [header.join(','), ...lines].join('\n');
+        download(`gain-audit-${company.id}-${new Date().toISOString().slice(0,10)}.csv`, 'text/csv', csv);
+        auditExportStatus.innerHTML = `<span class="text-muted">${rows.length} events exported.</span>`;
+      } catch (err) {
+        auditExportStatus.innerHTML = `<span style="color:var(--risk-high)">${escapeHTML(err.message || 'Export failed')}</span>`;
+      } finally {
+        auditCsvBtn.disabled = false;
+      }
+    });
+
+    auditJsonBtn.addEventListener('click', async () => {
+      auditJsonBtn.disabled = true;
+      auditExportStatus.innerHTML = '<span class="text-muted">Building JSON…</span>';
+      try {
+        const rows = await fetchAllAudit();
+        const clean = rows.map(r => ({ ...r, at: tsToIso(r.at) }));
+        const json = JSON.stringify({
+          companyId: company.id,
+          companyName: company.name || null,
+          exportedAt: new Date().toISOString(),
+          count: clean.length,
+          events: clean,
+        }, null, 2);
+        download(`gain-audit-${company.id}-${new Date().toISOString().slice(0,10)}.json`, 'application/json', json);
+        auditExportStatus.innerHTML = `<span class="text-muted">${rows.length} events exported.</span>`;
+      } catch (err) {
+        auditExportStatus.innerHTML = `<span style="color:var(--risk-high)">${escapeHTML(err.message || 'Export failed')}</span>`;
+      } finally {
+        auditJsonBtn.disabled = false;
+      }
     });
   </script>
 
