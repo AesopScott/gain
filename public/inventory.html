@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>GAIN — AI System Inventory</title>
   <script>(function(){try{var p=localStorage.getItem('gain.theme.palette')||'classic';var m=localStorage.getItem('gain.theme.mode')||'light';document.documentElement.setAttribute('data-palette',p);document.documentElement.setAttribute('data-mode',m);}catch(e){}})();</script>
-  <link rel="stylesheet" href="/css/gain-theme.css?v=50" />
+  <link rel="stylesheet" href="/css/gain-theme.css?v=51" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <meta name="description" content="AI governance — from intake to audit. NIST AI RMF · ISO 42001 · EU AI Act." />
   <meta property="og:type" content="website" />
@@ -82,12 +82,12 @@
   </main>
 
   <script type="module">
-    import { requireCompany, canEdit, canAdmin } from '/js/session.js?v=50';
-    import '/js/tour.js?v=50';
-    import { renderHeader, renderFooter, toast, openModal, confirmDialog, serializeForm, escapeHTML, formatDate } from '/js/ui.js?v=50';
-    import { listDocs, createRecord, updateRecord, deleteRecord, getRecord, logEvent, getPosture } from '/js/data.js?v=50';
-    import { derivedApplicableRegs, driftBannerHTML } from '/js/posture.js?v=50';
-    import { INVENTORY_SAMPLES, sampleBannerHTML } from '/js/samples.js?v=50';
+    import { requireCompany, canEdit, canAdmin } from '/js/session.js?v=51';
+    import '/js/tour.js?v=51';
+    import { renderHeader, renderFooter, toast, openModal, confirmDialog, serializeForm, escapeHTML, formatDate } from '/js/ui.js?v=51';
+    import { listDocs, createRecord, updateRecord, deleteRecord, getRecord, logEvent, getPosture } from '/js/data.js?v=51';
+    import { derivedApplicableRegs, driftBannerHTML } from '/js/posture.js?v=51';
+    import { INVENTORY_SAMPLES, sampleBannerHTML } from '/js/samples.js?v=51';
 
     const { user, memberships, company, member } = await requireCompany();
     renderHeader({ user, company, memberships });
@@ -106,6 +106,8 @@
     const applicableRegs = derivedApplicableRegs(posture);
     const hipaaSector = sectors.includes('Healthcare/HIPAA');
     const glbaSector = sectors.includes('Finance/GLBA');
+    const biometricsSector = sectors.includes('Biometrics');
+    const criticalInfraSector = sectors.includes('Critical Infrastructure');
     const iso42001 = managementSystem.includes('42001');
     const iso27001 = managementSystem.includes('27001');
     const soc2 = managementSystem === 'SOC 2';
@@ -271,12 +273,172 @@
       `;
     }
 
+    // Technical safeguards — applies to every system but auditors only look
+    // here when HIPAA / GLBA / Critical Infrastructure / Biometrics sectors
+    // are active. Wrapped in a <details> so it doesn't overwhelm the form.
+    // Reason line cites the specific checklist rows this block satisfies.
+    function technicalSafeguardsBlockHTML(v) {
+      const ts = v.technicalSafeguards || {};
+      const reasonParts = [];
+      if (hipaaSector)         reasonParts.push('HIPAA ht-1–ht-7');
+      if (glbaSector)          reasonParts.push('GLBA gs-3–gs-5');
+      if (criticalInfraSector) reasonParts.push('Critical Infrastructure ci-1–ci-5');
+      if (biometricsSector)    reasonParts.push('Biometrics bc-1–bc-5');
+      const reason = reasonParts.length
+        ? `Records the data an auditor will ask for: ${reasonParts.join(', ')}.`
+        : 'Document the safeguards protecting this system. Helpful for any framework that maps technical controls (SOC 2, ISO 27001, NIST CSF).';
+
+      const yn = (name, val, label) => `
+        <div class="field">
+          <label>${label}</label>
+          <select name="${name}">
+            <option value="">—</option>
+            <option ${val==='yes'?'selected':''} value="yes">Yes</option>
+            <option ${val==='no'?'selected':''} value="no">No</option>
+            <option ${val==='na'?'selected':''} value="na">N/A</option>
+          </select>
+        </div>`;
+
+      return `
+        <section class="intake-extra" data-extra="technicalSafeguards">
+          <details>
+            <summary style="cursor:pointer;padding:6px 0;font-weight:600;font-size:1rem">Technical safeguards <span class="text-muted" style="font-weight:400;font-size:.85rem">(encryption, access controls, logging, vuln scan, pen test)</span></summary>
+            <div style="padding-top:10px">
+              <p class="text-muted" style="font-size:.85rem;margin:0 0 14px">${escapeHTML(reason)}</p>
+
+              <h4 class="subsection" style="margin:16px 0 6px;font-size:.85rem;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-soft)">Encryption in transit</h4>
+              <div class="grid-2">
+                <div class="field">
+                  <label>TLS protocol confirmed</label>
+                  <select name="tsTlsVersion">
+                    <option value="">—</option>
+                    <option ${ts.tlsVersion==='1.3'?'selected':''} value="1.3">TLS 1.3</option>
+                    <option ${ts.tlsVersion==='1.2'?'selected':''} value="1.2">TLS 1.2</option>
+                    <option ${ts.tlsVersion==='mixed'?'selected':''} value="mixed">Mixed (document below)</option>
+                    <option ${ts.tlsVersion==='na'?'selected':''} value="na">Not applicable</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label>Date verified</label>
+                  <input type="date" name="tsTlsVerifiedDate" value="${escapeHTML(ts.tlsVerifiedDate || '')}" />
+                </div>
+              </div>
+
+              <h4 class="subsection" style="margin:16px 0 6px;font-size:.85rem;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-soft)">Encryption at rest</h4>
+              <div class="grid-2">
+                <div class="field">
+                  <label>Algorithm</label>
+                  <select name="tsRestAlgo">
+                    <option value="">—</option>
+                    <option ${ts.restAlgo==='aes-256'?'selected':''} value="aes-256">AES-256</option>
+                    <option ${ts.restAlgo==='aes-128'?'selected':''} value="aes-128">AES-128</option>
+                    <option ${ts.restAlgo==='other'?'selected':''} value="other">Other (document below)</option>
+                    <option ${ts.restAlgo==='na'?'selected':''} value="na">Not applicable</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label>Date verified</label>
+                  <input type="date" name="tsRestVerifiedDate" value="${escapeHTML(ts.restVerifiedDate || '')}" />
+                </div>
+              </div>
+
+              <h4 class="subsection" style="margin:16px 0 6px;font-size:.85rem;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-soft)">Access controls</h4>
+              <div class="grid-2">
+                ${yn('tsRbac', ts.rbac, 'Role-based access control?')}
+                ${yn('tsMfa',  ts.mfa,  'MFA enabled for human access?')}
+              </div>
+
+              <h4 class="subsection" style="margin:16px 0 6px;font-size:.85rem;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-soft)">Audit logging — fields captured per request</h4>
+              <div class="grid-2">
+                ${yn('tsLogModelId',    ts.logModelId,    'Model / version ID')}
+                ${yn('tsLogPrompt',     ts.logPrompt,     'Prompt / input')}
+                ${yn('tsLogOutput',     ts.logOutput,     'Output')}
+                ${yn('tsLogAuthorizer', ts.logAuthorizer, 'Authorizer / user')}
+                ${yn('tsLogTimestamp',  ts.logTimestamp,  'Timestamp')}
+              </div>
+
+              <h4 class="subsection" style="margin:16px 0 6px;font-size:.85rem;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-soft)">Network segmentation</h4>
+              <div class="grid-2">
+                ${yn('tsIsolated', ts.isolated, 'Isolated / segmented environment?')}
+                <div class="field">
+                  <label>Description</label>
+                  <input name="tsSegmentationDesc" value="${escapeHTML(ts.segmentationDesc || '')}" placeholder="e.g., VPC + private subnet, no public egress" />
+                </div>
+              </div>
+
+              <h4 class="subsection" style="margin:16px 0 6px;font-size:.85rem;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-soft)">Vulnerability scan</h4>
+              <div class="grid-2">
+                <div class="field">
+                  <label>Last scan date</label>
+                  <input type="date" name="tsVulnLastDate" value="${escapeHTML(ts.vulnLastDate || '')}" />
+                </div>
+                <div class="field">
+                  <label>Next scheduled</label>
+                  <input type="date" name="tsVulnNextDate" value="${escapeHTML(ts.vulnNextDate || '')}" />
+                </div>
+              </div>
+              <div class="field">
+                <label>Vendor / tool</label>
+                <input name="tsVulnVendor" value="${escapeHTML(ts.vulnVendor || '')}" placeholder="e.g., Qualys, Tenable, internal" />
+              </div>
+
+              <h4 class="subsection" style="margin:16px 0 6px;font-size:.85rem;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-soft)">Penetration test</h4>
+              <div class="grid-2">
+                <div class="field">
+                  <label>Last test date</label>
+                  <input type="date" name="tsPenLastDate" value="${escapeHTML(ts.penLastDate || '')}" />
+                </div>
+                <div class="field">
+                  <label>Next scheduled</label>
+                  <input type="date" name="tsPenNextDate" value="${escapeHTML(ts.penNextDate || '')}" />
+                </div>
+              </div>
+              <div class="grid-2">
+                <div class="field">
+                  <label>Vendor / firm</label>
+                  <input name="tsPenVendor" value="${escapeHTML(ts.penVendor || '')}" placeholder="e.g., NCC Group, Bishop Fox, internal red team" />
+                </div>
+                <div class="field">
+                  <label>Findings summary / link</label>
+                  <input name="tsPenFindings" value="${escapeHTML(ts.penFindings || '')}" placeholder="Report link or one-line summary" />
+                </div>
+              </div>
+
+              ${biometricsSector ? `
+                <h4 class="subsection" style="margin:16px 0 6px;font-size:.85rem;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-soft)">Biometrics — liveness &amp; accuracy</h4>
+                <div class="grid-2">
+                  ${yn('tsLiveness', ts.liveness, 'Liveness / anti-spoofing deployed?')}
+                  ${yn('tsDemoAccuracyDone', ts.demoAccuracyDone, 'Demographic accuracy test completed?')}
+                </div>
+                <div class="grid-2">
+                  <div class="field">
+                    <label>Demographic accuracy test date</label>
+                    <input type="date" name="tsDemoAccuracyDate" value="${escapeHTML(ts.demoAccuracyDate || '')}" />
+                  </div>
+                  <div class="field">
+                    <label>Findings / report link</label>
+                    <input name="tsDemoAccuracyLink" value="${escapeHTML(ts.demoAccuracyLink || '')}" placeholder="Report URL or doc ref" />
+                  </div>
+                </div>
+              ` : ''}
+
+              <div class="field" style="margin-top:12px">
+                <label>Safeguards notes</label>
+                <textarea name="tsNotes" rows="2" placeholder="Any nuances an auditor should know (carve-outs, upcoming changes, known exceptions)">${escapeHTML(ts.notes || '')}</textarea>
+              </div>
+            </div>
+          </details>
+        </section>
+      `;
+    }
+
     function inventoryExtrasHTML(v) {
       const parts = [];
       if (hipaaSector) parts.push(hipaaBaaBlockHTML(v));
       if (glbaSector)  parts.push(glbaBlockHTML(v));
       if (iso42001)    parts.push(iso42001BlockHTML(v));
       if (iso27001)    parts.push(iso27001BlockHTML(v));
+      parts.push(technicalSafeguardsBlockHTML(v));
       return parts.join('');
     }
 
@@ -405,6 +567,18 @@
             // Snapshot applicable regs at save-time so historical records
             // stay truthful if the framework posture changes later.
             data.applicableRegsSnapshot = applicableRegs;
+            // Reshape ts* flat keys into a nested `technicalSafeguards`
+            // object so the data model stays tidy and future report
+            // exports can grab the whole block with one property.
+            const ts = {};
+            for (const key of Object.keys(data)) {
+              if (key.startsWith('ts') && key.length > 2) {
+                const shortKey = key[2].toLowerCase() + key.slice(3);
+                ts[shortKey] = data[key];
+                delete data[key];
+              }
+            }
+            if (Object.keys(ts).length) data.technicalSafeguards = ts;
             try {
               if (isNew) {
                 const id = await createRecord(company.id, 'inventory', data, user.uid);

@@ -8,7 +8,7 @@
   <meta http-equiv="Expires" content="0" />
   <title>GAIN — Settings</title>
   <script>(function(){try{var p=localStorage.getItem('gain.theme.palette')||'classic';var m=localStorage.getItem('gain.theme.mode')||'light';document.documentElement.setAttribute('data-palette',p);document.documentElement.setAttribute('data-mode',m);}catch(e){}})();</script>
-  <link rel="stylesheet" href="/css/gain-theme.css?v=50" />
+  <link rel="stylesheet" href="/css/gain-theme.css?v=51" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <meta name="description" content="AI governance — from intake to audit. NIST AI RMF · ISO 42001 · EU AI Act." />
   <meta property="og:type" content="website" />
@@ -275,16 +275,16 @@
   </main>
 
   <script type="module">
-    import { requireCompany, canAdmin, isOwner, resolvePlan, changePassword } from '/js/session.js?v=50';
-    import { renderHeader, renderFooter, toast, openModal, confirmDialog, serializeForm, setFormValues, escapeHTML, formatDate } from '/js/ui.js?v=50';
-    import { updateCompany, listMembers, updateMemberRole, removeMember, createInvite, listInvitesForCompany, deleteInvite, logEvent } from '/js/data.js?v=50';
-    import { PALETTES, getPalette, getMode, setPalette, setMode } from '/js/theme.js?v=50';
-    import { app, db } from '/js/config.js?v=50';
+    import { requireCompany, canAdmin, isOwner, resolvePlan, changePassword } from '/js/session.js?v=51';
+    import { renderHeader, renderFooter, toast, openModal, confirmDialog, serializeForm, setFormValues, escapeHTML, formatDate } from '/js/ui.js?v=51';
+    import { updateCompany, listMembers, updateMemberRole, removeMember, createInvite, listInvitesForCompany, deleteInvite, logEvent } from '/js/data.js?v=51';
+    import { PALETTES, getPalette, getMode, setPalette, setMode } from '/js/theme.js?v=51';
+    import { app, db } from '/js/config.js?v=51';
     import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js';
     import { signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
-    import { auth } from '/js/config.js?v=50';
+    import { auth } from '/js/config.js?v=51';
     import { collection, query, orderBy, getDocs } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
-    import { startTour, resetTour } from '/js/tour.js?v=50';
+    import { startTour, resetTour } from '/js/tour.js?v=51';
 
     const { user, memberships, company, member } = await requireCompany();
     renderHeader({ user, company, memberships });
