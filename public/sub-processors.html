@@ -8,7 +8,7 @@
   <meta http-equiv="Expires" content="0" />
   <title>GAIN — Sub-processors</title>
   <script>(function(){try{var p=localStorage.getItem('gain.theme.palette')||'classic';var m=localStorage.getItem('gain.theme.mode')||'light';document.documentElement.setAttribute('data-palette',p);document.documentElement.setAttribute('data-mode',m);}catch(e){}})();</script>
-  <link rel="stylesheet" href="/css/gain-theme.css?v=32" />
+  <link rel="stylesheet" href="/css/gain-theme.css?v=33" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <meta name="description" content="GAIN sub-processors — third-party service providers that process data on our behalf." />
 </head>
@@ -22,8 +22,8 @@
     <p class="page-lead">Third-party service providers that process data on GAIN's behalf to deliver the Service. Last updated: <strong>2026-04-18</strong>.</p>
 
     <div class="card" style="border:2px solid var(--risk-high);background:var(--accent-soft)">
-      <p style="margin:0;font-weight:700;color:var(--risk-high)">⚠ DRAFT — verify entries before launch</p>
-      <p style="margin:6px 0 0;font-size:.9rem">Confirm the transactional email provider (row marked <em>TBD</em>) before publishing. After launch, keep this list current — see "Notification of changes" below.</p>
+      <p style="margin:0;font-weight:700;color:var(--risk-high)">⚠ DRAFT — counsel review pending</p>
+      <p style="margin:6px 0 0;font-size:.9rem">Entries are confirmed. This page is ready for legal review and then goes live with the rest of the legal pack. Keep this list current — see "Notification of changes" below.</p>
     </div>
 
     <div class="card section-sep">
@@ -71,18 +71,25 @@
             </td>
           </tr>
           <tr>
-            <td><strong>[Transactional email provider — TBD]</strong></td>
+            <td><strong>Sendinblue SAS</strong> (Brevo)</td>
             <td>Delivery of transactional emails (password reset, team invites, billing notifications, feature alerts).</td>
             <td>Recipient email address, sender identifier, email subject and body.</td>
-            <td>[TBD]</td>
-            <td>[Link to provider DPA]</td>
+            <td>France (EU)</td>
+            <td>
+              <a href="https://www.brevo.com/legal/termsofuse/dpa/" target="_blank" rel="noopener noreferrer">DPA</a> ·
+              <a href="https://www.brevo.com/legal/privacypolicy/" target="_blank" rel="noopener noreferrer">Privacy</a> ·
+              <a href="https://www.brevo.com/gdpr/" target="_blank" rel="noopener noreferrer">GDPR</a>
+            </td>
           </tr>
           <tr>
-            <td><strong>[Web hosting provider for marketing/static pages — TBD]</strong></td>
-            <td>Hosting of public marketing pages and the static application shell delivered via FTP. Does not process authenticated Customer Data.</td>
+            <td><strong>MochaHost</strong></td>
+            <td>Hosting of public marketing pages and the static application shell delivered via FTP. Does not process authenticated Customer Data; dynamic application traffic runs on Google Cloud / Firebase.</td>
             <td>Visitor IP address, user-agent, request metadata (standard web access logs).</td>
-            <td>[TBD]</td>
-            <td>[Link to provider terms]</td>
+            <td>United States</td>
+            <td>
+              <a href="https://mochahost.com/privacy-policy/" target="_blank" rel="noopener noreferrer">Privacy</a> ·
+              <a href="https://mochahost.com/terms-of-service/" target="_blank" rel="noopener noreferrer">Terms</a>
+            </td>
           </tr>
         </tbody>
       </table>
@@ -126,7 +133,7 @@
   </main>
 
   <script type="module">
-    import { renderFooter } from '/js/ui.js?v=32';
+    import { renderFooter } from '/js/ui.js?v=33';
     renderFooter();
     const mount = document.querySelector('[data-site-header]');
     if (mount) {
