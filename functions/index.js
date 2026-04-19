@@ -353,24 +353,41 @@ const POLICY_GEN_MODEL = 'claude-sonnet-4-5-20250929';
 exports.generatePolicy = onCall(
   { secrets: [anthropicKey], timeoutSeconds: 120, memory: '512MiB' },
   async (request) => {
+    console.log('[generatePolicy] START', {
+      hasAuth: !!request.auth,
+      uid: request.auth?.uid,
+      data: request.data ? Object.keys(request.data) : 'missing',
+    });
+
     const auth = request.auth;
     if (!auth?.uid) {
+      console.warn('[generatePolicy] FAIL no auth');
       throw new HttpsError('unauthenticated', 'Sign in required.');
     }
 
     const data = request.data || {};
     const { companyId, policyName, framework, description, companyName, industry } = data;
     if (!companyId || !policyName) {
+      console.warn('[generatePolicy] FAIL missing args', { companyId, policyName });
       throw new HttpsError('invalid-argument', 'companyId and policyName are required.');
     }
 
+    console.log('[generatePolicy] args', { companyId, policyName, framework, hasDesc: !!description });
+
     // Verify caller is editor+ of the target company.
-    const memberRef = db.doc(`companies/${companyId}/members/${auth.uid}`);
-    const memberSnap = await memberRef.get();
+    let memberSnap;
+    try {
+      memberSnap = await db.doc(`companies/${companyId}/members/${auth.uid}`).get();
+    } catch (err) {
+      console.error('[generatePolicy] FAIL member read', err);
+      throw new HttpsError('internal', 'Could not verify membership.');
+    }
     if (!memberSnap.exists) {
+      console.warn('[generatePolicy] FAIL not a member', { companyId, uid: auth.uid });
       throw new HttpsError('permission-denied', 'You are not a member of this company.');
     }
     const role = memberSnap.data().role;
+    console.log('[generatePolicy] role', role);
     if (!['owner', 'admin', 'editor'].includes(role)) {
       throw new HttpsError('permission-denied', 'Editor role or higher required to generate policies.');
     }
@@ -378,13 +395,28 @@ exports.generatePolicy = onCall(
     // Daily rate limit per company.
     const today = new Date().toISOString().slice(0, 10);
     const usageRef = db.doc(`companies/${companyId}/aiUsage/${today}`);
-    const usageSnap = await usageRef.get();
+    let usageSnap;
+    try {
+      usageSnap = await usageRef.get();
+    } catch (err) {
+      console.error('[generatePolicy] FAIL usage read', err);
+      throw new HttpsError('internal', 'Could not read usage counter.');
+    }
     const used = usageSnap.exists ? (usageSnap.data().policyGenerations || 0) : 0;
+    console.log('[generatePolicy] usage', { used, limit: DAILY_POLICY_GEN_LIMIT });
     if (used >= DAILY_POLICY_GEN_LIMIT) {
       throw new HttpsError(
         'resource-exhausted',
         `Daily AI policy generation limit reached (${DAILY_POLICY_GEN_LIMIT} per company per day). Resets at midnight UTC.`
       );
+    }
+
+    // Check the secret actually resolved.
+    const key = anthropicKey.value();
+    console.log('[generatePolicy] secret', { hasKey: !!key, keyLen: key?.length || 0, startsWith: key?.slice(0, 8) });
+    if (!key || !key.startsWith('sk-ant-')) {
+      console.error('[generatePolicy] FAIL secret looks invalid');
+      throw new HttpsError('failed-precondition', 'Server misconfiguration: Anthropic key missing.');
     }
 
     const prompt = [
@@ -399,12 +431,18 @@ exports.generatePolicy = onCall(
       `Be specific, actionable, and thorough. Use professional governance language.`,
     ].filter(Boolean).join('\n');
 
+    // Call Anthropic with an explicit 60s abort so we fail fast instead of
+    // silently running out the 120s function timeout.
+    const controller = new AbortController();
+    const abortTimer = setTimeout(() => controller.abort(), 60000);
+
     let result;
     try {
+      console.log('[generatePolicy] fetching Anthropic', { model: POLICY_GEN_MODEL, promptLen: prompt.length });
       const res = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: {
-          'x-api-key': anthropicKey.value(),
+          'x-api-key': key,
           'anthropic-version': '2023-06-01',
           'content-type': 'application/json',
         },
@@ -413,17 +451,29 @@ exports.generatePolicy = onCall(
           max_tokens: 4096,
           messages: [{ role: 'user', content: prompt }],
         }),
+        signal: controller.signal,
       });
+      console.log('[generatePolicy] Anthropic responded', { status: res.status, ok: res.ok });
       if (!res.ok) {
         const errText = await res.text();
-        console.error('Anthropic API error', res.status, errText);
-        throw new HttpsError('internal', `Policy generation failed (upstream ${res.status}).`);
+        console.error('[generatePolicy] Anthropic non-OK', res.status, errText.slice(0, 500));
+        throw new HttpsError('internal', `Policy generation failed (upstream ${res.status}): ${errText.slice(0, 200)}`);
       }
       result = await res.json();
+      console.log('[generatePolicy] parsed response', {
+        hasContent: !!result.content,
+        contentLen: result.content?.[0]?.text?.length || 0,
+        usage: result.usage,
+      });
     } catch (err) {
       if (err instanceof HttpsError) throw err;
-      console.error('generatePolicy call failed', err);
-      throw new HttpsError('internal', 'Policy generation failed. Please try again.');
+      console.error('[generatePolicy] fetch/parse threw', err?.name, err?.message, err?.stack);
+      if (err?.name === 'AbortError') {
+        throw new HttpsError('deadline-exceeded', 'Anthropic API took too long (>60s). Try again.');
+      }
+      throw new HttpsError('internal', `Policy generation failed: ${err?.message || 'unknown error'}`);
+    } finally {
+      clearTimeout(abortTimer);
     }
 
     const text = result.content?.[0]?.text || '';
