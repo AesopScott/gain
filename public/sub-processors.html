@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <title>GAIN — Sub-processors</title>
+  <script>(function(){try{var p=localStorage.getItem('gain.theme.palette')||'classic';var m=localStorage.getItem('gain.theme.mode')||'light';document.documentElement.setAttribute('data-palette',p);document.documentElement.setAttribute('data-mode',m);}catch(e){}})();</script>
+  <link rel="stylesheet" href="/css/gain-theme.css?v=32" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <meta name="description" content="GAIN sub-processors — third-party service providers that process data on our behalf." />
+</head>
+<body>
+
+  <div data-site-header></div>
+
+  <main class="app-shell">
+
+    <h1 class="page-title">Sub-processors</h1>
+    <p class="page-lead">Third-party service providers that process data on GAIN's behalf to deliver the Service. Last updated: <strong>2026-04-18</strong>.</p>
+
+    <div class="card" style="border:2px solid var(--risk-high);background:var(--accent-soft)">
+      <p style="margin:0;font-weight:700;color:var(--risk-high)">⚠ DRAFT — verify entries before launch</p>
+      <p style="margin:6px 0 0;font-size:.9rem">Confirm the transactional email provider (row marked <em>TBD</em>) before publishing. After launch, keep this list current — see "Notification of changes" below.</p>
+    </div>
+
+    <div class="card section-sep">
+      <h2 class="card-title">Current sub-processors</h2>
+      <table class="data">
+        <thead>
+          <tr>
+            <th>Sub-processor</th>
+            <th>Purpose</th>
+            <th>Data processed</th>
+            <th>Location</th>
+            <th>Links</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Google LLC</strong> (Firebase / Google Cloud)</td>
+            <td>Application hosting, authentication, database (Firestore), Cloud Functions, file storage, and logging.</td>
+            <td>All Customer Data and Personal Data submitted to the Service, including account data, company profile, governance records, and audit logs.</td>
+            <td>United States</td>
+            <td>
+              <a href="https://cloud.google.com/terms/data-processing-addendum" target="_blank" rel="noopener noreferrer">DPA</a> ·
+              <a href="https://cloud.google.com/security/compliance/iso-27001" target="_blank" rel="noopener noreferrer">ISO 27001</a> ·
+              <a href="https://cloud.google.com/security/compliance/soc-2" target="_blank" rel="noopener noreferrer">SOC 2</a>
+            </td>
+          </tr>
+          <tr>
+            <td><strong>Anthropic, PBC</strong></td>
+            <td>AI model inference for the policy-generation feature (Claude Haiku 4.5 via the Anthropic API).</td>
+            <td>The prompt text Customer submits through the policy-drafting feature, and the completion returned by the model. No Customer Data is sent other than what Customer includes in a prompt.</td>
+            <td>United States</td>
+            <td>
+              <a href="https://www.anthropic.com/legal/commercial-terms" target="_blank" rel="noopener noreferrer">Commercial terms</a> ·
+              <a href="https://www.anthropic.com/legal/privacy" target="_blank" rel="noopener noreferrer">Privacy policy</a>
+            </td>
+          </tr>
+          <tr>
+            <td><strong>Stripe, Inc.</strong></td>
+            <td>Subscription billing, payment processing, customer portal, and invoice delivery.</td>
+            <td>Customer's billing contact (name, email, address), payment method (tokenized — card number is not received by GAIN), subscription state, invoice history.</td>
+            <td>United States</td>
+            <td>
+              <a href="https://stripe.com/legal/dpa" target="_blank" rel="noopener noreferrer">DPA</a> ·
+              <a href="https://stripe.com/privacy" target="_blank" rel="noopener noreferrer">Privacy</a>
+            </td>
+          </tr>
+          <tr>
+            <td><strong>[Transactional email provider — TBD]</strong></td>
+            <td>Delivery of transactional emails (password reset, team invites, billing notifications, feature alerts).</td>
+            <td>Recipient email address, sender identifier, email subject and body.</td>
+            <td>[TBD]</td>
+            <td>[Link to provider DPA]</td>
+          </tr>
+          <tr>
+            <td><strong>[Web hosting provider for marketing/static pages — TBD]</strong></td>
+            <td>Hosting of public marketing pages and the static application shell delivered via FTP. Does not process authenticated Customer Data.</td>
+            <td>Visitor IP address, user-agent, request metadata (standard web access logs).</td>
+            <td>[TBD]</td>
+            <td>[Link to provider terms]</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card section-sep">
+      <h2 class="card-title">Notification of changes</h2>
+      <p>We update this page when we add, replace, or remove a sub-processor. For material changes, we provide at least <strong>30 days' notice</strong> before the change takes effect.</p>
+      <p>To be notified by email of changes to this list, email <a href="mailto:privacy@governainow.com?subject=Subscribe%20to%20sub-processor%20change%20notifications">privacy@governainow.com</a> with the subject "Subscribe to sub-processor change notifications" and include the domain of the workspace you represent.</p>
+      <p>If you object to the addition or replacement of a sub-processor on reasonable grounds, contact us during the notice period and we will work with you in good faith. Where an objection cannot be resolved, you may terminate the affected portion of the Service per our <a href="/dpa.html">Data Processing Agreement</a>.</p>
+    </div>
+
+    <div class="card section-sep">
+      <h2 class="card-title">Related documents</h2>
+      <ul>
+        <li><a href="/privacy.html">Privacy Policy</a></li>
+        <li><a href="/dpa.html">Data Processing Agreement</a></li>
+        <li><a href="/terms.html">Terms of Service</a></li>
+      </ul>
+    </div>
+
+    <div class="card section-sep">
+      <h2 class="card-title">Changelog</h2>
+      <table class="data">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Change</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>2026-04-18</td>
+            <td>Initial list published.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div data-site-footer></div>
+  </main>
+
+  <script type="module">
+    import { renderFooter } from '/js/ui.js?v=32';
+    renderFooter();
+    const mount = document.querySelector('[data-site-header]');
+    if (mount) {
+      mount.innerHTML = `
+        <header class="site-header">
+          <a class="brand" href="/" aria-label="GAIN — Govern AI Now">
+            <img src="/logo-dark.svg" alt="GAIN" class="brand-logo" />
+          </a>
+          <nav class="primary-nav">
+            <a class="nav-link" href="/pricing.html">Pricing</a>
+            <a class="nav-link active" href="/sub-processors.html">Sub-processors</a>
+          </nav>
+          <div class="header-right">
+            <a class="btn btn-ghost btn-sm" href="/index.html">Sign in</a>
+            <a class="btn btn-primary btn-sm" href="/index.html">Get started</a>
+          </div>
+        </header>
+      `;
+    }
+  </script>
+
+</body>
+</html>
