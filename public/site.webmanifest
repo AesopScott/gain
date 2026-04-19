@@ -1,0 +1,27 @@
+{
+  "name": "GAIN — Govern AI Now",
+  "short_name": "GAIN",
+  "description": "AI governance platform covering NIST AI RMF, ISO 42001, EU AI Act, HIPAA, and more.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F7F8FA",
+  "theme_color": "#1F3864",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/favicon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/favicon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

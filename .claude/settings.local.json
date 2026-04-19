@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -i \"accent\\\\|primary\\\\|#[0-9a-f]\\\\{3,6\\\\}\" \"C:\\\\Users\\\\scott\\\\Code\\\\gain\\\\.claude\\\\worktrees\\\\keen-northcutt-278ce6\\\\public\\\\css\\\\gain-theme.css\")"
+    ]
+  }
+}

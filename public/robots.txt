@@ -1,0 +1,45 @@
+User-agent: *
+
+# Public marketing + legal pages — index freely
+Allow: /$
+Allow: /index.html
+Allow: /pricing.html
+Allow: /help.html
+Allow: /privacy.html
+Allow: /terms.html
+Allow: /dpa.html
+Allow: /sub-processors.html
+Allow: /accessibility.html
+
+# App pages require authentication — no value crawling them
+Disallow: /dashboard.html
+Disallow: /admin.html
+Disallow: /aia.html
+Disallow: /audit.html
+Disallow: /checklists.html
+Disallow: /consent.html
+Disallow: /contracts.html
+Disallow: /disclosures.html
+Disallow: /framework.html
+Disallow: /incidents.html
+Disallow: /intake.html
+Disallow: /inventory.html
+Disallow: /misc.html
+Disallow: /policies.html
+Disallow: /risks.html
+Disallow: /settings.html
+Disallow: /support.html
+Disallow: /team.html
+Disallow: /training.html
+Disallow: /deletion-certificate.html
+
+# Developer preview pages
+Disallow: /preview-colors.html
+Disallow: /preview-nav.html
+Disallow: /preview-pricing.html
+
+# JS / CSS assets — allow crawl for rendering
+Allow: /js/
+Allow: /css/
+
+Sitemap: https://governainow.com/sitemap.xml
