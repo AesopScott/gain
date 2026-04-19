@@ -60,8 +60,14 @@ service cloud.firestore {
       // for company discovery / join requests. Subcollection rules remain member-only.
       allow read: if isSignedIn();
 
-      // Only owners/admins can update top-level company fields.
-      allow update: if isAdmin(companyId);
+      // Only owners/admins can update top-level company fields — but billing
+      // fields (planOverride, stripePlan, stripeCustomerId, stripeSubscriptionId)
+      // may only be changed by the platform super admin. This prevents a company
+      // admin from self-granting a paid plan.
+      allow update: if isAdmin(companyId) &&
+        !request.resource.data.diff(resource.data).affectedKeys()
+          .hasAny(['planOverride', 'stripePlan', 'stripeCustomerId', 'stripeSubscriptionId']);
+      allow update: if isSuperadmin();
 
       // Only owner can delete (rarely used; usually soft-delete via archived flag)
       allow delete: if isOwner(companyId);

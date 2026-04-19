@@ -187,3 +187,18 @@ export const SUPERADMIN_EMAIL = 'admin@governainow.com';
 export function isSuperadmin(user) {
   return !!(user && user.email && user.email.toLowerCase() === SUPERADMIN_EMAIL);
 }
+
+// ---------- plan ----------
+// Valid plan keys across the app. Anything else falls back to 'starter'.
+export const PLAN_KEYS = ['starter', 'pro', 'business', 'enterprise'];
+
+// Effective plan for a company. Precedence:
+//   1. planOverride — superadmin-set comp/test license (bypasses billing entirely).
+//   2. stripePlan   — written by the Stripe webhook on real subscription state.
+//   3. plan         — legacy/manual field.
+//   4. 'starter'    — default free tier.
+export function resolvePlan(company) {
+  if (!company) return 'starter';
+  const raw = (company.planOverride || company.stripePlan || company.plan || 'starter').toLowerCase();
+  return PLAN_KEYS.includes(raw) ? raw : 'starter';
+}
