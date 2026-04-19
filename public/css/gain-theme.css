@@ -1615,18 +1615,20 @@ table.data .actions {
   gap: 12px;
   margin-top: 6px;
 }
-.checklist-card-link { text-decoration: none; color: inherit; }
+.checklist-card-link { text-decoration: none; color: inherit; display: flex; cursor: pointer; }
 .checklist-card-link:hover { text-decoration: none; }
 .checklist-card {
+  flex: 1;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 14px;
   background: var(--surface);
-  transition: border-color .15s, box-shadow .15s, transform .05s;
+  transition: border-color .18s, box-shadow .18s, transform .18s;
 }
 .checklist-card-link:hover .checklist-card {
-  border-color: var(--blue);
-  box-shadow: var(--shadow);
+  border-color: var(--accent);
+  box-shadow: 0 6px 20px rgba(0,0,0,.18);
+  transform: translateY(-3px);
 }
 .checklist-card-head {
   display: flex;

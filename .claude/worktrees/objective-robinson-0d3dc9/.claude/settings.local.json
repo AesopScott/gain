@@ -40,7 +40,11 @@
       "Bash(git -C /c/Users/scott/Code/gain pull)",
       "Bash(git -C /c/Users/scott/Code/gain show HEAD:public/misc.html)",
       "Bash(git -C /c/Users/scott/Code/gain show HEAD:public/js/ui.js)",
-      "Bash(npm install *)"
+      "Bash(npm install *)",
+      "Bash(sed -i 's/ui\\\\.js?v=20/ui.js?v=21/g' *.html)",
+      "Bash(sed -i 's/>v20</>v21</g' js/ui.js)",
+      "Bash(powershell -Command ' *)",
+      "Bash(firebase deploy *)"
     ]
   }
 }

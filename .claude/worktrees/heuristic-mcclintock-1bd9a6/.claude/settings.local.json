@@ -44,7 +44,19 @@
       "Bash(sed -i -e 's#opacity:.6\">v17</span>#opacity:.6\">v18</span>#' js/ui.js)",
       "Bash(node --check admin-check.mjs)",
       "Bash(mv docs/pricing-tiers.csv docs/pricing-tiers-initial-draft.csv)",
-      "Bash(mv docs/pricing-tiers-final.csv docs/pricing-tiers.csv)"
+      "Bash(mv docs/pricing-tiers-final.csv docs/pricing-tiers.csv)",
+      "Bash(sed -i 's#opacity:.6\">v18</span>#opacity:.6\">v19</span>#' public/js/ui.js)",
+      "Bash(sed -i 's#./session.js?v=18#./session.js?v=19#' public/js/ui.js)",
+      "Bash(sed -i 's#opacity:.6\">v20</span>#opacity:.6\">v21</span>#' public/js/ui.js)",
+      "Bash(sed -i 's#?v=20#?v=21#g' public/pricing.html)",
+      "Bash(sed -i 's#opacity:.6\">v21</span>#opacity:.6\">v22</span>#' public/js/ui.js)",
+      "Bash(sed -i 's#ui\\\\.js?v=21#ui.js?v=22#g' public/*.html)",
+      "Bash(sed -i 's#opacity:.6\">v23</span>#opacity:.6\">v24</span>#' public/js/ui.js)",
+      "Bash(sed -i 's#?v=22#?v=24#g; s#?v=23#?v=24#g' public/policies.html)",
+      "Bash(firebase functions:list)",
+      "Bash(firebase functions:log --only generatePolicy --limit 20)",
+      "Bash(firebase functions:log)",
+      "Bash(firebase functions:secrets:access ANTHROPIC_API_KEY)"
     ]
   }
 }
