@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>GAIN — Settings</title>
   <script>(function(){try{var p=localStorage.getItem('gain.theme.palette')||'classic';var m=localStorage.getItem('gain.theme.mode')||'light';document.documentElement.setAttribute('data-palette',p);document.documentElement.setAttribute('data-mode',m);}catch(e){}})();</script>
-  <link rel="stylesheet" href="/css/gain-theme.css?v=25" />
+  <link rel="stylesheet" href="/css/gain-theme.css?v=26" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <meta name="description" content="AI governance — from intake to audit. NIST AI RMF · ISO 42001 · EU AI Act." />
   <meta property="og:type" content="website" />
@@ -28,6 +28,12 @@
   <main class="app-shell">
 
     <h1 class="page-title">Company settings</h1>
+
+    <!-- Plan & Billing -->
+    <div class="card" id="plan-card">
+      <h2 class="card-title">Plan &amp; Billing</h2>
+      <div id="plan-body"><!-- rendered by JS --></div>
+    </div>
 
     <div class="card">
       <h2 class="card-title">Appearance</h2>
@@ -131,10 +137,10 @@
   </main>
 
   <script type="module">
-    import { requireCompany, canAdmin, isOwner } from '/js/session.js?v=25';
-    import { renderHeader, renderFooter, toast, openModal, confirmDialog, serializeForm, setFormValues, escapeHTML, formatDate } from '/js/ui.js?v=25';
-    import { updateCompany, listMembers, updateMemberRole, removeMember, createInvite, listInvitesForCompany, deleteInvite, logEvent } from '/js/data.js?v=25';
-    import { PALETTES, getPalette, getMode, setPalette, setMode } from '/js/theme.js?v=25';
+    import { requireCompany, canAdmin, isOwner } from '/js/session.js?v=26';
+    import { renderHeader, renderFooter, toast, openModal, confirmDialog, serializeForm, setFormValues, escapeHTML, formatDate } from '/js/ui.js?v=26';
+    import { updateCompany, listMembers, updateMemberRole, removeMember, createInvite, listInvitesForCompany, deleteInvite, logEvent } from '/js/data.js?v=26';
+    import { PALETTES, getPalette, getMode, setPalette, setMode } from '/js/theme.js?v=26';
 
     const { user, memberships, company, member } = await requireCompany();
     renderHeader({ user, company, memberships });
@@ -179,6 +185,68 @@
 
     const adminOK = canAdmin(member);
     const ownerOK = isOwner(member);
+
+    // ---------- plan & billing ----------
+    const PLANS = {
+      starter:    { label: 'Starter',    monthly: 0,    members: 3,             systems: 3,             policies: 3,             workspaces: 1, support: 'Community' },
+      pro:        { label: 'Pro',        monthly: 100,  members: 10,            systems: 15,            policies: 6,             workspaces: 1, support: '48h email' },
+      business:   { label: 'Business',   monthly: 250,  members: 25,            systems: 35,            policies: 'Unlimited',   workspaces: 3, support: '24h email' },
+      enterprise: { label: 'Enterprise', monthly: 500,  members: 'Unlimited',   systems: 'Unlimited',   policies: 'Unlimited',   workspaces: 'Unlimited', support: '8h email + Discord' },
+    };
+    const UPGRADE_ORDER = ['starter', 'pro', 'business', 'enterprise'];
+    const planKey = (company.plan || 'starter').toLowerCase();
+    const plan = PLANS[planKey] || PLANS.starter;
+    const currentIdx = UPGRADE_ORDER.indexOf(planKey);
+    const upgradePlans = UPGRADE_ORDER.slice(currentIdx + 1).map(k => PLANS[k]);
+
+    function limitRow(label, val) {
+      return `<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:.88rem">
+        <span class="text-muted">${escapeHTML(label)}</span>
+        <strong>${escapeHTML(String(val))}</strong>
+      </div>`;
+    }
+
+    const upgradeHTML = upgradePlans.length ? `
+      <div style="margin-top:20px">
+        <p style="font-size:.85rem;font-weight:600;margin-bottom:10px;color:var(--text-muted)">UPGRADE OPTIONS</p>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px">
+          ${upgradePlans.map(p => `
+            <div style="border:1px solid var(--accent);border-radius:var(--radius);padding:14px;background:var(--accent-soft)">
+              <div style="font-weight:700;font-size:1rem;margin-bottom:2px">${escapeHTML(p.label)}</div>
+              <div style="font-size:1.4rem;font-weight:700;color:var(--accent);margin-bottom:8px">
+                ${p.monthly === 0 ? 'Free' : `$${p.monthly}<span style="font-size:.8rem;font-weight:400">/mo</span>`}
+              </div>
+              <div style="font-size:.8rem;color:var(--text-muted);margin-bottom:10px;line-height:1.5">
+                ${p.members} members · ${p.systems} systems<br>${p.support}
+              </div>
+              ${p.label === 'Enterprise'
+                ? `<a href="mailto:sales@governainow.com?subject=GAIN%20Enterprise%20Upgrade" class="btn btn-ghost btn-sm" style="width:100%;text-align:center;display:block">Contact sales</a>`
+                : `<a href="/pricing.html" class="btn btn-primary btn-sm" style="width:100%;text-align:center;display:block">See details →</a>`
+              }
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    ` : `<p class="text-muted" style="margin-top:12px;font-size:.85rem">You're on the highest plan. <a href="mailto:sales@governainow.com">Contact sales</a> for custom enterprise terms.</p>`;
+
+    document.getElementById('plan-body').innerHTML = `
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+        <span style="font-size:1.5rem;font-weight:800;letter-spacing:-.01em">${escapeHTML(plan.label)}</span>
+        <span class="badge badge-medium" style="font-size:.78rem;text-transform:uppercase;letter-spacing:.06em">Current plan</span>
+        ${plan.monthly > 0 ? `<span class="text-muted" style="font-size:.9rem">$${plan.monthly}/month</span>` : `<span class="text-muted" style="font-size:.9rem">Free forever</span>`}
+      </div>
+      <div style="max-width:380px">
+        ${limitRow('Team members', plan.members)}
+        ${limitRow('AI systems tracked', plan.systems)}
+        ${limitRow('Saved policies', plan.policies)}
+        ${limitRow('Workspaces', plan.workspaces)}
+        ${limitRow('Support', plan.support)}
+      </div>
+      ${upgradeHTML}
+      <p class="text-muted" style="font-size:.78rem;margin-top:14px">
+        To change or cancel your plan, <a href="mailto:support@governainow.com">contact support</a> or <a href="/pricing.html">view full pricing</a>.
+      </p>
+    `;
 
     if (!adminOK) {
       document.querySelectorAll('[data-admin-only]').forEach(el => el.setAttribute('disabled', 'disabled'));

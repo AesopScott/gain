@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>GAIN — Training Tracker</title>
   <script>(function(){try{var p=localStorage.getItem('gain.theme.palette')||'classic';var m=localStorage.getItem('gain.theme.mode')||'light';document.documentElement.setAttribute('data-palette',p);document.documentElement.setAttribute('data-mode',m);}catch(e){}})();</script>
-  <link rel="stylesheet" href="/css/gain-theme.css?v=25" />
+  <link rel="stylesheet" href="/css/gain-theme.css?v=26" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <!-- SheetJS for Excel/CSV parsing -->
   <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.mini.min.js"></script>
@@ -151,10 +151,10 @@
   </main>
 
   <script type="module">
-    import { requireCompany, canEdit, canAdmin } from '/js/session.js?v=25';
-    import { renderHeader, renderFooter, toast, openModal, confirmDialog, serializeForm, escapeHTML, formatDate } from '/js/ui.js?v=25';
-    import { listDocs, createRecord, updateRecord, deleteRecord, logEvent } from '/js/data.js?v=25';
-    import { db } from '/js/config.js?v=25';
+    import { requireCompany, canEdit, canAdmin } from '/js/session.js?v=26';
+    import { renderHeader, renderFooter, toast, openModal, confirmDialog, serializeForm, escapeHTML, formatDate } from '/js/ui.js?v=26';
+    import { listDocs, createRecord, updateRecord, deleteRecord, logEvent } from '/js/data.js?v=26';
+    import { db } from '/js/config.js?v=26';
     import { doc, setDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 
     const { user, memberships, company, member } = await requireCompany();
