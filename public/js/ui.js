@@ -7,7 +7,7 @@
 // session.js (without isSuperadmin) break the named import and ui.js fails
 // to initialize, which blanks every page. Bump this whenever session.js's
 // exported surface changes.
-import { logOut, setActiveCompanyId, isSuperadmin } from './session.js?v=26';
+import { logOut, setActiveCompanyId, isSuperadmin } from './session.js?v=29';
 import { toggleMode } from './theme.js';
 
 // ---------- header ----------
@@ -100,7 +100,7 @@ export function renderFooter() {
       <span>GAIN · Govern AI Now</span>
       <span class="text-muted">Your data · Your company · Your framework</span>
       <a href="/support.html" style="font-size:.8rem;color:inherit;opacity:.7">Support</a>
-      <span class="text-muted" style="font-size:.7rem;opacity:.6">v28</span>
+      <span class="text-muted" style="font-size:.7rem;opacity:.6">v29</span>
     </footer>
   `;
 }
