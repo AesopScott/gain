@@ -1,0 +1,875 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <title>GAIN — Help Center</title>
+  <script>(function(){try{var p=localStorage.getItem('gain.theme.palette')||'classic';var m=localStorage.getItem('gain.theme.mode')||'light';document.documentElement.setAttribute('data-palette',p);document.documentElement.setAttribute('data-mode',m);}catch(e){}})();</script>
+  <link rel="stylesheet" href="/css/gain-theme.css?v=42" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <meta name="description" content="GAIN help center — getting started, framework posture, inventory, AIAs, policies, billing, and data rights." />
+  <style>
+    .help-search{width:100%;max-width:480px;padding:10px 14px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:.95rem;margin-bottom:14px}
+    .help-search:focus{outline:2px solid var(--accent);outline-offset:2px}
+    .help-section h3{margin-top:22px;font-size:1.05rem}
+    .help-section p{line-height:1.6}
+    .help-section details{margin:10px 0;padding:12px 16px;border:1px solid var(--border);border-radius:8px;background:var(--surface-alt,var(--bg-card))}
+    .help-section details[open]{background:var(--accent-soft)}
+    .help-section summary{font-weight:600;cursor:pointer;list-style:none}
+    .help-section summary::before{content:"▸ ";display:inline-block;margin-right:4px;transition:transform .12s}
+    .help-section details[open] summary::before{content:"▾ "}
+    .help-inline-code{font-family:ui-monospace,SFMono-Regular,monospace;background:var(--surface-2,var(--accent-soft));padding:1px 6px;border-radius:3px;font-size:.9em}
+    .help-hl{background:rgba(255,235,59,.35);padding:0 2px;border-radius:2px}
+  </style>
+</head>
+<body>
+
+  <div data-site-header></div>
+
+  <main class="app-shell" id="main-content" tabindex="-1">
+
+    <h1 class="page-title">Help Center</h1>
+    <p class="page-lead">
+      Everything you need to know to get GAIN working for your organization.
+      If you don't find an answer here, <a href="/support.html">open a support ticket</a>
+      — we reply within our plan SLA (48h / 24h / 8h).
+    </p>
+
+    <input type="search" class="help-search" id="help-search"
+      placeholder="Search help topics…"
+      aria-label="Search help center" />
+
+    <nav class="settings-toc" aria-label="Help sections">
+      <div class="settings-toc-title">Jump to</div>
+      <ul>
+        <li><a href="#getting-started">Getting started</a></li>
+        <li><a href="#framework">Framework posture &amp; checklists</a></li>
+        <li><a href="#inventory">AI system inventory</a></li>
+        <li><a href="#intake">Intake requests</a></li>
+        <li><a href="#aias">AI Impact Assessments</a></li>
+        <li><a href="#risks">Risk register</a></li>
+        <li><a href="#policies">Policies &amp; AI drafting</a></li>
+        <li><a href="#misc">Contracts, incidents, consent, disclosures, training</a></li>
+        <li><a href="#team">Team, roles &amp; invites</a></li>
+        <li><a href="#billing">Plans &amp; billing</a></li>
+        <li><a href="#data-rights">Data rights (export &amp; delete)</a></li>
+        <li><a href="#security">Security &amp; privacy</a></li>
+        <li><a href="#faq">Frequently asked questions</a></li>
+        <li><a href="#contact">Contact us</a></li>
+      </ul>
+    </nav>
+
+    <!-- ─────────────────────────────────────────────────────────────── -->
+
+    <div class="card settings-card help-section" id="getting-started">
+      <h2 class="card-title"><a href="#getting-started" class="section-anchor">Getting started</a></h2>
+
+      <p>
+        GAIN is a governance platform — you catalog your AI systems, assess their impact,
+        track risks, and prove to auditors that you're running a credible program. The
+        flow runs top-to-bottom through the main nav.
+      </p>
+
+      <h3>The five-minute setup</h3>
+      <ol>
+        <li><strong><a href="/framework.html">Framework</a></strong> — pick the sectors, jurisdictions, and management system that apply to your organization. This drives which checklists appear, which intake fields are conditional, and which policy templates are suggested. Do this first.</li>
+        <li><strong><a href="/team.html">Team</a></strong> — add the people who'll own governance responsibilities (CAIO, Privacy Officer, ML Engineer, etc.). Owners show up in dropdowns throughout the app.</li>
+        <li><strong><a href="/intake.html">Intake</a></strong> — log the first AI system request. Every new AI use case starts here, whether you're building, buying, or enabling a vendor feature.</li>
+        <li><strong><a href="/inventory.html">Inventory</a></strong> — after an intake is approved, it becomes a tracked AI system. Set risk tier (high / limited / minimal / prohibited) and lifecycle (planned / pilot / production / retired).</li>
+        <li><strong><a href="/aia.html">AIA</a></strong> — for any high-tier system, run an AI Impact Assessment before launch. This documents intended use, data, fairness, oversight, and residual risk.</li>
+      </ol>
+
+      <h3>First-time users: take the tour</h3>
+      <p>
+        When you sign in for the first time, the <strong>Dashboard</strong> shows a
+        "▶ Start the tour" button that walks you through every page in 10 stops,
+        explaining what each page does. Each page is pre-populated with sample data
+        from a fictional healthcare org ("Memorial Community Clinic") so you can see
+        what a populated workspace looks like — samples vanish the moment you add
+        your first real entry. You can restart the tour anytime from
+        <a href="/settings.html#tour-card">Settings → Walkthrough tour</a>.
+      </p>
+    </div>
+
+    <!-- ─────────────────────────────────────────────────────────────── -->
+
+    <div class="card settings-card section-sep help-section" id="framework">
+      <h2 class="card-title"><a href="#framework" class="section-anchor">Framework posture &amp; checklists</a></h2>
+
+      <p>
+        Your Framework posture is the single most important configuration in GAIN. It
+        tells the platform which compliance regimes apply to you, so intake, AIAs, and
+        policies show only the fields and suggestions you actually need.
+      </p>
+
+      <details>
+        <summary>What is the Framework page?</summary>
+        <p>
+          <a href="/framework.html">Framework</a> is where you pick:
+        </p>
+        <ul>
+          <li><strong>Management system</strong> — ISO 42001, ISO 27001, SOC 2, or none. Controls which controls appear on Inventory records.</li>
+          <li><strong>Jurisdictions</strong> — EU (GDPR, AI Act), US federal, Colorado, California, New York, etc. Controls which laws show as compliance reminders.</li>
+          <li><strong>Sectors</strong> — Healthcare (HIPAA), Education (FERPA), Finance (GLBA), Public Company (SOX), Employment (NYC LL144, EEOC), Insurance (NAIC). Each activates its own sector checklist and intake fields.</li>
+          <li><strong>NIST AI RMF 1.0</strong> — always on. It's the operating foundation GAIN is built around.</li>
+        </ul>
+      </details>
+
+      <details>
+        <summary>Can I change my posture later?</summary>
+        <p>
+          Yes, anytime. When you add or remove a sector, existing records keep their
+          conditional data but new records will render with the updated field set.
+          You'll see a "posture changed" banner on pages where a review is recommended
+          after material changes.
+        </p>
+      </details>
+
+      <details>
+        <summary>How do checklists work?</summary>
+        <p>
+          <a href="/checklists.html">Checklists</a> is organized by framework
+          (NIST AI RMF, ISO 42001, EU AI Act) and sector (HIPAA, FERPA, etc.). Which
+          sector checklists appear is driven by the sectors you enabled in Framework.
+          Check items off as your program meets them. The Dashboard rolls up your
+          progress across all active checklists into a posture maturity score.
+        </p>
+      </details>
+
+      <details>
+        <summary>What does "maturity target" on the Framework page mean?</summary>
+        <p>
+          Every NIST AI RMF subcategory has four maturity levels (1 Ad-hoc → 4 Optimizing).
+          Your maturity target is the level you're aspiring to. The Dashboard shows
+          how many checklist items are at or above your target, so you can track
+          whether the organization is closing the gap.
+        </p>
+      </details>
+    </div>
+
+    <!-- ─────────────────────────────────────────────────────────────── -->
+
+    <div class="card settings-card section-sep help-section" id="inventory">
+      <h2 class="card-title"><a href="#inventory" class="section-anchor">AI system inventory</a></h2>
+
+      <p>
+        The Inventory is a living register of every AI system your organization builds,
+        buys, or enables — in production, pilot, or planned. Keeping this current
+        fulfils <strong>NIST AI RMF GOVERN 1.6</strong> and is table stakes for any
+        auditor.
+      </p>
+
+      <details>
+        <summary>What counts as an "AI system" for inventory?</summary>
+        <p>
+          Any system whose outputs are produced by a machine-learning model, including:
+        </p>
+        <ul>
+          <li>Models your team trained or fine-tuned in-house.</li>
+          <li>Third-party SaaS that uses AI (appointment bots, copilots, note summarizers, CADe).</li>
+          <li>AI features inside enterprise SaaS you already use (Salesforce Einstein, Microsoft Copilot, Zoom AI Companion).</li>
+          <li>Foundation-model APIs your team calls directly (OpenAI, Anthropic, Gemini).</li>
+        </ul>
+        <p>
+          You <em>don't</em> need to inventory rule-based automation, simple
+          statistical models, or dashboards — unless they make decisions that
+          materially affect people.
+        </p>
+      </details>
+
+      <details>
+        <summary>How do I pick a risk tier?</summary>
+        <p>
+          GAIN's risk tiers roughly map to EU AI Act's risk categories:
+        </p>
+        <ul>
+          <li><strong>Prohibited</strong> — systems that are illegal under the EU AI Act (social scoring, real-time biometric ID in public, etc.). Don't deploy; list here only to document that you've decided against.</li>
+          <li><strong>High</strong> — systems making consequential decisions (hiring, lending, diagnosis, safety-critical). AIA required before launch; ongoing monitoring.</li>
+          <li><strong>Limited</strong> — systems with transparency obligations (chatbots that may be mistaken for human, content generation). AIA recommended.</li>
+          <li><strong>Minimal</strong> — low-impact productivity tools (summarization, spam filters, autocomplete). Inventory only; no AIA required.</li>
+        </ul>
+        <p>
+          When in doubt, go one tier higher. Downgrading with justification is easier
+          than explaining why you skipped due diligence.
+        </p>
+      </details>
+
+      <details>
+        <summary>What are the lifecycle states?</summary>
+        <ul>
+          <li><strong>Planned</strong> — approved via intake but not yet built/licensed.</li>
+          <li><strong>Pilot</strong> — running with a limited user group or data set.</li>
+          <li><strong>Production</strong> — fully deployed.</li>
+          <li><strong>Retired</strong> — decommissioned. Keep the record for audit history.</li>
+        </ul>
+      </details>
+
+      <details>
+        <summary>Why do I see HIPAA / GLBA / SOX fields on some systems?</summary>
+        <p>
+          Those blocks appear on the Inventory editor only when the relevant sector is
+          enabled in your Framework posture. HIPAA adds BAA status, PHI scope, and
+          minimum-necessary fields. GLBA adds the Safeguards Rule control reference.
+          SOX adds material-financial-process flags. They let an auditor go from
+          "do you have an inventory?" to "show me the HIPAA-specific fields for every
+          system touching PHI" in one click.
+        </p>
+      </details>
+    </div>
+
+    <!-- ─────────────────────────────────────────────────────────────── -->
+
+    <div class="card settings-card section-sep help-section" id="intake">
+      <h2 class="card-title"><a href="#intake" class="section-anchor">Intake requests</a></h2>
+
+      <details>
+        <summary>Why have an intake step at all?</summary>
+        <p>
+          Intake enforces "nothing goes live without governance review." Every new AI
+          use case gets a triage decision before it's added to the inventory, which
+          gives you a documented audit trail for <strong>NIST AI RMF MAP 1.1</strong>
+          (establishing context) and eliminates shadow-AI projects no one sanctioned.
+        </p>
+      </details>
+
+      <details>
+        <summary>What's the intake → inventory flow?</summary>
+        <ol>
+          <li>A requester submits intake with intended purpose, expected benefits, and basic context.</li>
+          <li>Governance team reviews and sets a status: <em>In triage</em> → <em>In review</em> → <em>Approved</em> or <em>Rejected</em>.</li>
+          <li>On approval, create a matching Inventory record — GAIN pre-fills from the intake.</li>
+          <li>If the system is high-tier, open an AIA before production launch.</li>
+        </ol>
+      </details>
+
+      <details>
+        <summary>Can I reject an intake?</summary>
+        <p>
+          Yes. Set status to <em>Rejected</em> with a reason; the record stays in the
+          log so you can show auditors evidence of governance oversight, not a rubber
+          stamp. Requesters can withdraw their own submissions before triage.
+        </p>
+      </details>
+    </div>
+
+    <!-- ─────────────────────────────────────────────────────────────── -->
+
+    <div class="card settings-card section-sep help-section" id="aias">
+      <h2 class="card-title"><a href="#aias" class="section-anchor">AI Impact Assessments</a></h2>
+
+      <p>
+        An AIA documents the intended use, stakeholders, data, fairness, safety,
+        human oversight, and residual risk for a specific AI system. It's the
+        <strong>MAP + MEASURE</strong> function from NIST AI RMF in practice.
+      </p>
+
+      <details>
+        <summary>When is an AIA required?</summary>
+        <ul>
+          <li><strong>Always</strong> for any system tiered <em>High</em> or <em>Prohibited</em> in Inventory.</li>
+          <li><strong>Recommended</strong> for <em>Limited</em>-tier systems, especially ones with transparency obligations (chatbots, content generators).</li>
+          <li><strong>Jurisdiction-required</strong> when EU AI Act, Colorado AI Act, or NYC Local Law 144 apply — the AIA adds the relevant fields automatically based on your Framework posture.</li>
+        </ul>
+      </details>
+
+      <details>
+        <summary>How long does an AIA take to complete?</summary>
+        <p>
+          First AIA for a new system: typically 2–5 hours across 3–4 contributors
+          (system owner, privacy, legal, data science). Renewals and minor updates:
+          30–60 minutes. The tool auto-saves as you go and lets multiple members edit.
+        </p>
+      </details>
+
+      <details>
+        <summary>Does the impact score tell me if it's "safe"?</summary>
+        <p>
+          No — it's a structured prompt for deliberation, not a pass/fail gate. A
+          high score flags that you need documented oversight, monitoring, and
+          mitigations before launch, not that launch is prohibited. Accept, reject,
+          or require additional treatment based on the full assessment plus your own
+          judgment.
+        </p>
+      </details>
+
+      <details>
+        <summary>When do I renew an AIA?</summary>
+        <p>
+          Standard cadence is annual. Trigger an earlier renewal whenever there's a
+          <em>material change</em> — new data source, model version, new user group,
+          new jurisdiction, or a new risk surfaces during operation.
+        </p>
+      </details>
+    </div>
+
+    <!-- ─────────────────────────────────────────────────────────────── -->
+
+    <div class="card settings-card section-sep help-section" id="risks">
+      <h2 class="card-title"><a href="#risks" class="section-anchor">Risk register</a></h2>
+
+      <details>
+        <summary>Inherent vs residual risk — what's the difference?</summary>
+        <p>
+          <strong>Inherent risk</strong> is what the risk would be with no controls in
+          place — pure likelihood × impact of the bad outcome. <strong>Residual risk</strong>
+          is what's left after your treatment works (BAA executed, human in the loop,
+          monitoring in place). GAIN requires you to record both so your treatment's
+          effectiveness is measurable.
+        </p>
+      </details>
+
+      <details>
+        <summary>What are the treatment options?</summary>
+        <ul>
+          <li><strong>Mitigate</strong> — add controls to reduce likelihood or impact (most common).</li>
+          <li><strong>Transfer</strong> — push the risk to a vendor via contract (BAA, SLA, indemnification).</li>
+          <li><strong>Avoid</strong> — don't deploy the system, or scope it down until the risk is gone.</li>
+          <li><strong>Accept</strong> — document that leadership has accepted this risk level. Requires owner sign-off.</li>
+        </ul>
+      </details>
+
+      <details>
+        <summary>What's an "emergent" risk?</summary>
+        <p>
+          A risk you discover in operation that wasn't in the AIA. Tagging a risk as
+          <em>emergent</em> keeps the audit trail honest: it shows you're actively
+          monitoring and updating (NIST MEASURE 3.1–3.3), not producing a one-and-done
+          assessment that bit-rots.
+        </p>
+      </details>
+
+      <details>
+        <summary>Why does GAIN ask for a "regulatory basis"?</summary>
+        <p>
+          Many risks are risks <em>because</em> a specific law says they are (HIPAA
+          §164.308, EU AI Act Art. 10, FDA 510(k)). Citing the regulatory basis on a
+          risk lets you filter the register for "only the risks I'm on the hook for
+          regulatorily," which is the view an auditor wants.
+        </p>
+      </details>
+    </div>
+
+    <!-- ─────────────────────────────────────────────────────────────── -->
+
+    <div class="card settings-card section-sep help-section" id="policies">
+      <h2 class="card-title"><a href="#policies" class="section-anchor">Policies &amp; AI drafting</a></h2>
+
+      <details>
+        <summary>What policies does GAIN suggest?</summary>
+        <p>
+          <a href="/policies.html">Policies</a> suggests from a library of 40+
+          templates — things like Acceptable AI Use Policy, AI Incident Response Plan,
+          Model Monitoring and Drift Policy, Bias Testing Policy, Workforce AI Training
+          Policy, and so on. Which ones appear as "Suggested by your posture" is
+          driven by your Framework — an HIPAA-enabled workspace gets the HIPAA-adjacent
+          policies promoted.
+        </p>
+      </details>
+
+      <details>
+        <summary>How does AI-drafted policy work?</summary>
+        <p>
+          Click <strong>+ New policy</strong> (Pro, Business, or Enterprise) and pick a
+          template or describe your own. GAIN sends your policy name, framework
+          selection, and description to <strong>Anthropic's Claude Haiku 4.5</strong> and
+          returns a full draft: Purpose, Scope, Policy Statements, Roles &amp; Responsibilities,
+          Compliance &amp; Enforcement, Review &amp; Revision History. You edit, approve,
+          and set a next-review date.
+        </p>
+        <p>
+          <strong>Do not paste PHI, SSNs, or payment card data into the prompt.</strong>
+          The feature is for policy language, not patient data.
+        </p>
+      </details>
+
+      <details>
+        <summary>What's the daily limit on AI drafting?</summary>
+        <p>
+          20 policy generations per workspace per day, reset at midnight UTC. This is
+          a cost/abuse guardrail — if you routinely hit it, contact us and we can
+          raise the limit for your workspace.
+        </p>
+      </details>
+
+      <details>
+        <summary>How do review dates and alerts work?</summary>
+        <p>
+          Every policy has a <em>Next review</em> date. On the Policies page, policies
+          due in the next 30 days are highlighted amber; overdue policies are red. A
+          banner above the table surfaces how many are in each bucket, so you can
+          prioritize. Admins also get a daily email digest if any policies (or
+          contracts, risks, training, incidents) are overdue or due in the next 7
+          days.
+        </p>
+      </details>
+    </div>
+
+    <!-- ─────────────────────────────────────────────────────────────── -->
+
+    <div class="card settings-card section-sep help-section" id="misc">
+      <h2 class="card-title"><a href="#misc" class="section-anchor">Contracts, incidents, consent, disclosures, training</a></h2>
+
+      <p>
+        The <a href="/misc.html">Miscellaneous</a> page groups five smaller tools that
+        each cover a specific framework control:
+      </p>
+
+      <details>
+        <summary>Vendor Contracts &amp; BAAs</summary>
+        <p>
+          Upload and track BAAs, DPAs, MSAs, and AI addenda with your AI vendors.
+          Includes clause-coverage checkboxes (training prohibition, data retention,
+          sub-processor flow-down, audit rights, annual re-verification). Expiration
+          dates trigger alerts. Satisfies HIPAA §164.308 and NIST AI RMF GOVERN 5.1.
+        </p>
+        <p>
+          <strong>Important:</strong> this is where you upload the BAAs <em>you</em>
+          hold with your vendors. GAIN itself doesn't sign BAAs with customers —
+          we're a governance tool, not a PHI store. Don't upload patient data to GAIN.
+        </p>
+      </details>
+
+      <details>
+        <summary>Incident Response Tracking</summary>
+        <p>
+          Log AI-related incidents — hallucinations, bias events, prompt-injection
+          attempts, data leaks. Categorize, assign severity, walk through the
+          response workflow (new → investigating → contained → resolved → closed),
+          and track remediation. Satisfies NIST MANAGE 4.1 and ISO 42001 A.8.3.
+        </p>
+      </details>
+
+      <details>
+        <summary>Consent Records</summary>
+        <p>
+          Capture and track individual consent for AI-driven data processing, using
+          regulation-specific templates (HIPAA §164.508, GDPR Art. 7, FERPA, CCPA,
+          GLBA, EU AI Act Art. 13). Used when processing personal data beyond your
+          primary lawful basis — e.g., research, marketing, or automated decision-making.
+        </p>
+      </details>
+
+      <details>
+        <summary>Public Disclosure Tracker</summary>
+        <p>
+          Track where and when your AI systems have been publicly disclosed —
+          transparency notices, NYC LL144 bias-audit postings, EU AI Act Art. 50
+          disclosures, Form 10-K AI risk disclosures, voluntary statements. Cite the
+          framework reference for each entry; export CSV to include in auditor evidence.
+        </p>
+      </details>
+
+      <details>
+        <summary>Training Tracker</summary>
+        <p>
+          Build your AI governance training catalog: roster of people, course catalog,
+          scheduled classes, and completion tracking. Covers NIST AI RMF GOVERN 6.1
+          and HIPAA workforce training. Import the roster from CSV/Excel to bulk-enroll.
+        </p>
+      </details>
+    </div>
+
+    <!-- ─────────────────────────────────────────────────────────────── -->
+
+    <div class="card settings-card section-sep help-section" id="team">
+      <h2 class="card-title"><a href="#team" class="section-anchor">Team, roles &amp; invites</a></h2>
+
+      <details>
+        <summary>What are the roles?</summary>
+        <ul>
+          <li><strong>Owner</strong> — full control, including deleting the workspace. Only the workspace creator is owner by default; ownership can be transferred.</li>
+          <li><strong>Admin</strong> — everything except deleting the workspace or changing the owner. Can manage members, billing, and settings.</li>
+          <li><strong>Editor</strong> — can create, update, and delete governance records (inventory, risks, AIAs, policies). Cannot change settings or manage members.</li>
+          <li><strong>Viewer</strong> — read-only. Good for auditors, legal, or executive reviewers who need visibility without edit rights.</li>
+        </ul>
+      </details>
+
+      <details>
+        <summary>How do I invite someone?</summary>
+        <p>
+          <a href="/settings.html#members">Settings → Members</a> → <em>+ Invite member</em>.
+          Enter their email and pick a role. They'll get an email with a sign-up link;
+          creating an account with that email auto-redeems the invite and adds them to
+          your workspace. Invites don't expire — you can delete pending invites at any
+          time if circumstances change.
+        </p>
+      </details>
+
+      <details>
+        <summary>Can one person belong to multiple workspaces?</summary>
+        <p>
+          Yes. If you're invited to multiple companies, the header has a company
+          switcher at the top-right. Your member role is per-workspace — you might be
+          Owner at one company and Viewer at another.
+        </p>
+      </details>
+
+      <details>
+        <summary>What if an invitee already has a GAIN account?</summary>
+        <p>
+          Their next sign-in auto-redeems the invite and they'll see the new company
+          in their switcher. No action needed on their end beyond signing in.
+        </p>
+      </details>
+    </div>
+
+    <!-- ─────────────────────────────────────────────────────────────── -->
+
+    <div class="card settings-card section-sep help-section" id="billing">
+      <h2 class="card-title"><a href="#billing" class="section-anchor">Plans &amp; billing</a></h2>
+
+      <details>
+        <summary>What's included in each plan?</summary>
+        <p>
+          Full feature matrix is on <a href="/pricing.html">the pricing page</a>. Briefly:
+        </p>
+        <ul>
+          <li><strong>Starter (free)</strong> — 1 workspace, 3 members, 3 AI systems, NIST AI RMF checklist, basic intake &amp; risk register.</li>
+          <li><strong>Pro ($100/mo)</strong> — 10 members, 15 systems, all sector checklists, AIA workflow, AI policy drafting, audit log export.</li>
+          <li><strong>Business ($250/mo)</strong> — 25 members, 35 systems, 3 workspaces, unlimited policies, Google Workspace SSO, custom branding, vendor BAA tracking.</li>
+          <li><strong>Enterprise ($500/mo or $5,250/yr)</strong> — unlimited everything, SAML SSO / API / data residency by arrangement, dedicated Discord support.</li>
+        </ul>
+      </details>
+
+      <details>
+        <summary>Can I start on the free Starter plan?</summary>
+        <p>
+          Yes. Every new workspace starts on Starter. Upgrade anytime from
+          <a href="/settings.html#plan">Settings → Plan &amp; Billing</a>. Upgrades are
+          prorated.
+        </p>
+      </details>
+
+      <details>
+        <summary>How do I upgrade or cancel?</summary>
+        <p>
+          Use the in-app Customer Portal (accessible from Settings) or
+          <a href="mailto:support@governainow.com">email support</a>. Cancellations
+          take effect at the end of the current billing period; your workspace
+          downgrades to Starter afterward, but all your data remains.
+        </p>
+      </details>
+
+      <details>
+        <summary>Do you offer a discount for annual billing?</summary>
+        <p>
+          Yes — roughly 8% off Pro, 10% off Business, 13% off Enterprise (about one
+          free month per tier). Toggle "Annual" on the
+          <a href="/pricing.html">pricing page</a> to see exact numbers.
+        </p>
+      </details>
+
+      <details>
+        <summary>Does GAIN sign a BAA?</summary>
+        <p>
+          <strong>No.</strong> GAIN is not a HIPAA Business Associate and is not
+          designed to store PHI. The product is a governance/documentation tool —
+          you should not upload patient data to it. On Business and Enterprise plans
+          we <em>do</em> include a vendor-BAA tracking module where you upload the
+          BAAs you hold with <em>your</em> AI vendors (model providers, data
+          processors) with renewal reminders and clause checklists.
+        </p>
+      </details>
+    </div>
+
+    <!-- ─────────────────────────────────────────────────────────────── -->
+
+    <div class="card settings-card section-sep help-section" id="data-rights">
+      <h2 class="card-title"><a href="#data-rights" class="section-anchor">Data rights (export &amp; delete)</a></h2>
+
+      <details>
+        <summary>How do I export all my workspace data?</summary>
+        <p>
+          <a href="/settings.html#data-rights">Settings → Data &amp; deletion rights</a>
+          → <em>Export workspace data</em>. You'll get a ZIP containing one JSON file
+          per collection (inventory, risks, AIAs, policies, contracts, incidents,
+          audit log, etc.) plus a <code class="help-inline-code">manifest.json</code>
+          describing item counts and schema version. Download link expires in 24 hours.
+          Available to all members.
+        </p>
+      </details>
+
+      <details>
+        <summary>How do I delete my workspace?</summary>
+        <p>
+          Owner-only, from <a href="/settings.html#data-rights">Settings → Data &amp;
+          deletion rights</a>. Requires typing the workspace name to confirm. After
+          you submit:
+        </p>
+        <ol>
+          <li>The workspace is immediately <strong>soft-deleted</strong> — no one can access it.</li>
+          <li>You get a <strong>Deletion Certificate</strong> by email with a certificate ID and verification code.</li>
+          <li>After the <strong>30-day recovery window</strong>, the workspace is permanently hard-deleted from active systems.</li>
+          <li>Encrypted backups may persist up to <strong>90 days</strong> after hard-delete before rotation completes the erasure.</li>
+        </ol>
+        <p>
+          If you submitted the deletion by mistake, contact
+          <a href="mailto:support@governainow.com">support</a> before the hard-delete
+          date and we can cancel it.
+        </p>
+      </details>
+
+      <details>
+        <summary>How do I delete my personal account?</summary>
+        <p>
+          Same settings card, "Delete my account" section. Type <em>delete my account</em>
+          to confirm. If you own any workspaces, you'll need to transfer ownership or
+          delete the workspace first (GAIN blocks the deletion and tells you which
+          workspaces are blocking). You'll receive a certificate by email; hard-delete
+          of your Auth user + <code class="help-inline-code">/users/&lt;uid&gt;</code>
+          doc runs on the 30-day sweep.
+        </p>
+      </details>
+
+      <details>
+        <summary>What is the Deletion Certificate?</summary>
+        <p>
+          A formal record of your deletion request. It includes a certificate ID,
+          an 8-character verification code, timestamps (requested / scheduled hard-delete /
+          completed / backup retention until), counts of items at request time, and
+          the sub-processors involved. Once completed, it's your proof that the data
+          was erased — useful for your own GDPR / CCPA compliance records, or for
+          responding to a data subject request from someone whose data was in your
+          workspace. Bookmark the certificate URL or save as PDF from the
+          <a href="/deletion-certificate.html">certificate viewer</a>.
+        </p>
+      </details>
+    </div>
+
+    <!-- ─────────────────────────────────────────────────────────────── -->
+
+    <div class="card settings-card section-sep help-section" id="security">
+      <h2 class="card-title"><a href="#security" class="section-anchor">Security &amp; privacy</a></h2>
+
+      <details>
+        <summary>Where does my data live?</summary>
+        <p>
+          GAIN runs on <strong>Google Cloud / Firebase</strong> in the <em>us-central1</em>
+          region. All data is encrypted in transit (TLS 1.2+) and at rest (AES-256 via
+          Google Cloud default encryption). See our full list of
+          <a href="/sub-processors.html">sub-processors</a>.
+        </p>
+      </details>
+
+      <details>
+        <summary>Who can see my workspace data?</summary>
+        <p>
+          Only members you invite, gated by Firestore security rules that enforce
+          per-workspace isolation at the database layer. No GAIN employee has routine
+          access to customer workspace contents; production access is limited to
+          on-call engineers for incident response.
+        </p>
+      </details>
+
+      <details>
+        <summary>Is my AI policy prompt sent to a third party?</summary>
+        <p>
+          Yes — the AI policy drafting feature sends your prompt text to Anthropic's
+          API (Claude Haiku 4.5). Per <a href="https://www.anthropic.com/legal/commercial-terms"
+          target="_blank" rel="noopener noreferrer">Anthropic's API terms</a>, your
+          prompts and completions are <strong>not used to train</strong> Anthropic's
+          public models. Don't include PHI, SSNs, or payment-card data in prompts.
+        </p>
+      </details>
+
+      <details>
+        <summary>How often do you rotate backups?</summary>
+        <p>
+          Scheduled Firestore exports run daily to Google Cloud Storage. Backup
+          rotation is on a rolling schedule up to 90 days; hard-deletes complete their
+          backup-retention sweep in that window.
+        </p>
+      </details>
+
+      <details>
+        <summary>Do you have SOC 2? HITRUST?</summary>
+        <p>
+          Not yet. We're pre-launch and have not completed an independent SOC 2 or
+          HITRUST audit. We do follow the technical controls those audits verify
+          (encryption, access controls, audit logging, least-privilege access), and
+          we sign DPAs with enterprise customers on request. A SOC 2 Type 1 audit is
+          on the roadmap; Enterprise-tier customers who need audit-evidence before
+          purchase should <a href="mailto:sales@governainow.com">contact sales</a>
+          to discuss our controls in detail.
+        </p>
+      </details>
+
+      <details>
+        <summary>How do I report a security issue?</summary>
+        <p>
+          Email <a href="mailto:security@governainow.com">security@governainow.com</a>.
+          We acknowledge within 48 hours and work with you on coordinated disclosure.
+          Do not open a standard support ticket for security issues.
+        </p>
+      </details>
+    </div>
+
+    <!-- ─────────────────────────────────────────────────────────────── -->
+
+    <div class="card settings-card section-sep help-section" id="faq">
+      <h2 class="card-title"><a href="#faq" class="section-anchor">Frequently asked questions</a></h2>
+
+      <details>
+        <summary>Can I bring my own Anthropic API key?</summary>
+        <p>
+          No. AI policy drafting uses GAIN's managed Anthropic integration so there's
+          no per-token billing or key management on your side — it's included in your
+          plan. If you need on-premise or BYO-key for compliance reasons, contact sales.
+        </p>
+      </details>
+
+      <details>
+        <summary>Can I generate policies in languages other than English?</summary>
+        <p>
+          The AI model supports most major languages, but our templates and
+          framework mappings are English-optimized. If you need localized output for
+          a regulator (EU AI Act notifications in French, for example), generate in
+          English and use a legal translator for the final version.
+        </p>
+      </details>
+
+      <details>
+        <summary>Can GAIN fill in my checklists automatically based on my inventory?</summary>
+        <p>
+          Not today — on the roadmap. Currently you check items off manually as your
+          program meets them. The advantage: audit defensibility is clearer when a
+          human has acknowledged each control.
+        </p>
+      </details>
+
+      <details>
+        <summary>How does GAIN compare to OneTrust / Credo.ai / Holistic AI?</summary>
+        <p>
+          Those platforms are enterprise-first with 6-figure annual contracts and
+          lengthy implementation cycles. GAIN is self-serve, starts at $100/mo, and
+          is built for mid-market organizations that need real AI governance without
+          a six-month deployment. We cover the core workflows (inventory, AIAs,
+          risks, policies, checklists) that drive most audit findings — not the 300
+          features a large incumbent bundles for deals negotiated over dinner.
+        </p>
+      </details>
+
+      <details>
+        <summary>Do you offer an on-premise / self-hosted version?</summary>
+        <p>
+          Not at this time. Enterprise customers with data-residency constraints can
+          scope a custom deployment through sales.
+        </p>
+      </details>
+
+      <details>
+        <summary>Can auditors have viewer access?</summary>
+        <p>
+          Yes — invite the auditor as <strong>Viewer</strong>. They'll be able to read
+          everything but cannot create, update, or delete records. You can revoke
+          access instantly after the audit.
+        </p>
+      </details>
+
+      <details>
+        <summary>My framework posture shows a "posture changed" banner. What do I do?</summary>
+        <p>
+          GAIN is telling you that you recently changed sectors or jurisdictions, and
+          existing records may be missing the fields that the new posture activates.
+          Open the listed records and fill in any conditional blocks that are empty
+          (you'll see them highlighted). Snapshots auto-captured when the posture
+          changed are stored in the audit log for evidence of the transition.
+        </p>
+      </details>
+    </div>
+
+    <!-- ─────────────────────────────────────────────────────────────── -->
+
+    <div class="card settings-card section-sep help-section" id="contact">
+      <h2 class="card-title"><a href="#contact" class="section-anchor">Contact us</a></h2>
+      <ul>
+        <li><strong>Support tickets:</strong> <a href="/support.html">governainow.com/support</a> — fastest for product issues. Response SLA: 48h (Pro), 24h (Business), 8h (Enterprise).</li>
+        <li><strong>Sales &amp; Enterprise inquiries:</strong> <a href="mailto:sales@governainow.com">sales@governainow.com</a></li>
+        <li><strong>Privacy / data rights:</strong> <a href="mailto:privacy@governainow.com">privacy@governainow.com</a></li>
+        <li><strong>Security disclosures:</strong> <a href="mailto:security@governainow.com">security@governainow.com</a></li>
+        <li><strong>Legal / contracts:</strong> <a href="mailto:legal@governainow.com">legal@governainow.com</a></li>
+      </ul>
+    </div>
+
+    <div data-site-footer></div>
+  </main>
+
+  <script type="module">
+    import { auth } from '/js/config.js?v=42';
+    import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+    import { renderHeader, renderFooter, escapeHTML } from '/js/ui.js?v=42';
+    import { loadMemberships } from '/js/session.js?v=42';
+
+    renderFooter();
+
+    // Authed users see the full header; public visitors see a light one.
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        try {
+          const memberships = await loadMemberships(user.uid);
+          renderHeader({ user, company: null, memberships });
+        } catch (_) {
+          renderPublicHeader();
+        }
+      } else {
+        renderPublicHeader();
+      }
+    });
+
+    function renderPublicHeader() {
+      const mount = document.querySelector('[data-site-header]');
+      if (!mount) return;
+      mount.innerHTML = `
+        <header class="site-header">
+          <a class="brand" href="/" aria-label="GAIN — Govern AI Now">
+            <img src="/logo-dark.svg" alt="GAIN" class="brand-logo" />
+          </a>
+          <nav class="primary-nav">
+            <a class="nav-link" href="/pricing.html">Pricing</a>
+            <a class="nav-link active" href="/help.html">Help</a>
+          </nav>
+          <div class="header-right">
+            <a class="btn btn-ghost btn-sm" href="/index.html">Sign in</a>
+            <a class="btn btn-primary btn-sm" href="/index.html">Get started</a>
+          </div>
+        </header>
+      `;
+    }
+
+    // ---------- client-side filter ----------
+    // Matches both summary text and details body — open any match automatically
+    // so the searched term is visible.
+    const searchInput = document.getElementById('help-search');
+    const sections = document.querySelectorAll('.help-section');
+    const allDetails = document.querySelectorAll('.help-section details');
+
+    searchInput.addEventListener('input', () => {
+      const q = searchInput.value.trim().toLowerCase();
+      if (!q) {
+        // Reset: show everything, close every details.
+        sections.forEach(s => s.style.display = '');
+        allDetails.forEach(d => d.open = false);
+        return;
+      }
+      sections.forEach(section => {
+        let anyMatch = false;
+        const topText = section.textContent.toLowerCase();
+        const sectionMatches = topText.includes(q);
+        section.querySelectorAll('details').forEach(d => {
+          const matches = d.textContent.toLowerCase().includes(q);
+          d.style.display = matches ? '' : 'none';
+          d.open = matches;
+          if (matches) anyMatch = true;
+        });
+        // Hide whole section only if none of its details match AND the top-level
+        // copy doesn't match either.
+        section.style.display = (anyMatch || sectionMatches) ? '' : 'none';
+      });
+    });
+  </script>
+
+</body>
+</html>
